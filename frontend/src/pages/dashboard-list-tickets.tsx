@@ -8,9 +8,11 @@ import { AlertCircle, DollarSign, Tag, Ticket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import { Link } from "react-router";
+import { useRoles } from "@/hooks/use-roles";
 
 const DashboardListTickets: React.FC = () => {
   const { isLoading, user } = useAuth();
+  const { roles, isOrganizer, isAttendee, isStaff } = useRoles();
 
   const [tickets, setTickets] = useState<
     SpringBootPagination<TicketSummary> | undefined
@@ -61,6 +63,26 @@ const DashboardListTickets: React.FC = () => {
       <div className="py-8 px-4">
         <h1 className="text-2xl font-bold">Your Tickets</h1>
         <p>Tickets you have purchased</p>
+        
+        {/* Debug Info - Remove this after checking roles */}
+        <div className="mt-4 p-4 bg-gray-800 rounded border">
+          <h3 className="text-yellow-400 font-semibold">Debug Info (Current User Roles):</h3>
+          <p className="text-sm">
+            <strong>Roles:</strong> {roles.length > 0 ? roles.join(', ') : 'No roles found'}
+          </p>
+          <p className="text-sm">
+            <strong>Is Organizer:</strong> {isOrganizer ? 'Yes' : 'No'}
+          </p>
+          <p className="text-sm">
+            <strong>Is Attendee:</strong> {isAttendee ? 'Yes' : 'No'}
+          </p>
+          <p className="text-sm">
+            <strong>Is Staff:</strong> {isStaff ? 'Yes' : 'No'}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            If "Is Organizer" is "No", you need to assign ROLE_ORGANIZER in Keycloak admin console.
+          </p>
+        </div>
       </div>
 
       <div className="max-w-lg mx-auto">

@@ -48,6 +48,7 @@ const AttendeeLandingPage: React.FC = () => {
   const queryPublishedEvents = async () => {
     if (!query) {
       await refreshPublishedEvents();
+      return;
     }
 
     try {
