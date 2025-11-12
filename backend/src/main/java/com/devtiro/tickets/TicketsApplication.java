@@ -8,7 +8,7 @@ public class TicketsApplication {
 
   public static void main(String[] args) {
     // Ensure Java reports a Postgres-accepted timezone id
-    System.setProperty("user.timezone", "Asia/Kolkata");
+    System.setProperty("user.timezone", "UTC");
     SpringApplication.run(TicketsApplication.class, args);
   }
 

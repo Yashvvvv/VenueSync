@@ -76,17 +76,23 @@ export const listEvents = async (
     },
   });
 
-  const responseBody = await response.json();
-
   if (!response.ok) {
-    if (isErrorResponse(responseBody)) {
-      throw new Error(responseBody.error);
+    // Check if response has content before parsing
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const responseBody = await response.json();
+      if (isErrorResponse(responseBody)) {
+        throw new Error(responseBody.error);
+      } else {
+        console.error(JSON.stringify(responseBody));
+        throw new Error("An unknown error occurred");
+      }
     } else {
-      console.error(JSON.stringify(responseBody));
-      throw new Error("An unknown error occurred");
+      throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
     }
   }
 
+  const responseBody = await response.json();
   return responseBody as SpringBootPagination<EventSummary>;
 };
 
