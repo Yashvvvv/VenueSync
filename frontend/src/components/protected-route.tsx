@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { useAuth } from "react-oidc-context";
 import { Navigate, useLocation } from "react-router";
+import { PageLoader } from "./common/loading-skeleton";
 
 interface ProtectedRouteProperties {
   children: ReactNode;
@@ -11,7 +12,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProperties> = ({ children }) => {
   const location = useLocation();
 
   if (isLoading) {
-    return <p>Loading...</p>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {

@@ -12,6 +12,8 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5173,
+    strictPort: true, // Fail if port 5173 is already in use instead of picking another
     proxy: {
       // Proxy /api to json-server
       // "/api": {

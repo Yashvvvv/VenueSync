@@ -1,156 +1,238 @@
-import { TicketDetails, TicketStatus } from "@/domain/domain";
-import { getTicket, getTicketQr } from "@/lib/api";
-import { format } from "date-fns";
-import { Calendar, DollarSign, MapPin, Tag } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useAuth } from "react-oidc-context";
-import { useParams } from "react-router";
-import NavBar from "@/components/nav-bar";
+"use client"
+
+import type React from "react"
+
+import { type TicketDetails, TicketStatus } from "@/domain/domain"
+import { getTicket, getTicketQr } from "@/lib/api"
+import { format } from "date-fns"
+import { Calendar, MapPin, Tag, DollarSign, ArrowLeft, Download, QrCode } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useAuth } from "react-oidc-context"
+import { useParams, useNavigate } from "react-router"
+import Navbar from "@/components/layout/navbar"
+import PageContainer from "@/components/layout/page-container"
+import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { Skeleton } from "@/components/common/loading-skeleton"
+
+const statusConfig: Record<TicketStatus, { label: string; className: string }> = {
+  [TicketStatus.PURCHASED]: {
+    label: "Valid",
+    className: "bg-green-500/20 text-green-400 border-green-500/30",
+  },
+  [TicketStatus.CANCELLED]: {
+    label: "Cancelled",
+    className: "bg-destructive/20 text-destructive border-destructive/30",
+  },
+}
 
 const DashboardViewTicketPage: React.FC = () => {
-  const [ticket, setTicket] = useState<TicketDetails | undefined>();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | undefined>();
-  const [isQrLoading, setIsQrCodeLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>();
+  const [ticket, setTicket] = useState<TicketDetails | undefined>()
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | undefined>()
 
-  const { id } = useParams();
-  const { isLoading, user } = useAuth();
+  const { id } = useParams()
+  const { isLoading: isAuthLoading, user } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
-    if (isLoading || !user?.access_token || !id) {
-      return;
-    }
+    if (isAuthLoading || !user?.access_token || !id) return
 
-    const doUseEffect = async (accessToken: string, id: string) => {
+    const fetchTicketData = async () => {
+      setIsLoading(true)
       try {
-        setIsQrCodeLoading(true);
-        setError(undefined);
-
-        setTicket(await getTicket(accessToken, id));
-        setQrCodeUrl(URL.createObjectURL(await getTicketQr(accessToken, id)));
+        const [ticketData, qrBlob] = await Promise.all([
+          getTicket(user.access_token, id),
+          getTicketQr(user.access_token, id),
+        ])
+        setTicket(ticketData)
+        setQrCodeUrl(URL.createObjectURL(qrBlob))
       } catch (err) {
         if (err instanceof Error) {
-          setError(err.message);
-        } else if (typeof err === "string") {
-          setError(err);
+          setError(err.message)
         } else {
-          setError("An unknown error has occurred");
+          setError("An unknown error has occurred")
         }
       } finally {
-        setIsQrCodeLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    doUseEffect(user?.access_token, id);
+    fetchTicketData()
 
     return () => {
       if (qrCodeUrl) {
-        URL.revokeObjectURL(qrCodeUrl);
+        URL.revokeObjectURL(qrCodeUrl)
       }
-    };
-  }, [user?.access_token, isLoading, id]);
-
-  const getStatusColor = (status: TicketStatus) => {
-    switch (status) {
-      case TicketStatus.PURCHASED:
-        return "text-green-400";
-      case TicketStatus.CANCELLED:
-        return "text-red-400";
-      default:
-        return "text-gray-400";
     }
-  };
+  }, [user?.access_token, isAuthLoading, id])
 
-  if (!ticket) {
-    return <p>Loading..</p>;
-  }
-
-  return (
-    <div className="bg-black min-h-screen text-white">
-      <NavBar />
-      <div className="flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 rounded-3xl p-8 shadow-2xl">
-          {/* Status */}
-          <div className="bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full mb-8 text-center">
-            <span
-              className={`text-sm font-medium ${getStatusColor(ticket.status)}`}
-            >
-              {ticket?.status}
-            </span>
-          </div>
-
-          <div className="mb-2">
-            <h1 className="text-2xl font-bold mb-2">{ticket.eventName}</h1>
-            <div className="flex items-center gap-2 text-purple-200">
-              <MapPin className="w-4" />
-              <span>{ticket.eventVenue}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-purple-300 mb-8">
-            <Calendar className="w-4 text-purple-200" />
-            <div>
-              {format(ticket.eventStart, "Pp")} -{" "}
-              {format(ticket.eventEnd, "Pp")}
-            </div>
-          </div>
-
-          <div className="flex justify-center mb-8">
-            <div className="bg-white p-4 rounded-2xl shadow-lg">
-              <div className="w-32 h-32 flex items-center justify-center">
-                {/* Loading */}
-                {isQrLoading && (
-                  <div className="text-xs text-center p2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 mb-2 mx-auto"></div>
-                    <div className="text-gray-800">Loading QR...</div>
-                  </div>
-                )}
-                {/* error */}
-                {error && (
-                  <div className="text-red-400 text-sm text-center p-2">
-                    <div className="mb-1">⚠️</div>
-                    {error}
-                  </div>
-                )}
-                {/* Display QR */}
-                {qrCodeUrl && !isQrLoading && !error && (
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code for event"
-                    className="w-full h-full object-contain rounded-large"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mb-8">
-            <p className="text-purple-200 text-sm">
-              Present this QR code at the venue for entry
-            </p>
-          </div>
-
-          <div className="space-y-2 mb-8">
-            <div className="flex items-center gap-2">
-              <Tag className="w-5 text-purple-200" />
-              <span className="font-semibold">{ticket.description}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 text-purple-200" />
-              <span className="font-semibold">{ticket.price}</span>
-            </div>
-          </div>
-
-          <div className="text-center mb-2">
-            <h4 className="text-sm font-semibold font-mono">Ticket ID</h4>
-            <p className="text-purple-200 text-sm font-mono">{ticket.id}</p>
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <Navbar />
+        <div className="container mx-auto px-4 lg:px-8 pt-24 pb-12 flex justify-center">
+          <div className="w-full max-w-md space-y-6">
+            <Skeleton className="h-[500px] rounded-3xl" />
           </div>
         </div>
-      </div>
-      </div>
-    </div>
-  );
-};
+      </PageContainer>
+    )
+  }
 
-export default DashboardViewTicketPage;
+  if (error || !ticket) {
+    return (
+      <PageContainer>
+        <Navbar />
+        <div className="container mx-auto px-4 lg:px-8 pt-24 pb-12">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error || "Ticket not found"}</p>
+            <Button 
+              variant="outline" 
+              className="gap-2 bg-transparent"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </PageContainer>
+    )
+  }
+
+  const status = statusConfig[ticket.status]
+
+  return (
+    <PageContainer>
+      <Navbar />
+
+      <div className="container mx-auto px-4 lg:px-8 pt-24 pb-12">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Go Back
+        </button>
+
+        <div className="flex justify-center">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+            {/* Ticket Card */}
+            <div className="relative">
+              {/* Main Ticket */}
+              <div className="relative rounded-3xl overflow-hidden gradient-primary p-1">
+                <div className="bg-background/95 backdrop-blur-xl rounded-[22px] p-6">
+                  {/* Status Badge */}
+                  <div className="flex justify-center mb-6">
+                    <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${status.className}`}>
+                      {status.label}
+                    </span>
+                  </div>
+
+                  {/* Event Info */}
+                  <div className="text-center mb-6">
+                    <h1 className="text-2xl font-bold text-foreground mb-2">{ticket.eventName}</h1>
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span>{ticket.eventVenue}</span>
+                    </div>
+                  </div>
+
+                  {/* Date/Time */}
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-8">
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      {format(new Date(ticket.eventStart), "EEE, MMM d, yyyy")} at{" "}
+                      {format(new Date(ticket.eventStart), "h:mm a")}
+                    </span>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="flex justify-center mb-8">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="bg-white p-4 rounded-2xl shadow-lg"
+                    >
+                      {qrCodeUrl ? (
+                        <img
+                          src={qrCodeUrl || "/placeholder.svg"}
+                          alt="Ticket QR Code"
+                          className="w-40 h-40 object-contain"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 flex items-center justify-center">
+                          <QrCode className="w-16 h-16 text-muted-foreground" />
+                        </div>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  <p className="text-center text-sm text-muted-foreground mb-6">
+                    Present this QR code at the venue for entry
+                  </p>
+
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full -ml-9" />
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full -mr-9" />
+                    <div className="border-t-2 border-dashed border-border" />
+                  </div>
+
+                  {/* Ticket Details */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Tag className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Ticket Type</p>
+                        <p className="font-medium text-foreground">{ticket.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <DollarSign className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Price Paid</p>
+                        <p className="font-medium text-foreground">${ticket.price}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ticket ID */}
+                  <div className="mt-6 pt-4 border-t border-border text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Ticket ID</p>
+                    <p className="font-mono text-sm text-foreground">{ticket.id}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download Button */}
+              <div className="mt-6">
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 glass border-border/50 h-12 bg-transparent"
+                  onClick={() => {
+                    // Could implement PDF download here
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  Download Ticket
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </PageContainer>
+  )
+}
+
+export default DashboardViewTicketPage

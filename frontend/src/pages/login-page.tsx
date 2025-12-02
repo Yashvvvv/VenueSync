@@ -1,19 +1,22 @@
-import { useEffect } from "react";
-import { useAuth } from "react-oidc-context";
+"use client"
+
+import { useEffect } from "react"
+import { useAuth } from "react-oidc-context"
+import { PageLoader } from "@/components/common/loading-skeleton"
 
 const LoginPage: React.FC = () => {
-  const { isLoading, isAuthenticated, signinRedirect } = useAuth();
+  const { isLoading, isAuthenticated, signinRedirect } = useAuth()
 
   useEffect(() => {
     if (isLoading) {
-      return;
+      return
     }
     if (!isAuthenticated) {
-      signinRedirect();
+      signinRedirect()
     }
-  }, [isLoading, isAuthenticated, signinRedirect]);
+  }, [isLoading, isAuthenticated, signinRedirect])
 
-  return <div>Redirecting to login...</div>;
-};
+  return <PageLoader />
+}
 
-export default LoginPage;
+export default LoginPage

@@ -1,66 +1,85 @@
-import { useEffect } from "react";
-import { useAuth } from "react-oidc-context";
-import { useNavigate } from "react-router";
+"use client"
+
+import type React from "react"
+
+import { useEffect } from "react"
+import { useAuth } from "react-oidc-context"
+import { useNavigate } from "react-router"
+import { motion } from "framer-motion"
+import { Ticket } from "lucide-react"
 
 const CallbackPage: React.FC = () => {
-  const { isLoading, isAuthenticated, error } = useAuth();
-  const navigate = useNavigate();
+  const { isLoading, isAuthenticated, error } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (isLoading) {
-      return;
+      return
     }
 
     if (error) {
-      console.error("Authentication error:", error);
-      navigate("/login");
-      return;
+      console.error("Authentication error:", error)
+      navigate("/login")
+      return
     }
 
     if (isAuthenticated) {
-      const redirectPath = localStorage.getItem("redirectPath");
+      const redirectPath = localStorage.getItem("redirectPath")
       if (redirectPath) {
-        localStorage.removeItem("redirectPath");
-        navigate(redirectPath);
+        localStorage.removeItem("redirectPath")
+        navigate(redirectPath)
       } else {
-        // Default redirect to the main landing page if no specific path was saved
-        navigate("/");
+        navigate("/")
       }
     } else {
-      // If not authenticated after processing, redirect to login
-      navigate("/login");
+      navigate("/login")
     }
-  }, [isLoading, isAuthenticated, error, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg">Processing login...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-lg text-red-600">Authentication failed. Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [isLoading, isAuthenticated, error, navigate])
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-        <p className="text-lg">Completing login...</p>
-      </div>
-    </div>
-  );
-};
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="absolute inset-0 gradient-mesh opacity-30" />
 
-export default CallbackPage;
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative text-center"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6"
+        >
+          <Ticket className="w-8 h-8 text-white" />
+        </motion.div>
+
+        {error ? (
+          <>
+            <h2 className="text-xl font-semibold text-destructive mb-2">Authentication Failed</h2>
+            <p className="text-muted-foreground">Redirecting to login...</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {isLoading ? "Processing..." : "Welcome Back!"}
+            </h2>
+            <p className="text-muted-foreground">{isLoading ? "Completing your sign in" : "Redirecting you now..."}</p>
+          </>
+        )}
+
+        <div className="mt-6 flex justify-center gap-1">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, delay: i * 0.2 }}
+              className="w-2 h-2 rounded-full bg-primary"
+            />
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+export default CallbackPage

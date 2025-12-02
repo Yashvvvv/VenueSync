@@ -197,6 +197,60 @@ export const listPublishedEvents = async (
   return responseBody as SpringBootPagination<PublishedEventSummary>;
 };
 
+// Fetch all events with larger page size for "View All" page
+export const listAllPublishedEvents = async (
+  page: number,
+): Promise<SpringBootPagination<PublishedEventSummary>> => {
+  const response = await fetch(`/api/v1/published-events?page=${page}&size=12`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    if (isErrorResponse(responseBody)) {
+      throw new Error(responseBody.error);
+    } else {
+      console.error(JSON.stringify(responseBody));
+      throw new Error("An unknown error occurred");
+    }
+  }
+
+  return responseBody as SpringBootPagination<PublishedEventSummary>;
+};
+
+// Search events with larger page size for "View All" page
+export const searchAllPublishedEvents = async (
+  query: string,
+  page: number,
+): Promise<SpringBootPagination<PublishedEventSummary>> => {
+  const response = await fetch(
+    `/api/v1/published-events?q=${query}&page=${page}&size=12`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    if (isErrorResponse(responseBody)) {
+      throw new Error(responseBody.error);
+    } else {
+      console.error(JSON.stringify(responseBody));
+      throw new Error("An unknown error occurred");
+    }
+  }
+
+  return responseBody as SpringBootPagination<PublishedEventSummary>;
+};
+
 export const searchPublishedEvents = async (
   query: string,
   page: number,

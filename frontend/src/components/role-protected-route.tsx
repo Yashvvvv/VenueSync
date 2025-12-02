@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useAuth } from "react-oidc-context";
 import { Navigate, useLocation } from "react-router";
 import { useRoles } from "@/hooks/use-roles";
+import { PageLoader } from "./common/loading-skeleton";
 
 interface RoleProtectedRouteProperties {
   children: ReactNode;
@@ -17,7 +18,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProperties> = ({
   const location = useLocation();
 
   if (isAuthLoading || isRolesLoading) {
-    return <p>Loading...</p>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -43,8 +44,17 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProperties> = ({
   });
 
   if (!hasRequiredRole) {
-    // Redirect to dashboard which will redirect based on their actual role
-    return <Navigate to="/dashboard" replace />;
+    // Redirect directly to the user's appropriate dashboard based on their role
+    // This avoids double redirects through /dashboard
+    if (isOrganizer) {
+      return <Navigate to="/dashboard/events" replace />;
+    } else if (isStaff) {
+      return <Navigate to="/dashboard/validate-qr" replace />;
+    } else if (isAttendee) {
+      return <Navigate to="/dashboard/tickets" replace />;
+    }
+    // Fallback to home if no roles
+    return <Navigate to="/" replace />;
   }
 
   return children;

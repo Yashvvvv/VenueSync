@@ -22,12 +22,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
   @Query(value = "SELECT * FROM events WHERE " +
       "status = 'PUBLISHED' AND " +
-      "to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(venue, '')) " +
-      "@@ plainto_tsquery('english', :searchTerm)",
+      "(LOWER(name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+      "LOWER(venue) LIKE LOWER(CONCAT('%', :searchTerm, '%')))",
       countQuery = "SELECT count(*) FROM events WHERE " +
           "status = 'PUBLISHED' AND " +
-          "to_tsvector('english', COALESCE(name, '') || ' ' || COALESCE(venue, '')) " +
-          "@@ plainto_tsquery('english', :searchTerm)",
+          "(LOWER(name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+          "LOWER(venue) LIKE LOWER(CONCAT('%', :searchTerm, '%')))",
       nativeQuery = true)
   Page<Event> searchEvents(@Param("searchTerm") String searchTerm, Pageable pageable);
 

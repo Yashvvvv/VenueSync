@@ -14,11 +14,11 @@ Current important values (project)
 - Docker Compose host mapping: `5433:5432` (container 5432 → host 5433)
 - Spring Boot `application.properties` currently points to:
 
-```ini
+\`\`\`ini
 spring.datasource.url=jdbc:postgresql://localhost:5433/postgres
 spring.datasource.username=postgres
 spring.datasource.password=changemeinprod!
-```
+\`\`\`
 
 Why the conflict happened
 - When an app connects to `jdbc:postgresql://localhost:5432`, Windows chooses whichever Postgres server is listening on host port 5432 (your local install). Because the host Postgres had different credentials, the connection attempt failed with `FATAL: password authentication failed for user "postgres"`.
@@ -26,37 +26,37 @@ Why the conflict happened
 Quick verification commands (PowerShell)
 - Show which process is listening on port 5432/5433:
 
-```powershell
+\`\`\`powershell
 # check host Postgres (port 5432) and our docker-mapped port (5433)
 netstat -ano | Select-String ':5432'
 netstat -ano | Select-String ':5433'
 
 # find process info for a PID (replace <PID> with the number shown)
 Get-Process -Id <PID> -ErrorAction SilentlyContinue | Format-List Id,ProcessName,Path
-```
+\`\`\`
 
 - Docker container status and ports
 
-```powershell
+\`\`\`powershell
 # show running compose containers and port mappings
 cd backend
 docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
 
 # inspect db container env + ports
 docker inspect backend-db-1 --format "Container: {{.Name}}\nEnv:\n{{range .Config.Env}}{{println .}}{{end}}\nPorts:\n{{json .NetworkSettings.Ports}}"
-```
+\`\`\`
 
 - Tail postgres logs
 
-```powershell
+\`\`\`powershell
 docker logs backend-db-1 --tail 200
-```
+\`\`\`
 
 - Check active DB connections (inside container)
 
-```powershell
+\`\`\`powershell
 docker exec backend-db-1 psql -U postgres -c "SELECT pid, usename, application_name, client_addr, state, query_start, query FROM pg_stat_activity ORDER BY pid DESC;"
-```
+\`\`\`
 
 Connect from host tools
 - pgAdmin / psql client: host = `localhost`, port = `5433`, user = `postgres`, password = `changemeinprod!`, database = `postgres`.
@@ -67,12 +67,12 @@ Options (pick one)
    - Pros: non-destructive, both local and container Postgres can coexist.
    - How to reinitialize container DB (destroys container volumes):
 
-```powershell
+\`\`\`powershell
 cd backend
 # WARNING: removes volumes (data)
 docker-compose down -v
 docker-compose up -d --build
-```
+\`\`\`
 
 2) Stop or uninstall local Postgres so container can bind to 5432
    - Stop the Windows service for local Postgres, revert `docker-compose.yml` to `5432:5432` and change `application.properties` back to 5432.
@@ -98,13 +98,13 @@ How to revert my changes (if desired)
 - If a volume was already created with a different init password, you may need to remove the volume (`docker-compose down -v`) to reinitialize the container with the new env.
 
 Useful git commands I used / recommend
-```bash
+\`\`\`bash
 # show file changes
 git status
 git diff backend/docker-compose.yml backend/src/main/resources/application.properties
 # if you want to revert my edits
 git checkout -- backend/docker-compose.yml backend/src/main/resources/application.properties
-```
+\`\`\`
 
 Contact me if you want
 - I can add the backend as a Compose service so it uses `db` by service name (recommended).
@@ -112,4 +112,3 @@ Contact me if you want
 
 --
 Small note: keep passwords out of source control for production; for local development this is fine but consider using `.env` or Docker secrets for anything sensitive.
-
