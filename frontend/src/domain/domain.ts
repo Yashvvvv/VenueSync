@@ -28,11 +28,11 @@ export interface CreateTicketTypeRequest {
 
 export interface CreateEventRequest {
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
-  salesStart?: Date;
-  salesEnd?: Date;
+  salesStart?: string;
+  salesEnd?: string;
   status: EventStatusEnum;
   ticketTypes: CreateTicketTypeRequest[];
 }
@@ -48,11 +48,11 @@ export interface UpdateTicketTypeRequest {
 export interface UpdateEventRequest {
   id: string;
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
-  salesStart?: Date;
-  salesEnd?: Date;
+  salesStart?: string;
+  salesEnd?: string;
   status: EventStatusEnum;
   ticketTypes: UpdateTicketTypeRequest[];
 }
@@ -68,11 +68,11 @@ export interface TicketTypeSummary {
 export interface EventSummary {
   id: string;
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
-  salesStart?: Date;
-  salesEnd?: Date;
+  salesStart?: string;
+  salesEnd?: string;
   status: EventStatusEnum;
   ticketTypes: TicketTypeSummary[];
 }
@@ -80,8 +80,8 @@ export interface EventSummary {
 export interface PublishedEventSummary {
   id: string;
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
 }
 
@@ -96,15 +96,15 @@ export interface TicketTypeDetails {
 export interface EventDetails {
   id: string;
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
-  salesStart?: Date;
-  salesEnd?: Date;
+  salesStart?: string;
+  salesEnd?: string;
   status: EventStatusEnum;
   ticketTypes: TicketTypeDetails[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SpringBootPagination<T> {
@@ -146,14 +146,16 @@ export interface PublishedEventTicketTypeDetails {
 export interface PublishedEventDetails {
   id: string;
   name: string;
-  start?: Date;
-  end?: Date;
+  start?: string;
+  end?: string;
   venue: string;
   ticketTypes: PublishedEventTicketTypeDetails[];
 }
 
 export enum TicketStatus {
   PURCHASED = "PURCHASED",
+  USED = "USED",
+  EXPIRED = "EXPIRED",
   CANCELLED = "CANCELLED",
 }
 
@@ -167,6 +169,9 @@ export interface TicketSummary {
   id: string;
   status: TicketStatus;
   ticketType: TicketSummaryTicketType;
+  eventName: string;
+  eventStart?: string;
+  eventEnd?: string;
 }
 
 export interface TicketDetails {
@@ -176,8 +181,8 @@ export interface TicketDetails {
   description: string;
   eventName: string;
   eventVenue: string;
-  eventStart: Date;
-  eventEnd: Date;
+  eventStart: string;
+  eventEnd: string;
 }
 
 export enum TicketValidationMethod {
@@ -189,6 +194,7 @@ export enum TicketValidationStatus {
   VALID = "VALID",
   INVALID = "INVALID",
   EXPIRED = "EXPIRED",
+  ALREADY_USED = "ALREADY_USED",
 }
 
 export interface TicketValidationRequest {

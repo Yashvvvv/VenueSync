@@ -14,6 +14,9 @@ public interface TicketMapper {
 
   ListTicketTicketTypeResponseDto toListTicketTicketTypeResponseDto(TicketType ticketType);
 
+  @Mapping(target = "eventName", source = "ticketType.event.name")
+  @Mapping(target = "eventStart", source = "ticketType.event.start")
+  @Mapping(target = "eventEnd", source = "ticketType.event.end")
   ListTicketResponseDto toListTicketResponseDto(Ticket ticket);
 
   @Mapping(target = "price", source = "ticketType.price")

@@ -11,6 +11,7 @@ import com.fullstack.tickets.domain.dtos.ListEventResponseDto;
 import com.fullstack.tickets.domain.dtos.UpdateEventRequestDto;
 import com.fullstack.tickets.domain.dtos.UpdateEventResponseDto;
 import com.fullstack.tickets.domain.entities.Event;
+import com.fullstack.tickets.domain.entities.EventStatusEnum;
 import com.fullstack.tickets.mappers.EventMapper;
 import com.fullstack.tickets.services.EventService;
 import jakarta.validation.Valid;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -71,13 +73,37 @@ public class EventController {
 
   @GetMapping
   public ResponseEntity<Page<ListEventResponseDto>> listEvents(
-      @AuthenticationPrincipal Jwt jwt, Pageable pageable
+      @AuthenticationPrincipal Jwt jwt, 
+      @RequestParam(required = false) String status,
+      Pageable pageable
   ) {
     UUID userId = parseUserId(jwt);
-    Page<Event> events = eventService.listEventsForOrganizer(userId, pageable);
+    Page<Event> events;
+    
+    if (status != null && !status.isEmpty()) {
+      EventStatusEnum statusEnum = EventStatusEnum.valueOf(status.toUpperCase());
+      events = eventService.listEventsForOrganizerByStatus(userId, statusEnum, pageable);
+    } else {
+      events = eventService.listEventsForOrganizer(userId, pageable);
+    }
+    
     return ResponseEntity.ok(
         events.map(eventMapper::toListEventResponseDto)
     );
+  }
+
+  @GetMapping(path = "/counts")
+  public ResponseEntity<java.util.Map<String, Long>> getEventCounts(
+      @AuthenticationPrincipal Jwt jwt
+  ) {
+    UUID userId = parseUserId(jwt);
+    java.util.Map<String, Long> counts = new java.util.HashMap<>();
+    
+    for (EventStatusEnum status : EventStatusEnum.values()) {
+      counts.put(status.name().toLowerCase(), eventService.countEventsForOrganizerByStatus(userId, status));
+    }
+    
+    return ResponseEntity.ok(counts);
   }
 
   @GetMapping(path = "/{eventId}")

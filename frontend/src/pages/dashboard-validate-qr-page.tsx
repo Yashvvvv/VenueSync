@@ -10,7 +10,7 @@ import {
   TicketValidationMethod,
   TicketValidationStatus,
 } from "@/domain/domain"
-import { AlertCircle, Check, X, QrCode, Keyboard, RotateCcw, ScanLine } from "lucide-react"
+import { AlertCircle, Check, X, QrCode, Keyboard, RotateCcw, ScanLine, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { validateTicket } from "@/lib/api"
 import { useAuth } from "react-oidc-context"
@@ -63,6 +63,8 @@ const DashboardValidateQrPage: React.FC = () => {
         toast.error("Invalid ticket!")
       } else if (response.status === TicketValidationStatus.EXPIRED) {
         toast.error("Ticket has expired!")
+      } else if (response.status === TicketValidationStatus.ALREADY_USED) {
+        toast.error("Ticket has already been used!")
       }
     } catch (err) {
       handleError(err)
@@ -148,7 +150,7 @@ const DashboardValidateQrPage: React.FC = () => {
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.5 }}
-                    className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
                   >
                     {validationStatus === TicketValidationStatus.VALID ? (
                       <motion.div
@@ -158,6 +160,24 @@ const DashboardValidateQrPage: React.FC = () => {
                         className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center glow-success"
                       >
                         <Check className="w-12 h-12 text-green-500" />
+                      </motion.div>
+                    ) : validationStatus === TicketValidationStatus.ALREADY_USED ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                        className="w-24 h-24 rounded-full bg-blue-500/20 flex items-center justify-center"
+                      >
+                        <RefreshCw className="w-12 h-12 text-blue-500" />
+                      </motion.div>
+                    ) : validationStatus === TicketValidationStatus.EXPIRED ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                        className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center"
+                      >
+                        <AlertCircle className="w-12 h-12 text-yellow-500" />
                       </motion.div>
                     ) : (
                       <motion.div
@@ -169,6 +189,17 @@ const DashboardValidateQrPage: React.FC = () => {
                         <X className="w-12 h-12 text-destructive" />
                       </motion.div>
                     )}
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mt-4 text-lg font-medium text-foreground"
+                    >
+                      {validationStatus === TicketValidationStatus.VALID && "Ticket Valid!"}
+                      {validationStatus === TicketValidationStatus.ALREADY_USED && "Already Used"}
+                      {validationStatus === TicketValidationStatus.EXPIRED && "Ticket Expired"}
+                      {validationStatus === TicketValidationStatus.INVALID && "Invalid Ticket"}
+                    </motion.p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -245,7 +276,7 @@ const DashboardValidateQrPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-8 grid grid-cols-3 gap-4"
+            className="mt-8 grid grid-cols-4 gap-3"
           >
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-2">
@@ -254,16 +285,22 @@ const DashboardValidateQrPage: React.FC = () => {
               <p className="text-xs text-muted-foreground">Valid</p>
             </div>
             <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-2">
-                <X className="w-5 h-5 text-destructive" />
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                <RefreshCw className="w-5 h-5 text-blue-500" />
               </div>
-              <p className="text-xs text-muted-foreground">Invalid</p>
+              <p className="text-xs text-muted-foreground">Already Used</p>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-2">
                 <AlertCircle className="w-5 h-5 text-yellow-500" />
               </div>
               <p className="text-xs text-muted-foreground">Expired</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-2">
+                <X className="w-5 h-5 text-destructive" />
+              </div>
+              <p className="text-xs text-muted-foreground">Invalid</p>
             </div>
           </motion.div>
         </div>

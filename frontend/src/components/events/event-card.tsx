@@ -10,6 +10,7 @@ import { Link } from "react-router"
 import { useState } from "react"
 import RandomEventImage from "../random-event-image"
 import toast from "react-hot-toast"
+import { parseWallClockDate } from "@/lib/date-utils"
 
 interface EventCardProps {
   event: PublishedEventSummary
@@ -85,10 +86,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                 className="absolute top-4 left-4 glass-strong rounded-xl px-3 py-2 text-center min-w-[52px]"
               >
                 <p className="text-xs font-bold text-primary uppercase tracking-wider">
-                  {format(new Date(event.start), "MMM")}
+                  {format(parseWallClockDate(event.start)!, "MMM")}
                 </p>
                 <p className="text-xl font-bold text-foreground leading-none mt-0.5">
-                  {format(new Date(event.start), "dd")}
+                  {format(parseWallClockDate(event.start)!, "dd")}
                 </p>
               </motion.div>
             )}
@@ -143,7 +144,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                     <Calendar className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <span>
-                    {format(new Date(event.start), "EEE, MMM d")} - {format(new Date(event.end), "MMM d")}
+                    {format(parseWallClockDate(event.start)!, "EEE, MMM d")} - {format(parseWallClockDate(event.end)!, "MMM d")}
                   </span>
                 </div>
               )}

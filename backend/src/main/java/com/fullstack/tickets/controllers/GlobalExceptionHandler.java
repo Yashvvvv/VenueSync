@@ -5,6 +5,7 @@ import com.fullstack.tickets.exceptions.EventNotFoundException;
 import com.fullstack.tickets.exceptions.EventUpdateException;
 import com.fullstack.tickets.exceptions.QrCodeGenerationException;
 import com.fullstack.tickets.exceptions.QrCodeNotFoundException;
+import com.fullstack.tickets.exceptions.SalesPeriodException;
 import com.fullstack.tickets.exceptions.TicketNotFoundException;
 import com.fullstack.tickets.exceptions.TicketTypeNotFoundException;
 import com.fullstack.tickets.exceptions.TicketsSoldOutException;
@@ -39,6 +40,14 @@ public class GlobalExceptionHandler {
     log.error("Caught TicketsSoldOutException", ex);
     ErrorDto errorDto = new ErrorDto();
     errorDto.setError("Tickets are sold out for this ticket type");
+    return new ResponseEntity<>(errorDto, HttpStatus.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(SalesPeriodException.class)
+  public ResponseEntity<ErrorDto> handleSalesPeriodException(SalesPeriodException ex) {
+    log.error("Caught SalesPeriodException", ex);
+    ErrorDto errorDto = new ErrorDto();
+    errorDto.setError(ex.getMessage() != null ? ex.getMessage() : "Ticket sales are not available at this time");
     return new ResponseEntity<>(errorDto, HttpStatus.BAD_REQUEST);
   }
 

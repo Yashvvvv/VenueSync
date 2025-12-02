@@ -133,8 +133,8 @@ interface EventData {
   salesEndTime: string | undefined
   ticketTypes: TicketTypeData[]
   status: EventStatusEnum
-  createdAt: Date | undefined
-  updatedAt: Date | undefined
+  createdAt: string | undefined
+  updatedAt: string | undefined
 }
 
 const DashboardManageEventPage: React.FC = () => {
@@ -180,15 +180,15 @@ const DashboardManageEventPage: React.FC = () => {
           setEventData({
             id: event.id,
             name: event.name,
-            startDate: event.start ? new Date(event.start) : undefined,
-            startTime: event.start ? formatTimeFromDate(new Date(event.start)) : undefined,
-            endDate: event.end ? new Date(event.end) : undefined,
-            endTime: event.end ? formatTimeFromDate(new Date(event.end)) : undefined,
+            startDate: event.start ? parseDateFromString(event.start) : undefined,
+            startTime: event.start ? formatTimeFromDate(event.start) : undefined,
+            endDate: event.end ? parseDateFromString(event.end) : undefined,
+            endTime: event.end ? formatTimeFromDate(event.end) : undefined,
             venueDetails: event.venue,
-            salesStartDate: event.salesStart ? new Date(event.salesStart) : undefined,
-            salesStartTime: event.salesStart ? formatTimeFromDate(new Date(event.salesStart)) : undefined,
-            salesEndDate: event.salesEnd ? new Date(event.salesEnd) : undefined,
-            salesEndTime: event.salesEnd ? formatTimeFromDate(new Date(event.salesEnd)) : undefined,
+            salesStartDate: event.salesStart ? parseDateFromString(event.salesStart) : undefined,
+            salesStartTime: event.salesStart ? formatTimeFromDate(event.salesStart) : undefined,
+            salesEndDate: event.salesEnd ? parseDateFromString(event.salesEnd) : undefined,
+            salesEndTime: event.salesEnd ? formatTimeFromDate(event.salesEnd) : undefined,
             status: event.status,
             ticketTypes: event.ticketTypes.map((ticket) => ({
               id: ticket.id,
@@ -212,30 +212,43 @@ const DashboardManageEventPage: React.FC = () => {
     }
   }, [id, user, isAuthLoading, isEditMode])
 
-  const formatTimeFromDate = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, "0")
-    const minutes = date.getMinutes().toString().padStart(2, "0")
-    return `${hours}:${minutes}`
+  // Extract time from a date string (treats as local/wall clock time)
+  const formatTimeFromDate = (dateString: string): string => {
+    // Parse the date string and extract time components
+    // Backend returns format like "2025-12-01T14:00:00" (no timezone = wall clock time)
+    const match = dateString.match(/T(\d{2}):(\d{2})/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+    // Fallback: parse as date and get hours/minutes
+    const date = new Date(dateString);
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
   }
 
-  const combineDateTime = (date: Date, time: string): Date => {
-    const [hours, minutes] = time.split(":").map((num) => Number.parseInt(num, 10))
-    const combinedDateTime = new Date(date)
-    combinedDateTime.setHours(hours)
-    combinedDateTime.setMinutes(minutes)
-    combinedDateTime.setSeconds(0)
+  // Extract date from a date string (treats as local/wall clock time)
+  const parseDateFromString = (dateString: string): Date => {
+    // Parse "2025-12-01T14:00:00" format
+    // Create date from components to avoid timezone shifts
+    const match = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+    }
+    return new Date(dateString);
+  }
 
-    return new Date(
-      Date.UTC(
-        combinedDateTime.getFullYear(),
-        combinedDateTime.getMonth(),
-        combinedDateTime.getDate(),
-        hours,
-        minutes,
-        0,
-        0,
-      ),
-    )
+  // Combines date and time into a LocalDateTime string for the backend
+  // NO timezone conversion - stores the exact wall clock time the user entered
+  const combineDateTime = (date: Date, time: string): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const [hours, minutes] = time.split(":");
+    
+    // Return LocalDateTime format: "2025-12-01T14:00:00"
+    // This is wall clock time - no timezone conversion
+    return `${year}-${month}-${day}T${hours}:${minutes}:00`;
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {

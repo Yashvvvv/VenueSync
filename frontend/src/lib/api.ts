@@ -13,32 +13,13 @@ import {
   UpdateEventRequest,
 } from "@/domain/domain";
 
-// Helper to format a Date into a LocalDateTime-style string without timezone offset
-const pad = (n: number) => n.toString().padStart(2, "0");
-const toLocalDateTimeString = (d: Date) => {
-  // Use UTC getters because the app constructs UTC-based Date objects for selected date/time.
-  // This will produce a string like "2025-11-24T15:30:00" (no trailing Z).
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(
-    d.getUTCDate(),
-  )}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(
-    d.getUTCSeconds(),
-  )}`;
-};
-
-// Convert CreateEventRequest / UpdateEventRequest instances (which may contain Date objects)
-// into a plain object where Date fields are serialized into yyyy-MM-dd'T'HH:mm:ss (LocalDateTime)
+// Serialize event request - dates are already in LocalDateTime format
+// No conversion needed since frontend now sends wall clock time directly
 export const serializeEventRequest = (
   req: CreateEventRequest | UpdateEventRequest,
 ): Record<string, unknown> => {
-  const clone: Record<string, unknown> = { ...req } as Record<string, unknown>;
-
-  if (req.start instanceof Date) clone.start = toLocalDateTimeString(req.start);
-  if (req.end instanceof Date) clone.end = toLocalDateTimeString(req.end);
-  if (req.salesStart instanceof Date) clone.salesStart = toLocalDateTimeString(req.salesStart);
-  if (req.salesEnd instanceof Date) clone.salesEnd = toLocalDateTimeString(req.salesEnd);
-
-  // ticketTypes and other fields remain untouched
-  return clone;
+  // Simply return as-is - dates are already in correct LocalDateTime format
+  return { ...req } as Record<string, unknown>;
 };
 
 export const createEvent = async (
@@ -95,8 +76,10 @@ export const updateEvent = async (
 export const listEvents = async (
   accessToken: string,
   page: number,
+  status?: string,
 ): Promise<SpringBootPagination<EventSummary>> => {
-  const response = await fetch(`/api/v1/events?page=${page}&size=2`, {
+  const statusParam = status ? `&status=${status}` : "";
+  const response = await fetch(`/api/v1/events?page=${page}&size=6${statusParam}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -122,6 +105,38 @@ export const listEvents = async (
 
   const responseBody = await response.json();
   return responseBody as SpringBootPagination<EventSummary>;
+};
+
+export interface EventCounts {
+  draft: number;
+  published: number;
+  cancelled: number;
+  completed: number;
+}
+
+export const getEventCounts = async (
+  accessToken: string,
+): Promise<EventCounts> => {
+  const response = await fetch(`/api/v1/events/counts`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    if (isErrorResponse(responseBody)) {
+      throw new Error(responseBody.error);
+    } else {
+      console.error(JSON.stringify(responseBody));
+      throw new Error("An unknown error occurred");
+    }
+  }
+
+  return responseBody as EventCounts;
 };
 
 export const getEvent = async (
@@ -333,8 +348,10 @@ export const purchaseTicket = async (
 export const listTickets = async (
   accessToken: string,
   page: number,
+  filter?: "active" | "past",
 ): Promise<SpringBootPagination<TicketSummary>> => {
-  const response = await fetch(`/api/v1/tickets?page=${page}&size=8`, {
+  const filterParam = filter ? `&filter=${filter}` : "";
+  const response = await fetch(`/api/v1/tickets?page=${page}&size=8${filterParam}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,

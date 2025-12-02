@@ -1,5 +1,5 @@
 package com.fullstack.tickets.domain.entities;
 
 public enum TicketValidationStatusEnum {
-  VALID, INVALID, EXPIRED
+  VALID, INVALID, EXPIRED, ALREADY_USED
 }

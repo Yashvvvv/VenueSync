@@ -3,6 +3,7 @@ package com.fullstack.tickets.services;
 import com.fullstack.tickets.domain.CreateEventRequest;
 import com.fullstack.tickets.domain.UpdateEventRequest;
 import com.fullstack.tickets.domain.entities.Event;
+import com.fullstack.tickets.domain.entities.EventStatusEnum;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ public interface  EventService {
 
   Event createEvent(UUID organizerId, CreateEventRequest event);
   Page<Event> listEventsForOrganizer(UUID organizerId, Pageable pageable);
+  Page<Event> listEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status, Pageable pageable);
+  long countEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status);
   Optional<Event> getEventForOrganizer(UUID organizerId, UUID id);
   Event updateEventForOrganizer(UUID organizerId, UUID id, UpdateEventRequest event);
   void deleteEventForOrganizer(UUID organizerId, UUID id);

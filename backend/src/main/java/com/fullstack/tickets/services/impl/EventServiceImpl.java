@@ -75,6 +75,16 @@ public class EventServiceImpl implements EventService {
   }
 
   @Override
+  public Page<Event> listEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status, Pageable pageable) {
+    return eventRepository.findByOrganizerIdAndStatus(organizerId, status, pageable);
+  }
+
+  @Override
+  public long countEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status) {
+    return eventRepository.countByOrganizerIdAndStatus(organizerId, status);
+  }
+
+  @Override
   public Optional<Event> getEventForOrganizer(UUID organizerId, UUID id) {
     return eventRepository.findByIdAndOrganizerId(id, organizerId);
   }

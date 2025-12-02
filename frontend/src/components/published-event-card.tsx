@@ -6,6 +6,7 @@ import { Link } from "react-router";
 import RandomEventImage from "./random-event-image";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { parseWallClockDate } from "@/lib/date-utils";
 
 interface PublishedEventCardProperties {
   publishedEvent: PublishedEventSummary;
@@ -71,8 +72,8 @@ const PublishedEventCard: React.FC<PublishedEventCardProperties> = ({
             {publishedEvent.start && publishedEvent.end ? (
               <div className="flex gap-2">
                 <Calendar className="w-5" />{" "}
-                {format(publishedEvent.start, "PP")} -{" "}
-                {format(publishedEvent.end, "PP")}
+                {format(parseWallClockDate(publishedEvent.start)!, "PP")} -{" "}
+                {format(parseWallClockDate(publishedEvent.end)!, "PP")}
               </div>
             ) : (
               <div className="flex gap-2">

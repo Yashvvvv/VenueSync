@@ -8,12 +8,13 @@ import { format } from "date-fns"
 import RandomEventImage from "../random-event-image"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import { parseWallClockDate } from "@/lib/date-utils"
 
 interface EventHeroProps {
   name: string
   venue: string
-  start?: Date
-  end?: Date
+  start?: string
+  end?: string
 }
 
 export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end }) => {
@@ -105,7 +106,7 @@ export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end })
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium text-foreground">{format(new Date(start), "EEE, MMM d, yyyy")}</p>
+                  <p className="font-medium text-foreground">{format(parseWallClockDate(start)!, "EEE, MMM d, yyyy")}</p>
                 </div>
               </div>
             )}
@@ -118,8 +119,8 @@ export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end })
                 <div>
                   <p className="text-sm text-muted-foreground">Time</p>
                   <p className="font-medium text-foreground">
-                    {format(new Date(start), "h:mm a")}
-                    {end && ` - ${format(new Date(end), "h:mm a")}`}
+                    {format(parseWallClockDate(start)!, "h:mm a")}
+                    {end && ` - ${format(parseWallClockDate(end)!, "h:mm a")}`}
                   </p>
                 </div>
               </div>

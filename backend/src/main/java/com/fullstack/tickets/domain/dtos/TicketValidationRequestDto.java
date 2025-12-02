@@ -1,7 +1,6 @@
 package com.fullstack.tickets.domain.dtos;
 
 import com.fullstack.tickets.domain.entities.TicketValidationMethod;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TicketValidationRequestDto {
-  private UUID id;
+  private String id;
   private TicketValidationMethod method;
 }

@@ -20,6 +20,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,12 +35,22 @@ public class TicketController {
   @GetMapping
   public Page<ListTicketResponseDto> listTickets(
       @AuthenticationPrincipal Jwt jwt,
+      @RequestParam(required = false) String filter,
       Pageable pageable
   ) {
-    return ticketService.listTicketsForUser(
-        parseUserId(jwt),
-        pageable
-    ).map(ticketMapper::toListTicketResponseDto);
+    UUID userId = parseUserId(jwt);
+    
+    if ("active".equalsIgnoreCase(filter)) {
+      return ticketService.listActiveTicketsForUser(userId, pageable)
+          .map(ticketMapper::toListTicketResponseDto);
+    } else if ("past".equalsIgnoreCase(filter)) {
+      return ticketService.listPastTicketsForUser(userId, pageable)
+          .map(ticketMapper::toListTicketResponseDto);
+    }
+    
+    // Default: return all tickets
+    return ticketService.listTicketsForUser(userId, pageable)
+        .map(ticketMapper::toListTicketResponseDto);
   }
 
   @GetMapping(path = "/{ticketId}")
