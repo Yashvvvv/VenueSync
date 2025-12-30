@@ -13,8 +13,6 @@ frontend/.vite/
 
 # Root level node_modules (if any)
 node_modules/
-package-lock.json
-package.json
 
 # IDE
 .idea/
