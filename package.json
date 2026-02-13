@@ -1,0 +1,22 @@
+{
+  "name": "venuesync-monorepo",
+  "version": "1.0.0",
+  "description": "VenueSync - A high-performance event ticketing platform with race-condition-proof seat allocation and real-time QR validation",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yashvvvv/Event_Management_Platform.git"
+  },
+  "keywords": [
+    "event-management",
+    "ticketing",
+    "spring-boot",
+    "react",
+    "typescript",
+    "keycloak",
+    "oauth2",
+    "qr-code"
+  ],
+  "author": "Yashvvvv",
+  "license": "MIT"
+}
