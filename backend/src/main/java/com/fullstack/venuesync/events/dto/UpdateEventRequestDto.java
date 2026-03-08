@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class UpdateEventRequestDto {
   private UUID id;
 
   @NotBlank(message = "Event name is required")
+  @Size(min = 2, max = 200, message = "Event name must be between 2 and 200 characters")
   private String name;
 
   private LocalDateTime start;
@@ -31,6 +33,7 @@ public class UpdateEventRequestDto {
   private LocalDateTime end;
 
   @NotBlank(message = "Venue information is required")
+  @Size(min = 2, max = 500, message = "Venue must be between 2 and 500 characters")
   private String venue;
 
   private LocalDateTime salesStart;

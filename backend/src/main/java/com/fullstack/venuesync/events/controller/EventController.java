@@ -1,3 +1,4 @@
+
 package com.fullstack.venuesync.events.controller;
 
 import jakarta.validation.Valid;
