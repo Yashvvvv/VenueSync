@@ -1,5 +1,6 @@
 package com.fullstack.venuesync.shared.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,9 +16,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.fullstack.venuesync.shared.filters.UserProvisioningFilter;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+  @Value("${app.cors.allowed-origins:http://localhost:5173}")
+  private String allowedOrigins;
 
   @Bean
   public SecurityFilterChain filterChain(
@@ -28,6 +33,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(authorize ->
             authorize
                 .requestMatchers(HttpMethod.GET, "/api/v1/published-events/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/api/v1/events").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/ticket-validations").hasRole("STAFF")
                 .requestMatchers("/api/v1/tickets/**").hasRole("ATTENDEE")
@@ -50,7 +56,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+    configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(Arrays.asList("*"));
     configuration.setAllowCredentials(true);
