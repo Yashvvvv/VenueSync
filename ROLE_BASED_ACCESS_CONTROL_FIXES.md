@@ -1,6 +1,7 @@
 # VenueSync - Role-Based Access Control Implementation
 
 > Documentation for the RBAC security layer implementation
+> **Last updated:** March 9, 2026
 
 ## Problem Summary
 The common topbar implementation caused the following issues:
@@ -53,10 +54,10 @@ Already correctly implemented:
 ## Files Modified
 
 ### Backend
-- `backend/src/main/java/com/fullstack/tickets/config/SecurityConfig.java`
+- `backend/src/main/java/com/fullstack/venuesync/shared/config/SecurityConfig.java`
 
 ### Frontend
-- `frontend/src/components/nav-bar.tsx` - Updated to show role-specific links
+- `frontend/src/components/layout/navbar.tsx` - Updated to show role-specific links
 - `frontend/src/components/role-protected-route.tsx` - **NEW FILE** - Role-based route protection
 - `frontend/src/main.tsx` - Updated routes to use `RoleProtectedRoute`
 

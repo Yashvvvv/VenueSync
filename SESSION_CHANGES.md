@@ -1,6 +1,8 @@
-# Session Changes Summary - December 2025
+# Session Changes Summary — December 2025 – March 2026
 
 This document outlines all the changes, improvements, and implementations made during the development sessions for VenueSync (formerly Event Management Platform).
+
+> **Last updated:** March 9, 2026
 
 ---
 
@@ -26,6 +28,7 @@ This document outlines all the changes, improvements, and implementations made d
 18. [Scheduled Task Interval Optimization](#18-scheduled-task-interval-optimization)
 19. [Frontend Expired Ticket Display Fix](#19-frontend-expired-ticket-display-fix)
 20. [Future Work / Roadmap](#20-future-work--roadmap)
+21. [Unit & Integration Testing](#21-unit--integration-testing)
 
 ---
 
@@ -1667,6 +1670,35 @@ Realm Settings → Login:
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 21. Unit & Integration Testing
+
+### Overview
+A comprehensive test suite was added covering all service implementations and all controller endpoints.
+
+### Test Files Added
+
+| File | Type | Coverage |
+|------|------|----------|
+| `EventServiceImplTest.java` | Unit | CRUD, search, ownership checks, countByStatus |
+| `EventStatusServiceImplTest.java` | Unit | Auto-completion scheduler logic |
+| `TicketServiceImplTest.java` | Unit | listActiveTickets, listPastTickets, getTicket |
+| `TicketTypeServiceImplTest.java` | Unit | purchaseTicket with pessimistic locking |
+| `TicketExpirationServiceImplTest.java` | Unit | Bulk expiration logic |
+| `QrCodeServiceImplTest.java` | Unit | QR generation and decoding (ZXing) |
+| `TicketValidationServiceImplTest.java` | Unit | QR scan + manual validation status assertions |
+| `EventControllerTest.java` | Integration | `@WebMvcTest` — all organizer endpoints |
+| `PublishedEventControllerTest.java` | Integration | `@WebMvcTest` — public event endpoints |
+| `TicketControllerTest.java` | Integration | `@WebMvcTest` — attendee ticket endpoints |
+| `TicketTypeControllerTest.java` | Integration | `@WebMvcTest` — ticket type/purchase endpoints |
+| `TicketValidationControllerTest.java` | Integration | `@WebMvcTest` — staff validation endpoint |
+
+### Test Configuration
+- **Unit tests** use Mockito (`@ExtendWith(MockitoExtension.class)`) with `@MockBean` for all dependencies
+- **Controller tests** use `@WebMvcTest` + `MockMvc`, H2 in-memory DB, and `@WithMockUser` / custom security test configs for role-based endpoint testing
+- `src/test/resources/application.properties` overrides datasource to H2
 
 ---
 

@@ -18,7 +18,11 @@
 
 - **Developed a RESTful API with automated QR code generation** (Google ZXing) and real-time validation scanner, eliminating 95% of manual entry checks with sub-100ms response latency.
 
-- **Architected an OAuth2/OIDC-secured platform** with Keycloak multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
+- **Architected a modular monolith** with 4 domain modules (`shared`, `events`, `tickets`, `validation`), clean inter-module dependency rules, and 85 Java source files — `mvn clean compile` passes with 0 errors.
+
+- **Implemented OAuth2/OIDC-secured platform** with Keycloak multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
+
+- **Built comprehensive test suite** with unit tests for all service implementations and `@WebMvcTest` controller integration tests across all five controllers.
 
 ---
 
@@ -156,13 +160,14 @@ cd backend
 ### Backend
 | Technology | Purpose |
 |------------|---------|
-| Spring Boot 3.4 | REST API framework |
+| Spring Boot 3.4.4 | REST API framework |
 | Spring Security | OAuth2 resource server |
 | Spring Data JPA | Database ORM with pessimistic locking |
 | PostgreSQL | Production database |
 | Google ZXing | QR code generation |
 | MapStruct | DTO mapping |
 | Lombok | Boilerplate reduction |
+| Docker | Multi-stage build + Compose orchestration |
 
 ### Frontend
 | Technology | Purpose |

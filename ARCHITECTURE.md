@@ -403,6 +403,15 @@ frontend/src/
 - User auto-provisioning from Keycloak
 - Scheduled tasks (ticket expiry, event auto-completion)
 - Search and pagination for published events
+- Full-text event search (`?q=` parameter on published-events)
+- Sales period validation on ticket purchases
+- Organizer event filtering by status with count badges
+- Ticket status lifecycle (PURCHASED → USED → EXPIRED / CANCELLED)
+- Wall-clock time approach for timezone-agnostic scheduling
+- Unit tests for all service implementations
+- `@WebMvcTest` controller integration tests for all five controllers
+- Docker named volumes for data persistence across container restarts
+- Role-based frontend route guards (`RoleProtectedRoute`)
 
 ### Phase 2: Platform Polish (Next)
 
@@ -472,5 +481,5 @@ Use these for your resume/portfolio when describing VenueSync:
 
 ---
 
-*Last updated: February 13, 2026*
-*Architecture restructuring completed and verified — `mvn clean compile` passes with 0 errors.*
+*Last updated: March 9, 2026*
+*Architecture restructuring completed and verified — `mvn clean compile` passes with 0 errors. Unit and integration tests added across all modules.*

@@ -1,6 +1,7 @@
 # Docker Postgres — quick reminder
 
-Date: 2025-11-28
+Date: 2025-11-28  
+Last verified: 2026-03-09 — configuration is unchanged. Port 5433 mapping and `changemeinprod!` password are still in use.
 
 This note documents the local Postgres vs Docker Postgres situation for this project and the minimal steps/commands to verify and change behavior in the future.
 
