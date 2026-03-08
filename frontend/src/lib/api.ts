@@ -13,6 +13,11 @@ import {
   UpdateEventRequest,
 } from "@/domain/domain";
 
+// Base URL for API calls.
+// In production, set VITE_API_BASE_URL to your deployed backend URL (e.g. https://venuesync-api.onrender.com).
+// In local dev, leave it unset (empty string) so Vite's proxy forwards /api → http://localhost:8080.
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
 // Serialize event request - dates are already in LocalDateTime format
 // No conversion needed since frontend now sends wall clock time directly
 export const serializeEventRequest = (
@@ -26,7 +31,7 @@ export const createEvent = async (
   accessToken: string,
   request: CreateEventRequest,
 ): Promise<void> => {
-  const response = await fetch("/api/v1/events", {
+  const response = await fetch(`${API_BASE}/api/v1/events`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -52,7 +57,7 @@ export const updateEvent = async (
   id: string,
   request: UpdateEventRequest,
 ): Promise<void> => {
-  const response = await fetch(`/api/v1/events/${id}`, {
+  const response = await fetch(`${API_BASE}/api/v1/events/${id}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -79,7 +84,7 @@ export const listEvents = async (
   status?: string,
 ): Promise<SpringBootPagination<EventSummary>> => {
   const statusParam = status ? `&status=${status}` : "";
-  const response = await fetch(`/api/v1/events?page=${page}&size=6${statusParam}`, {
+  const response = await fetch(`${API_BASE}/api/v1/events?page=${page}&size=6${statusParam}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -117,7 +122,7 @@ export interface EventCounts {
 export const getEventCounts = async (
   accessToken: string,
 ): Promise<EventCounts> => {
-  const response = await fetch(`/api/v1/events/counts`, {
+  const response = await fetch(`${API_BASE}/api/v1/events/counts`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -143,7 +148,7 @@ export const getEvent = async (
   accessToken: string,
   id: string,
 ): Promise<EventDetails> => {
-  const response = await fetch(`/api/v1/events/${id}`, {
+  const response = await fetch(`${API_BASE}/api/v1/events/${id}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -169,7 +174,7 @@ export const deleteEvent = async (
   accessToken: string,
   id: string,
 ): Promise<void> => {
-  const response = await fetch(`/api/v1/events/${id}`, {
+  const response = await fetch(`${API_BASE}/api/v1/events/${id}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -191,7 +196,7 @@ export const deleteEvent = async (
 export const listPublishedEvents = async (
   page: number,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
-  const response = await fetch(`/api/v1/published-events?page=${page}&size=4`, {
+  const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=4`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -216,7 +221,7 @@ export const listPublishedEvents = async (
 export const listAllPublishedEvents = async (
   page: number,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
-  const response = await fetch(`/api/v1/published-events?page=${page}&size=12`, {
+  const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=12`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -243,7 +248,7 @@ export const searchAllPublishedEvents = async (
   page: number,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(
-    `/api/v1/published-events?q=${query}&page=${page}&size=12`,
+    `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=12`,
     {
       method: "GET",
       headers: {
@@ -271,7 +276,7 @@ export const searchPublishedEvents = async (
   page: number,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(
-    `/api/v1/published-events?q=${query}&page=${page}&size=4`,
+    `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=4`,
     {
       method: "GET",
       headers: {
@@ -297,7 +302,7 @@ export const searchPublishedEvents = async (
 export const getPublishedEvent = async (
   id: string,
 ): Promise<PublishedEventDetails> => {
-  const response = await fetch(`/api/v1/published-events/${id}`, {
+  const response = await fetch(`${API_BASE}/api/v1/published-events/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -324,7 +329,7 @@ export const purchaseTicket = async (
   ticketTypeId: string,
 ): Promise<void> => {
   const response = await fetch(
-    `/api/v1/events/${eventId}/ticket-types/${ticketTypeId}/tickets`,
+    `${API_BASE}/api/v1/events/${eventId}/ticket-types/${ticketTypeId}/tickets`,
     {
       method: "POST",
       headers: {
@@ -351,7 +356,7 @@ export const listTickets = async (
   filter?: "active" | "past",
 ): Promise<SpringBootPagination<TicketSummary>> => {
   const filterParam = filter ? `&filter=${filter}` : "";
-  const response = await fetch(`/api/v1/tickets?page=${page}&size=8${filterParam}`, {
+  const response = await fetch(`${API_BASE}/api/v1/tickets?page=${page}&size=8${filterParam}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -377,7 +382,7 @@ export const getTicket = async (
   accessToken: string,
   id: string,
 ): Promise<TicketDetails> => {
-  const response = await fetch(`/api/v1/tickets/${id}`, {
+  const response = await fetch(`${API_BASE}/api/v1/tickets/${id}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -403,7 +408,7 @@ export const getTicketQr = async (
   accessToken: string,
   id: string,
 ): Promise<Blob> => {
-  const response = await fetch(`/api/v1/tickets/${id}/qr-codes`, {
+  const response = await fetch(`${API_BASE}/api/v1/tickets/${id}/qr-codes`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -421,7 +426,7 @@ export const validateTicket = async (
   accessToken: string,
   request: TicketValidationRequest,
 ): Promise<TicketValidationResponse> => {
-  const response = await fetch(`/api/v1/ticket-validations`, {
+  const response = await fetch(`${API_BASE}/api/v1/ticket-validations`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
