@@ -1,0 +1,59 @@
+services:
+  # Backend Spring Boot API
+  - type: web
+    name: venuesync-api
+    env: java
+    plan: free
+    region: oregon  # Change to your preferred region (oregon, ohio, virginia, singapore, sydney, frankfurt, london, tokyo)
+    buildCommand: cd backend && ./mvnw clean package -DskipTests
+    startCommand: cd backend && java -jar target/venuesync-1.0.0.jar
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: -Dserver.port=10000
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: APP_TIMEZONE
+        value: Asia/Kolkata
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: venuesync-postgres
+          property: connectionString
+      - key: DATABASE_USERNAME
+        fromService:
+          type: pserv
+          name: venuesync-postgres
+          property: user
+      - key: DATABASE_PASSWORD
+        fromService:
+          type: pserv
+          name: venuesync-postgres
+          property: password
+      - key: KEYCLOAK_ISSUER_URI
+        syncEnv: KEYCLOAK_ISSUER_URI
+      - key: KEYCLOAK_CLIENT_ID
+        syncEnv: KEYCLOAK_CLIENT_ID
+      - key: KEYCLOAK_CLIENT_SECRET
+        syncEnv: KEYCLOAK_CLIENT_SECRET
+      - key: CORS_ORIGINS
+        syncEnv: CORS_ORIGINS
+
+  # Frontend React SPA
+  - type: web
+    name: venuesync-web
+    env: static
+    plan: free
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublicPath: dist
+    buildFilter:
+      paths:
+        - frontend/**
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://venuesync-api.onrender.com  # Change to your backend URL once deployed
+
+# Database
+databases:
+  - name: venuesync-postgres
+    ipAllowList: []  # Allow all IPs (adjust for security if needed)
