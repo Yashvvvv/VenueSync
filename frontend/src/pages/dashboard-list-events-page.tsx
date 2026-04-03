@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { type EventSummary, EventStatusEnum, type SpringBootPagination } from "@/domain/domain"
 import { deleteEvent, listEvents, getEventCounts, type EventCounts } from "@/lib/api"
+import type { LucideIcon } from "lucide-react"
 import { AlertCircle, Calendar, Clock, Edit, MapPin, Plus, Tag, Trash2, MoreVertical, FileEdit, Globe, XCircle, CheckCircle2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useAuth } from "react-oidc-context"
@@ -32,7 +33,7 @@ import toast from "react-hot-toast"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { parseWallClockDate } from "@/lib/date-utils"
 
-const statusConfig: Record<EventStatusEnum, { label: string; className: string; icon: React.ElementType }> = {
+const statusConfig: Record<EventStatusEnum, { label: string; className: string; icon: LucideIcon }> = {
   [EventStatusEnum.DRAFT]: {
     label: "Draft",
     className: "bg-muted text-muted-foreground",

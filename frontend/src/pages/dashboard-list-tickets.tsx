@@ -58,10 +58,6 @@ const DashboardListTickets: React.FC = () => {
     fetchTickets()
   }, [isAuthLoading, user?.access_token, activePage, pastPage])
 
-  const currentTickets = currentTab === "active" ? activeTickets : pastTickets
-  const currentPage = currentTab === "active" ? activePage : pastPage
-  const setCurrentPage = currentTab === "active" ? setActivePage : setPastPage
-
   // Calculate stats
   const totalActive = activeTickets?.totalElements ?? 0
   const totalPast = pastTickets?.totalElements ?? 0
