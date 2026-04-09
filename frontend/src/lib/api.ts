@@ -88,7 +88,6 @@ export const listEvents = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
 
@@ -126,7 +125,6 @@ export const getEventCounts = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
 
@@ -152,7 +150,6 @@ export const getEvent = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
 
@@ -198,9 +195,6 @@ export const listPublishedEvents = async (
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=4`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   const responseBody = await response.json();
@@ -223,9 +217,6 @@ export const listAllPublishedEvents = async (
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=12`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   const responseBody = await response.json();
@@ -251,9 +242,6 @@ export const searchAllPublishedEvents = async (
     `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=12`,
     {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     },
   );
 
@@ -279,9 +267,6 @@ export const searchPublishedEvents = async (
     `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=4`,
     {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     },
   );
 
@@ -304,9 +289,6 @@ export const getPublishedEvent = async (
 ): Promise<PublishedEventDetails> => {
   const response = await fetch(`${API_BASE}/api/v1/published-events/${id}`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
 
   const responseBody = await response.json();
@@ -360,7 +342,6 @@ export const listTickets = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
 
@@ -386,7 +367,6 @@ export const getTicket = async (
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
 
