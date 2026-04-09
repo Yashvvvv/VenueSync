@@ -143,11 +143,14 @@ const router = createBrowserRouter([
   },
 ])
 
+const appOrigin = window.location.origin
 const oidcConfig = {
-  authority: "http://localhost:9090/realms/event-ticket-platform",
-  client_id: "event-ticket-platform-app",
-  redirect_uri: "http://localhost:5173/callback",
-  post_logout_redirect_uri: "http://localhost:5173",
+  authority:
+    import.meta.env.VITE_OIDC_AUTHORITY ??
+    "http://localhost:9090/realms/event-ticket-platform",
+  client_id: import.meta.env.VITE_OIDC_CLIENT_ID ?? "event-ticket-platform-app",
+  redirect_uri: `${appOrigin}/callback`,
+  post_logout_redirect_uri: appOrigin,
 }
 
 createRoot(document.getElementById("root")!).render(
