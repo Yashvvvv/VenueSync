@@ -32,6 +32,34 @@ jobs:
             git checkout main
             git pull --ff-only origin main
             cd backend
-            docker compose up -d --build backend
+
+            cat > .env <<EOF
+            SPRING_PROFILES_ACTIVE=prod
+            APP_TIMEZONE=Asia/Kolkata
+            BACKEND_HOST_PORT=80
+            DB_HOST_PORT=5433
+            ADMINER_HOST_PORT=8888
+            DATABASE_URL=jdbc:postgresql://db:5432/postgres
+            DATABASE_USERNAME=postgres
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+            KEYCLOAK_HOST_PORT=9090
+            KEYCLOAK_ADMIN=${{ secrets.KEYCLOAK_ADMIN }}
+            KEYCLOAK_ADMIN_PASSWORD=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
+            KEYCLOAK_PUBLIC_BASE_URL=${{ secrets.KEYCLOAK_PUBLIC_BASE_URL }}
+            KEYCLOAK_ISSUER_URI=${{ secrets.KEYCLOAK_ISSUER_URI }}
+            KC_PROXY_HEADERS=xforwarded
+            KC_HTTP_ENABLED=true
+            CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
+            EOF
+
+            docker compose --env-file .env up -d --build --force-recreate db keycloak backend
             docker compose ps
-            curl -fsS http://localhost/health
+            for i in $(seq 1 24); do
+              if curl -fsS http://localhost/health >/dev/null; then
+                curl -fsS http://localhost/health
+                exit 0
+              fi
+              sleep 5
+            done
+            docker compose logs --tail=120 backend keycloak
+            exit 1
