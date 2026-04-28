@@ -37,6 +37,7 @@ services:
       KC_HOSTNAME: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:9090}
       KC_HTTP_ENABLED: ${KC_HTTP_ENABLED:-true}
       KC_HOSTNAME_STRICT: ${KC_HOSTNAME_STRICT:-true}
+      KC_HOSTNAME_STRICT_HTTPS: ${KC_HOSTNAME_STRICT_HTTPS:-false}
     volumes:
       - keycloak-data:/opt/keycloak/data
     command:
