@@ -49,6 +49,8 @@ jobs:
             KEYCLOAK_ISSUER_URI=${{ secrets.KEYCLOAK_ISSUER_URI }}
             KC_PROXY_HEADERS=xforwarded
             KC_HTTP_ENABLED=true
+            KC_HOSTNAME_STRICT=true
+            KC_HOSTNAME_STRICT_HTTPS=false
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
             EOF
 
