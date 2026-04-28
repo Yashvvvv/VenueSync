@@ -4,9 +4,10 @@ import type React from "react"
 
 import type { PublishedEventTicketTypeDetails } from "@/domain/domain"
 import { motion } from "framer-motion"
-import { Check, Ticket } from "lucide-react"
+import { Check, Ticket, AlertCircle, Calendar } from "lucide-react"
 import { Button } from "../ui/button"
 import { Link } from "react-router"
+import { useRoles } from "@/hooks/use-roles"
 
 interface TicketSelectorProps {
   ticketTypes: PublishedEventTicketTypeDetails[]
@@ -21,6 +22,12 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
   onSelect,
   eventId,
 }) => {
+  const { isLoading: isRolesLoading, isOrganizer, isAttendee, isStaff } = useRoles()
+
+  if (isRolesLoading) {
+    return null
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -78,9 +85,36 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
             <span className="text-muted-foreground">Total</span>
             <span className="text-2xl font-bold text-foreground">${selectedTicketType.price}</span>
           </div>
-          <Link to={`/events/${eventId}/purchase/${selectedTicketType.id}`}>
-            <Button className="w-full gradient-primary text-white h-12 text-lg font-semibold">Get Tickets</Button>
-          </Link>
+
+          {isAttendee && (
+            <Link to={`/events/${eventId}/purchase/${selectedTicketType.id}`}>
+              <Button className="w-full gradient-primary text-white h-12 text-lg font-semibold">Get Tickets</Button>
+            </Link>
+          )}
+
+          {isOrganizer && (
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+              <Calendar className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-400">Manage Events</p>
+                <p className="text-xs text-blue-400/80 mt-1">
+                  As an organizer, you create and manage events. Attend events and purchase tickets by switching to an attendee account.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isStaff && (
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+              <AlertCircle className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-purple-400">Validate Tickets</p>
+                <p className="text-xs text-purple-400/80 mt-1">
+                  As staff, you validate tickets at events. Visit the QR validation page to scan attendee tickets.
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
     </div>
