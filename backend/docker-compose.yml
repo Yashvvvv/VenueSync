@@ -36,11 +36,15 @@ services:
       KC_PROXY_HEADERS: ${KC_PROXY_HEADERS:-xforwarded}
       KC_HOSTNAME: ${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:9090}
       KC_HTTP_ENABLED: ${KC_HTTP_ENABLED:-true}
+      KC_HOSTNAME_STRICT: ${KC_HOSTNAME_STRICT:-true}
     volumes:
       - keycloak-data:/opt/keycloak/data
     command:
-      - start-dev
+      - start
       - --db=dev-file
+      - --http-enabled=true
+      - --proxy-headers=${KC_PROXY_HEADERS:-xforwarded}
+      - --hostname=${KEYCLOAK_PUBLIC_BASE_URL:-http://localhost:9090}
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200'"]
       interval: 30s
