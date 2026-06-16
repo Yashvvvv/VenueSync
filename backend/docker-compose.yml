@@ -26,6 +26,7 @@ services:
     ports:
       - "${ADMINER_HOST_PORT:-8888}:8080"
 
+  #Keycloak Identity and Access Management
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     ports:

@@ -18,7 +18,7 @@ services:
         fromService:
           type: pserv
           name: venuesync-postgres
-          property: connectionString
+          property: jdbcConnectionString
       - key: DATABASE_USERNAME
         fromService:
           type: pserv
@@ -35,8 +35,8 @@ services:
         syncEnv: KEYCLOAK_CLIENT_ID
       - key: KEYCLOAK_CLIENT_SECRET
         syncEnv: KEYCLOAK_CLIENT_SECRET
-      - key: CORS_ORIGINS
-        syncEnv: CORS_ORIGINS
+      - key: CORS_ALLOWED_ORIGINS
+        syncEnv: CORS_ALLOWED_ORIGINS
 
   # Frontend React SPA
   - type: web
@@ -52,6 +52,10 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://venuesync-api.onrender.com  # Change to your backend URL once deployed
+      - key: VITE_OIDC_AUTHORITY
+        syncEnv: VITE_OIDC_AUTHORITY
+      - key: VITE_OIDC_CLIENT_ID
+        syncEnv: VITE_OIDC_CLIENT_ID
 
 # Database
 databases:
