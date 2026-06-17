@@ -29,16 +29,30 @@ public class SecurityConfig {
     http
         .authorizeHttpRequests(authorize ->
             authorize
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // ── Preflight ──────────────────────────────────────────────
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // ── Public endpoints ───────────────────────────────────────
                 .requestMatchers(HttpMethod.GET, "/api/v1/published-events/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/health").permitAll()
-                .requestMatchers("/health", "/actuator/health").permitAll()
-                .requestMatchers("/api/v1/events").hasRole("ORGANIZER")
-                .requestMatchers("/api/v1/ticket-validations").hasRole("STAFF")
+                .requestMatchers("/actuator/**", "/health", "/actuator/health").permitAll()
+
+                // ── ORGANIZER: full CRUD on their own events + ticket types ─
+                .requestMatchers(HttpMethod.POST,   "/api/v1/events").hasRole("ORGANIZER")
+                .requestMatchers(HttpMethod.GET,    "/api/v1/events").hasRole("ORGANIZER")
+                .requestMatchers(HttpMethod.GET,    "/api/v1/events/**").hasRole("ORGANIZER")
+                .requestMatchers(HttpMethod.PUT,    "/api/v1/events/**").hasRole("ORGANIZER")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/events/**").hasRole("ORGANIZER")
+                .requestMatchers("/api/v1/events/*/ticket-types/**").hasRole("ORGANIZER")
+
+                // ── ATTENDEE: purchase tickets + view own tickets ───────────
+                // Must come AFTER organizer rules — more specific wins first
+                .requestMatchers(HttpMethod.POST, "/api/v1/events/*/ticket-types/*/tickets").hasRole("ATTENDEE")
                 .requestMatchers("/api/v1/tickets/**").hasRole("ATTENDEE")
-                .requestMatchers("/api/v1/events/*/ticket-types/*/tickets").hasRole("ATTENDEE")
-                // Catch-all rule
+
+                // ── STAFF: validate QR codes ────────────────────────────────
+                .requestMatchers("/api/v1/ticket-validations/**").hasRole("STAFF")
+
+                // ── Everything else requires a valid token ──────────────────
                 .anyRequest().authenticated())
         .cors(Customizer.withDefaults())
         .csrf(csrf -> csrf.disable())
@@ -63,7 +77,7 @@ public class SecurityConfig {
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(Arrays.asList("*"));
     configuration.setAllowCredentials(true);
-    
+
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
