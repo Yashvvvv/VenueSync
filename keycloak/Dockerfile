@@ -44,7 +44,7 @@ COPY event-ticket-platform-realm.json  /opt/keycloak/data/import/event-ticket-pl
 COPY event-ticket-platform-users-0.json /opt/keycloak/data/import/event-ticket-platform-users-0.json
 
 # Cap JVM heap so Keycloak stays well under 512 MB
-ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=96m -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=128m -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 
@@ -55,5 +55,7 @@ CMD ["start", \
      "--db=postgres", \
      "--cache=local", \
      "--http-enabled=true", \
+     "--http-host=0.0.0.0", \
+     "--http-port=8080", \
      "--hostname-strict=false", \
      "--proxy-headers=xforwarded"]
