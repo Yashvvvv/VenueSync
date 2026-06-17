@@ -1,7 +1,8 @@
 services:
   # ── Keycloak Identity Provider ─────────────────────────────────────────────
-  # Builds a custom image with the realm export baked in (auto-imported on first boot).
-  # On first deploy Keycloak will import the realm + all 3 users automatically.
+  # Uses PostgreSQL (Supabase) as its DB → no disk needed, survives free-tier restarts.
+  # --cache=local disables JGroups clustering → saves ~150 MB RAM.
+  # Realm + users are auto-imported on first boot via --import-realm.
   - type: web
     name: venuesync-keycloak
     env: docker
@@ -9,23 +10,29 @@ services:
     region: oregon
     dockerfilePath: ./keycloak/Dockerfile
     dockerContext: ./keycloak
-    disk:
-      name: keycloak-data
-      mountPath: /opt/keycloak/data
-      sizeGB: 1
     envVars:
       - key: KEYCLOAK_ADMIN
         value: admin
       - key: KEYCLOAK_ADMIN_PASSWORD
-        generateValue: true   # Render auto-generates a secure password; copy it from the dashboard
+        syncEnv: KEYCLOAK_ADMIN_PASSWORD   # Set this in Render dashboard → keep it secret
       - key: KC_HOSTNAME
-        sync: false           # Set to your Keycloak Render URL after first deploy, e.g. https://venuesync-keycloak.onrender.com
+        value: https://keycloak-server-3dsx.onrender.com
       - key: KC_HTTP_ENABLED
         value: "true"
       - key: KC_HOSTNAME_STRICT
         value: "false"
       - key: KC_PROXY_HEADERS
         value: xforwarded
+      # ── Supabase PostgreSQL for Keycloak data ──────────────────────────────
+      - key: KC_DB
+        value: postgres
+      - key: KC_DB_URL
+        syncEnv: KC_DB_URL          # e.g. jdbc:postgresql://<host>:5432/postgres?sslmode=require
+      - key: KC_DB_USERNAME
+        syncEnv: KC_DB_USERNAME     # your Supabase username
+      - key: KC_DB_PASSWORD
+        syncEnv: KC_DB_PASSWORD     # your Supabase password
+
 
   # ── Backend Spring Boot API ────────────────────────────────────────────────
   - type: web
@@ -37,7 +44,16 @@ services:
     startCommand: cd backend && java -jar target/venuesync-1.0.0.jar
     envVars:
       - key: JAVA_TOOL_OPTIONS
-        value: -Dserver.port=10000
+        value: >-
+          -Dserver.port=10000
+          -Xms64m
+          -Xmx256m
+          -Xss256k
+          -XX:MaxMetaspaceSize=96m
+          -XX:+UseSerialGC
+          -XX:+UseContainerSupport
+          -XX:+OptimizeStringConcat
+          -Djava.security.egd=file:/dev/./urandom
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: APP_TIMEZONE
