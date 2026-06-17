@@ -22,13 +22,16 @@ ENV KC_CACHE=local
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
 ENV KC_PROXY_HEADERS=xforwarded
+ENV KC_DB_SCHEMA=keycloak
+ENV KC_HTTP_HOST=0.0.0.0
 
 RUN /opt/keycloak/bin/kc.sh build \
     --db=postgres \
     --cache=local \
     --http-enabled=true \
     --hostname-strict=false \
-    --proxy-headers=xforwarded
+    --proxy-headers=xforwarded \
+    --db-schema=keycloak
 
 # ── Runtime image ──────────────────────────────────────────────────────────────
 FROM quay.io/keycloak/keycloak:latest
@@ -41,7 +44,7 @@ COPY event-ticket-platform-realm.json  /opt/keycloak/data/import/event-ticket-pl
 COPY event-ticket-platform-users-0.json /opt/keycloak/data/import/event-ticket-platform-users-0.json
 
 # Cap JVM heap so Keycloak stays well under 512 MB
-ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=96m -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 
