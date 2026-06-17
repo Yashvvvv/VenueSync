@@ -1,11 +1,39 @@
 services:
-  # Backend Spring Boot API
+  # ── Keycloak Identity Provider ─────────────────────────────────────────────
+  # Builds a custom image with the realm export baked in (auto-imported on first boot).
+  # On first deploy Keycloak will import the realm + all 3 users automatically.
+  - type: web
+    name: venuesync-keycloak
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./keycloak/Dockerfile
+    dockerContext: ./keycloak
+    disk:
+      name: keycloak-data
+      mountPath: /opt/keycloak/data
+      sizeGB: 1
+    envVars:
+      - key: KEYCLOAK_ADMIN
+        value: admin
+      - key: KEYCLOAK_ADMIN_PASSWORD
+        generateValue: true   # Render auto-generates a secure password; copy it from the dashboard
+      - key: KC_HOSTNAME
+        sync: false           # Set to your Keycloak Render URL after first deploy, e.g. https://venuesync-keycloak.onrender.com
+      - key: KC_HTTP_ENABLED
+        value: "true"
+      - key: KC_HOSTNAME_STRICT
+        value: "false"
+      - key: KC_PROXY_HEADERS
+        value: xforwarded
+
+  # ── Backend Spring Boot API ────────────────────────────────────────────────
   - type: web
     name: venuesync-api
     env: java
     plan: free
-    region: oregon  # Change to your preferred region (oregon, ohio, virginia, singapore, sydney, frankfurt, london, tokyo)
-    buildCommand: cd backend && ./mvnw clean package -DskipTests
+    region: oregon
+    buildCommand: cd backend && mvn clean package -DskipTests
     startCommand: cd backend && java -jar target/venuesync-1.0.0.jar
     envVars:
       - key: JAVA_TOOL_OPTIONS
@@ -30,15 +58,11 @@ services:
           name: venuesync-postgres
           property: password
       - key: KEYCLOAK_ISSUER_URI
-        syncEnv: KEYCLOAK_ISSUER_URI
-      - key: KEYCLOAK_CLIENT_ID
-        syncEnv: KEYCLOAK_CLIENT_ID
-      - key: KEYCLOAK_CLIENT_SECRET
-        syncEnv: KEYCLOAK_CLIENT_SECRET
+        syncEnv: KEYCLOAK_ISSUER_URI   # e.g. https://venuesync-keycloak.onrender.com/realms/event-ticket-platform
       - key: CORS_ALLOWED_ORIGINS
-        syncEnv: CORS_ALLOWED_ORIGINS
+        syncEnv: CORS_ALLOWED_ORIGINS  # e.g. https://venuesync-web.onrender.com
 
-  # Frontend React SPA
+  # ── Frontend React SPA ─────────────────────────────────────────────────────
   - type: web
     name: venuesync-web
     env: static
@@ -53,11 +77,11 @@ services:
       - key: VITE_API_BASE_URL
         value: https://venuesync-api.onrender.com  # Change to your backend URL once deployed
       - key: VITE_OIDC_AUTHORITY
-        syncEnv: VITE_OIDC_AUTHORITY
+        syncEnv: VITE_OIDC_AUTHORITY   # e.g. https://venuesync-keycloak.onrender.com/realms/event-ticket-platform
       - key: VITE_OIDC_CLIENT_ID
-        syncEnv: VITE_OIDC_CLIENT_ID
+        value: event-ticket-platform-app
 
-# Database
+# ── Database ───────────────────────────────────────────────────────────────
 databases:
   - name: venuesync-postgres
     ipAllowList: []  # Allow all IPs (adjust for security if needed)
