@@ -39,19 +39,14 @@ FROM quay.io/keycloak/keycloak:latest
 # Copy the pre-built Keycloak from the builder stage
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-# Bake in realm + users — imported automatically on first boot via --import-realm
-COPY event-ticket-platform-realm.json  /opt/keycloak/data/import/event-ticket-platform-realm.json
-COPY event-ticket-platform-users-0.json /opt/keycloak/data/import/event-ticket-platform-users-0.json
-
 # Cap JVM heap so Keycloak stays well under 512 MB
-ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -XX:MaxMetaspaceSize=128m -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS_APPEND="-Xms64m -Xmx192m -Xss256k -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 CMD ["start", \
      "--optimized", \
-     "--import-realm", \
      "--db=postgres", \
      "--cache=local", \
      "--http-enabled=true", \
