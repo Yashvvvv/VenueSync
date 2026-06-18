@@ -2,7 +2,7 @@
 
 This document outlines all the changes, improvements, and implementations made during the development sessions for VenueSync (formerly Event Management Platform).
 
-> **Last updated:** March 9, 2026
+> **Last updated: June 18, 2026
 
 ---
 
@@ -29,6 +29,7 @@ This document outlines all the changes, improvements, and implementations made d
 19. [Frontend Expired Ticket Display Fix](#19-frontend-expired-ticket-display-fix)
 20. [Future Work / Roadmap](#20-future-work--roadmap)
 21. [Unit & Integration Testing](#21-unit--integration-testing)
+22. [Production Deployment - Render](#22-production-deployment---render)
 
 ---
 
@@ -766,7 +767,7 @@ useEffect(() => {
 **Last Updated Timestamp:**
 ```tsx
 <span className="text-xs text-zinc-500">
-  Last updated: {lastUpdated.toLocaleTimeString()}
+  Last updated: June 18, 2026
 </span>
 ```
 
@@ -1702,6 +1703,45 @@ A comprehensive test suite was added covering all service implementations and al
 
 ---
 
+## 22. Production Deployment - Render
+
+### Overview
+The current production configuration was updated to support Render-style environment variables for both the backend and the browser-based frontend.
+
+### Backend Changes
+
+#### `application-prod.properties`
+- Accepts either `DATABASE_URL` or `SPRING_DATASOURCE_URL`
+- Accepts either `DATABASE_USERNAME` or `SPRING_DATASOURCE_USERNAME`
+- Accepts either `DATABASE_PASSWORD` or `SPRING_DATASOURCE_PASSWORD`
+- Forces `sslmode=require` for Render PostgreSQL connections
+- Keeps `spring.jpa.hibernate.ddl-auto` configurable through env vars while defaulting to `update`
+
+#### `SecurityConfig.java`
+- Trims and filters the configured CORS origins before applying them
+- Uses the renamed `CORS_ALLOWED_ORIGINS` environment variable consistently
+
+### Frontend Changes
+
+#### `frontend/.env.production`
+- Adds `VITE_API_BASE_URL` for the deployed backend URL
+- Adds `VITE_OIDC_AUTHORITY` for the public Keycloak issuer
+- Adds `VITE_OIDC_CLIENT_ID` for the browser OIDC client
+
+### Render Blueprint Changes
+
+#### `render.yaml`
+- Uses Render's `jdbcConnectionString` output for PostgreSQL
+- Passes `CORS_ALLOWED_ORIGINS` through to the backend service
+- Passes `VITE_OIDC_AUTHORITY` and `VITE_OIDC_CLIENT_ID` through to the frontend service
+
+### Result
+- The deployment is now driven entirely by environment variables
+- Backend and frontend auth settings stay aligned with the same Keycloak realm
+- The production configuration no longer depends on root-level monorepo deployment files
+
+---
+
 ## Quick Reference Commands
 
 ```powershell
@@ -1729,3 +1769,29 @@ docker exec backend-db-1 psql -U postgres -d postgres -c "UPDATE events SET stat
 # Remove all data (CAUTION!)
 docker-compose down -v
 ```
+
+## Section 22: June 18, 2026 - Production Deployment & Stability Fixes
+
+This session focused on resolving severe deployment issues and configuration bugs when moving the application to Render (Free Tier) and Cloudflare Pages:
+
+1. **Keycloak Metaspace Crash Fixed**: 
+   - Diagnosed an issue where Keycloak crashed repeatedly on Render due to OutOfMemoryError: Metaspace.
+   - The crash occurred because Keycloak attempted to parse massive JSON files (event-ticket-platform-realm.json) on every boot, exceeding the 512MB RAM limit.
+   - Removed the --import-realm flag and the COPY .json commands from the Dockerfile, relying instead on an external script (sync-to-render.ps1) or one-time population to initialize the database.
+   - Removed strict Metaspace caps (-XX:MaxMetaspaceSize=128m) to allow JVM autoscaling.
+
+2. **Render Health Checks**:
+   - Fixed Keycloak deployment by adding --http-host=0.0.0.0 to the start command so Render's port scanner could successfully verify the container's health.
+
+3. **Frontend Authentication & Redirects**:
+   - Wrote and executed a script targeting the Keycloak Admin REST API to dynamically add https://venuesync.pages.dev/* and https://venuesync-backend.onrender.com/* to the event-ticket-platform-app Valid Redirect URIs and Web Origins.
+   - Resolved Invalid parameter: redirect_uri errors blocking login from Cloudflare Pages.
+
+4. **Spring Boot Environment Variables**:
+   - Resolved a persistent 401 Unauthorized token rejection error on the Spring Boot backend.
+   - Discovered an invisible trailing space at the end of the KEYCLOAK_ISSUER_URI environment variable in the Render Dashboard (java.net.URISyntaxException: Illegal character in path at index 71).
+
+5. **Spring Security Role Order Bug**:
+   - Fixed a 403 Forbidden: insufficient_scope error when users with ROLE_ATTENDEE attempted to purchase tickets.
+   - The bug was caused by a catch-all rule (/api/v1/events/*/ticket-types/** -> ORGANIZER) being placed *before* the specific purchase rule (/api/v1/events/*/ticket-types/*/tickets -> ATTENDEE) in SecurityConfig.java. 
+   - Moved the specific Attendee rule to the top of the chain.

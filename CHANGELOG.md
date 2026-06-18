@@ -130,6 +130,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-06-16
+
+### 🚀 Production Deployment & Environment Updates
+
+#### Render Production Config
+- **Backend prod profile** now accepts either `DATABASE_*` or `SPRING_*` environment variables for datasource binding
+- **Render PostgreSQL** is wired through `jdbcConnectionString` and the backend enforces `sslmode=require`
+- **CORS** now uses `CORS_ALLOWED_ORIGINS` consistently across backend and Render env config
+
+#### Frontend Production Config
+- `frontend/.env.production` now includes `VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, and `VITE_OIDC_CLIENT_ID`
+- Frontend browser auth settings now match the Keycloak issuer used by the backend
+
+#### Deployment Cleanup
+- Removed the obsolete root-level `vercel.json` route file and kept deployment-specific config with the frontend
+- Updated the deployment docs to reflect the current Render-first setup
+
+---
+
+## [1.2.1] - 2026-06-18
+
+### 🐛 Bug Fixes & Deployment Stability
+
+#### Keycloak on Render (Free Tier)
+- **OOM Metaspace Fix**: Removed `--import-realm` from `Dockerfile` start command to bypass the 5-minute boot timeout and prevent `OutOfMemoryError: Metaspace` crashes during massive JSON parsing.
+- **Health Checks**: Bound HTTP host to `0.0.0.0` to pass Render's port scanning.
+- **Memory Caps**: Eliminated strict metaspace limits (`-XX:MaxMetaspaceSize`), letting the JVM autoscale within the 512MB RAM constraint.
+- **Redirect URIs**: Dynamically injected `https://venuesync.pages.dev/*` and `https://venuesync-backend.onrender.com/*` into Keycloak's Valid Redirect URIs and Web Origins via the Keycloak Admin REST API.
+
+#### Spring Boot Backend
+- **401 Unauthorized Fix**: Diagnosed and fixed a JWT validation failure caused by an invisible trailing space in the `KEYCLOAK_ISSUER_URI` Render environment variable (`java.net.URISyntaxException: Illegal character in path at index 71`).
+- **403 Forbidden Fix (Security Role Order)**: Fixed a bug where attendees could not purchase tickets by shifting the specific `hasRole("ATTENDEE")` ticket-purchase rule above the `hasRole("ORGANIZER")` catch-all rule in `SecurityConfig.java`. Spring Security enforces the first matching rule, so the specific rule must come first.
+
+---
+
 ## [Unreleased]
 
 ### Planned Features
@@ -141,8 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-language support
 - Dark / Light theme toggle
 - PWA support for mobile devices
-- Production deployment (AWS EC2 + RDS + S3 + CloudFront)
-- Externalized configuration (environment variables for DB, Keycloak, CORS)
+- Multi-tenant support for future organizations
+- API key management for future integrations
 
 ---
 
@@ -150,5 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.2.1 | 2026-06-18 | Keycloak OOM fixes, Render deploy stability, RBAC rule ordering fix |
+| 1.2.0 | 2026-06-16 | Render deployment config, env wiring, frontend auth settings |
 | 1.1.0 | 2026-03-09 | Ticket lifecycle, RBAC, modular monolith, tests, infrastructure |
 | 1.0.0 | 2024-12-09 | Initial release with core ticketing features |

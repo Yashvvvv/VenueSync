@@ -27,7 +27,7 @@ VenueSync is evolving from a **ticketing platform** into a combined **Event + CF
 | Auth       | Keycloak OAuth2/OIDC with multi-role RBAC (Organizer/Attendee/Staff) |
 | Mapping    | MapStruct 1.6.3                                                   |
 | QR Codes   | ZXing                                                             |
-| Deployment | Monorepo (root `package.json` + `vercel.json` for frontend)      |
+| Deployment | Render backend + frontend env-based deployment                   |
 
 ---
 
@@ -335,7 +335,16 @@ frontend/src/
 
 ## Cloud Deployment Strategy
 
-### Recommended: AWS (with $100 Student Credits)
+### Current: Render-first deployment
+
+VenueSync now uses Render-style environment variables for production configuration and browser auth settings.
+
+- Backend production settings come from `application-prod.properties`
+- Frontend production settings come from `frontend/.env.production`
+- Render PostgreSQL is wired through `jdbcConnectionString`
+- Browser OIDC settings are injected via `VITE_OIDC_AUTHORITY` and `VITE_OIDC_CLIENT_ID`
+
+### Future: AWS (with $100 Student Credits)
 
 #### Estimated Monthly Cost: **$10–25/month**
 
@@ -383,7 +392,7 @@ frontend/src/
 | Phase | When          | Action                                          |
 | ----- | ------------- | ------------------------------------------------ |
 | 1     | Now           | Local development with Docker Compose (Postgres + Keycloak) |
-| 2     | MVP ready     | Deploy to Railway or Render (easiest)            |
+| 2     | MVP ready     | Deploy to Render with env-driven config          |
 | 3     | With credits  | Migrate to AWS (EC2 + RDS + S3 + CloudFront)    |
 | 4     | If scaling    | Add auto-scaling group, ElastiCache (Redis)      |
 
@@ -481,5 +490,6 @@ Use these for your resume/portfolio when describing VenueSync:
 
 ---
 
-*Last updated: March 9, 2026*
+*Last updated: June 18, 2026
 *Architecture restructuring completed and verified — `mvn clean compile` passes with 0 errors. Unit and integration tests added across all modules.*
+

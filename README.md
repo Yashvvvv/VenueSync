@@ -189,6 +189,18 @@ cd backend
 
 ---
 
+## 🌐 Production Deployment
+
+VenueSync currently targets a Render-based deployment with environment-driven configuration.
+
+- **Backend** reads production settings from environment variables in `backend/src/main/resources/application-prod.properties`
+- **Frontend** reads `VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, and `VITE_OIDC_CLIENT_ID` from `frontend/.env.production`
+- **Keycloak authority** must match the backend `KEYCLOAK_ISSUER_URI`
+- **CORS** is controlled through `CORS_ALLOWED_ORIGINS`
+- **Render** uses `jdbcConnectionString` for the PostgreSQL service binding
+
+If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-specific config and point it at the built `dist/` directory.
+
 ## 📝 API Endpoints
 
 ### Public Endpoints
