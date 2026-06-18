@@ -36,6 +36,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/published-events/**").permitAll()
                 .requestMatchers("/actuator/**", "/health", "/actuator/health").permitAll()
 
+                // ── ATTENDEE: purchase tickets + view own tickets ───────────
+                // More specific rules MUST come BEFORE catch-all rules!
+                .requestMatchers(HttpMethod.POST, "/api/v1/events/*/ticket-types/*/tickets").hasRole("ATTENDEE")
+                .requestMatchers("/api/v1/tickets/**").hasRole("ATTENDEE")
+
                 // ── ORGANIZER: full CRUD on their own events + ticket types ─
                 .requestMatchers(HttpMethod.POST,   "/api/v1/events").hasRole("ORGANIZER")
                 .requestMatchers(HttpMethod.GET,    "/api/v1/events").hasRole("ORGANIZER")
@@ -43,11 +48,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/events/**").hasRole("ORGANIZER")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/events/**").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/events/*/ticket-types/**").hasRole("ORGANIZER")
-
-                // ── ATTENDEE: purchase tickets + view own tickets ───────────
-                // Must come AFTER organizer rules — more specific wins first
-                .requestMatchers(HttpMethod.POST, "/api/v1/events/*/ticket-types/*/tickets").hasRole("ATTENDEE")
-                .requestMatchers("/api/v1/tickets/**").hasRole("ATTENDEE")
 
                 // ── STAFF: validate QR codes ────────────────────────────────
                 .requestMatchers("/api/v1/ticket-validations/**").hasRole("STAFF")
