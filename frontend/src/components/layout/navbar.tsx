@@ -18,9 +18,10 @@ import { Link, useLocation } from "react-router"
 import { Button } from "../ui/button"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { API_BASE } from "@/lib/api"
 
 const Navbar: React.FC = () => {
-  const { user, signoutRedirect, signinRedirect, isAuthenticated } = useAuth()
+  const { user, signoutRedirect, signinRedirect, isAuthenticated, signinSilent } = useAuth()
   const { isOrganizer, isAttendee, isStaff } = useRoles()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -46,7 +47,7 @@ const Navbar: React.FC = () => {
       const token = user?.access_token;
       if (!token) return;
 
-      const res = await fetch("http://localhost:8080/api/v1/users/me/roles/organizer", {
+      const res = await fetch(`${API_BASE}/api/v1/users/me/roles/organizer`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`

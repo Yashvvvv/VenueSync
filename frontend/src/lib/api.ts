@@ -16,7 +16,7 @@ import {
 // Base URL for API calls.
 // In production, set VITE_API_BASE_URL to your deployed backend URL (e.g. https://venuesync-api.onrender.com).
 // In local dev, leave it unset (empty string) so Vite's proxy forwards /api → http://localhost:8080.
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 // Serialize event request - dates are already in LocalDateTime format
 // No conversion needed since frontend now sends wall clock time directly
