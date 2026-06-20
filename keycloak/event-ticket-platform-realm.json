@@ -1,4 +1,4 @@
-﻿{
+{
     "id":  "c16d9a6d-b2dc-4f2d-91ee-e5cd26eda0c3",
     "realm":  "event-ticket-platform",
     "notBefore":  0,
@@ -27,7 +27,7 @@
     "oauth2DevicePollingInterval":  5,
     "enabled":  true,
     "sslRequired":  "external",
-    "registrationAllowed":  false,
+    "registrationAllowed": true,
     "registrationEmailAsUsername":  false,
     "rememberMe":  false,
     "verifyEmail":  false,
