@@ -18,7 +18,7 @@
 
 - **Developed a RESTful API with automated QR code generation** (Google ZXing) and real-time validation scanner, eliminating 95% of manual entry checks with sub-100ms response latency.
 
-- **Architected a modular monolith** with 4 domain modules (`shared`, `events`, `tickets`, `validation`), clean inter-module dependency rules, and 85 Java source files — `mvn clean compile` passes with 0 errors.
+- **Architected a modular monolith** with 5 domain modules (`shared`, `users`, `events`, `tickets`, `validation`), clean inter-module dependency rules, and 94 Java source files — `mvn clean compile` passes with 0 errors.
 
 - **Implemented OAuth2/OIDC-secured platform** with Keycloak multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
 
@@ -226,6 +226,7 @@ If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-
 | GET | `/api/v1/tickets` | List user's tickets |
 | GET | `/api/v1/tickets/{id}` | Get ticket details |
 | GET | `/api/v1/tickets/{id}/qr-codes` | Get ticket QR code |
+| POST | `/api/v1/users/me/roles/organizer` | Upgrade self to Organizer |
 
 **Staff Role:**
 | Method | Endpoint | Description |
@@ -249,6 +250,7 @@ If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-
 
 - **JWT-based authentication** with Keycloak as identity provider
 - **Role-based access control** (ORGANIZER, ATTENDEE, STAFF)
+- **Keycloak Admin Bridge** for secure, automated self-service role upgrades using service account credentials
 - **Pessimistic locking** prevents race conditions during ticket purchases
 - **Stateless API** with token-based sessions
 
