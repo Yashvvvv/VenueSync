@@ -39,6 +39,7 @@ public class SecurityConfig {
                 // ── ATTENDEE: purchase tickets + view own tickets ───────────
                 // More specific rules MUST come BEFORE catch-all rules!
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/*/ticket-types/*/tickets").hasRole("ATTENDEE")
+                .requestMatchers(HttpMethod.POST, "/api/v1/users/me/roles/organizer").hasRole("ATTENDEE")
                 .requestMatchers("/api/v1/tickets/**").hasRole("ATTENDEE")
 
                 // ── ORGANIZER: full CRUD on their own events + ticket types ─

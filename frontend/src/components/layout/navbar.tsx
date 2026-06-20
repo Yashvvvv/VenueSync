@@ -24,6 +24,7 @@ const Navbar: React.FC = () => {
   const { isOrganizer, isAttendee, isStaff } = useRoles()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isUpgrading, setIsUpgrading] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
@@ -37,6 +38,36 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [location.pathname])
+
+  const handleUpgradeToOrganizer = async () => {
+    if (isUpgrading) return;
+    try {
+      setIsUpgrading(true);
+      const token = user?.access_token;
+      if (!token) return;
+
+      const res = await fetch("http://localhost:8080/api/v1/users/me/roles/organizer", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        // Force silent token refresh to retrieve new roles
+        await user?.profile; // Ensure profile is loaded
+        await signinSilent();
+        // Redirect to events dashboard (this will happen automatically due to role change and links)
+      } else {
+        alert("Failed to upgrade account. Please try again.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Network error while trying to upgrade account.");
+    } finally {
+      setIsUpgrading(false);
+    }
+  }
 
   const navLinks = [
     { to: "/", label: "Discover", icon: Home, public: true },
@@ -103,6 +134,20 @@ const Navbar: React.FC = () => {
             <div className="flex items-center gap-3">
               {isAuthenticated ? (
                 <>
+                  {/* Host an Event Button for Attendees */}
+                  {isAttendee && !isOrganizer && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="hidden lg:flex gap-2 border-primary/50 text-primary hover:bg-primary/10 mr-2"
+                      onClick={handleUpgradeToOrganizer}
+                      disabled={isUpgrading}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {isUpgrading ? "Upgrading..." : "Host an Event"}
+                    </Button>
+                  )}
+
                   {/* Dashboard Link */}
                   <Link to="/dashboard" className="hidden lg:block">
                     <Button variant="ghost" size="sm" className="gap-2 hover:bg-secondary/50">
@@ -139,14 +184,25 @@ const Navbar: React.FC = () => {
                   </DropdownMenu>
                 </>
               ) : (
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    onClick={() => signinRedirect()}
-                    className="gradient-primary text-white hover:opacity-90 transition-all duration-300 shadow-lg shadow-primary/25 px-6"
-                  >
-                    Sign In
-                  </Button>
-                </motion.div>
+                <div className="flex items-center gap-2">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => signinRedirect()}
+                      className="hover:bg-secondary/50 font-medium hidden sm:flex"
+                    >
+                      Log In
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      onClick={() => signinRedirect({ extraQueryParams: { kc_action: "register" } })}
+                      className="gradient-primary text-white hover:opacity-90 transition-all duration-300 shadow-lg shadow-primary/25 px-6"
+                    >
+                      Sign Up
+                    </Button>
+                  </motion.div>
+                </div>
               )}
 
               {/* Mobile Menu Toggle */}
