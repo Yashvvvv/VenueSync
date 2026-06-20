@@ -16,6 +16,17 @@ import { LogOut, Menu, X, Calendar, Ticket, QrCode, LayoutDashboard, Sparkles, H
 import { useRoles } from "@/hooks/use-roles"
 import { Link, useLocation } from "react-router"
 import { Button } from "../ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { API_BASE } from "@/lib/api"
@@ -137,16 +148,33 @@ const Navbar: React.FC = () => {
                 <>
                   {/* Host an Event Button for Attendees */}
                   {isAttendee && !isOrganizer && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="hidden lg:flex gap-2 border-primary/50 text-primary hover:bg-primary/10 mr-2"
-                      onClick={handleUpgradeToOrganizer}
-                      disabled={isUpgrading}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {isUpgrading ? "Upgrading..." : "Host an Event"}
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="hidden lg:flex gap-2 border-primary/50 text-primary hover:bg-primary/10 mr-2"
+                          disabled={isUpgrading}
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          {isUpgrading ? "Upgrading..." : "Host an Event"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Become an Organizer</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you ready to host your own events? Upgrading to an Organizer account is free and gives you full access to create events, manage tickets, and track sales on your dashboard.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleUpgradeToOrganizer} disabled={isUpgrading}>
+                            Yes, Upgrade My Account
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
 
                   {/* Dashboard Link */}
