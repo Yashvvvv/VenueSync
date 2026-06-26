@@ -4,7 +4,7 @@ import type React from "react"
 
 import type { PublishedEventTicketTypeDetails } from "@/domain/domain"
 import { motion } from "framer-motion"
-import { Check, Ticket, Info, Calendar, ArrowRight } from "lucide-react"
+import { Check, Ticket, Info, CalendarBlank, ArrowRight } from "@/components/icons"
 import { Button } from "../ui/button"
 import { Link } from "react-router"
 import { useRoles } from "@/hooks/use-roles"
@@ -29,7 +29,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-4">
-        <Ticket className="w-4 h-4 text-primary" />
+        <Ticket weight="fill" size={16} className="text-primary" />
         <h3 className="font-semibold text-foreground text-sm">Select Ticket Type</h3>
       </div>
 
@@ -59,7 +59,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
                         isSelected ? "border-primary bg-primary" : "border-border/60"
                       }`}
                     >
-                      {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                      {isSelected && <Check weight="bold" size={10} color="white" />}
                     </div>
                     <span className="font-medium text-foreground text-sm">{ticketType.name}</span>
                   </div>
@@ -92,14 +92,14 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
             <Link to={`/events/${eventId}/purchase/${selectedTicketType.id}`}>
               <Button className="w-full gradient-primary text-white h-11 font-semibold shadow-md shadow-primary/20">
                 Get Tickets
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight weight="bold" size={16} className="ml-2" />
               </Button>
             </Link>
           )}
 
           {isOrganizer && (
             <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-500/[0.06] border border-blue-500/20">
-              <Calendar className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+              <CalendarBlank weight="fill" size={15} className="text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-medium text-blue-400">Organizer Account</p>
                 <p className="text-xs text-blue-400/70 mt-0.5 leading-relaxed">
@@ -111,7 +111,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
 
           {isStaff && (
             <div className="flex items-start gap-2.5 p-3 rounded-lg bg-primary/[0.06] border border-primary/20">
-              <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <Info weight="fill" size={15} className="text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-medium text-primary">Staff Account</p>
                 <p className="text-xs text-primary/70 mt-0.5 leading-relaxed">

@@ -4,40 +4,55 @@ import type React from "react"
 
 import { type TicketSummary, TicketStatus } from "@/domain/domain"
 import { motion } from "framer-motion"
-import { Ticket, ChevronRight, QrCode, Calendar, CheckCircle, XCircle, Clock } from "lucide-react"
 import { Link } from "react-router"
 import { format } from "date-fns"
 import { parseWallClockDate } from "@/lib/date-utils"
+import {
+  Ticket,
+  CaretRight,
+  QrCode,
+  CalendarBlank,
+  CheckCircle,
+  XCircle,
+  Clock,
+} from "@/components/icons"
 
 interface TicketCardProps {
   ticket: TicketSummary
   index?: number
 }
 
-const statusConfig: Record<TicketStatus, { label: string; dotColor: string; textColor: string; icon: React.ReactNode }> = {
+const statusConfig: Record<
+  TicketStatus,
+  { label: string; dotColor: string; textColor: string; Icon: typeof CheckCircle; weight: "fill" | "regular" }
+> = {
   [TicketStatus.PURCHASED]: {
     label: "Active",
     dotColor: "bg-emerald-500",
     textColor: "text-emerald-400",
-    icon: <Ticket className="w-3 h-3" />,
+    Icon: Ticket,
+    weight: "fill",
   },
   [TicketStatus.USED]: {
     label: "Used",
     dotColor: "bg-blue-400",
     textColor: "text-blue-400",
-    icon: <CheckCircle className="w-3 h-3" />,
+    Icon: CheckCircle,
+    weight: "fill",
   },
   [TicketStatus.EXPIRED]: {
     label: "Expired",
     dotColor: "bg-yellow-400",
     textColor: "text-yellow-400",
-    icon: <Clock className="w-3 h-3" />,
+    Icon: Clock,
+    weight: "fill",
   },
   [TicketStatus.CANCELLED]: {
     label: "Cancelled",
     dotColor: "bg-red-400",
     textColor: "text-red-400",
-    icon: <XCircle className="w-3 h-3" />,
+    Icon: XCircle,
+    weight: "fill",
   },
 }
 
@@ -56,13 +71,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, transform: "translateY(12px)" }}
+      animate={{ opacity: 1, transform: "translateY(0px)" }}
+      transition={{ delay: index * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link to={`/dashboard/tickets/${ticket.id}`} className="group block">
         <div
-          className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
+          className={`relative rounded-xl border transition-colors duration-150 overflow-hidden ${
             isPast
               ? "border-border/30 bg-card/30 opacity-70"
               : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card/70"
@@ -70,23 +85,33 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
         >
           {/* Left accent stripe */}
           <div
-            className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${isPast ? "bg-border/30" : "gradient-primary"}`}
+            className={`absolute left-0 top-0 bottom-0 w-[3px] ${
+              isPast ? "bg-border/30" : "gradient-primary"
+            }`}
           />
 
           <div className="flex items-center gap-4 px-5 py-4 pl-6">
             {/* Icon */}
             <div
-              className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
                 isPast ? "bg-secondary/50" : "gradient-primary shadow-md shadow-primary/20"
               }`}
             >
-              <Ticket className={`w-6 h-6 ${isPast ? "text-muted-foreground" : "text-white"}`} />
+              <Ticket
+                weight="fill"
+                size={22}
+                color={isPast ? "oklch(0.55 0.012 265)" : "white"}
+              />
               <div
-                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-background border border-border flex items-center justify-center ${
+                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-background border border-border flex items-center justify-center ${
                   isPast ? "opacity-40" : ""
                 }`}
               >
-                <QrCode className={`w-3 h-3 ${isPast ? "text-muted-foreground" : "text-primary"}`} />
+                <QrCode
+                  weight="bold"
+                  size={11}
+                  color={isPast ? "oklch(0.55 0.012 265)" : "oklch(0.68 0.19 278)"}
+                />
               </div>
             </div>
 
@@ -96,7 +121,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
                 <h3 className="font-semibold text-foreground truncate text-sm group-hover:text-primary transition-colors duration-150">
                   {ticket.eventName}
                 </h3>
-                {/* Status dot + label */}
                 <span className={`flex items-center gap-1 text-[10px] font-semibold ${status.textColor} flex-shrink-0`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dotColor} inline-block`} />
                   {status.label}
@@ -107,7 +131,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
                 <span className="font-semibold text-primary">${ticket.ticketType.price.toFixed(2)}</span>
                 {ticket.eventStart && (
                   <span className="flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
+                    <CalendarBlank weight="fill" size={11} />
                     {format(parseWallClockDate(ticket.eventStart)!, "MMM d, yyyy")}
                   </span>
                 )}
@@ -116,7 +140,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
             </div>
 
             {/* Arrow */}
-            <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 flex-shrink-0" />
+            <CaretRight
+              weight="bold"
+              size={14}
+              className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 flex-shrink-0"
+            />
           </div>
         </div>
       </Link>

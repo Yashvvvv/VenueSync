@@ -4,11 +4,11 @@ import type React from "react"
 
 import type { PublishedEventSummary } from "@/domain/domain"
 import { motion } from "framer-motion"
-import { Calendar, MapPin, ArrowUpRight } from "lucide-react"
 import { format } from "date-fns"
 import { Link } from "react-router"
 import RandomEventImage from "../random-event-image"
 import { parseWallClockDate } from "@/lib/date-utils"
+import { MapPin, CalendarBlank, ArrowUpRight } from "@/components/icons"
 
 interface EventCardProps {
   event: PublishedEventSummary
@@ -21,7 +21,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
 
   return (
     <motion.div
-      /* transform string — NOT x/y shorthand — stays on GPU compositor thread */
       initial={{ opacity: 0, transform: "translateY(22px)" }}
       animate={{ opacity: 1, transform: "translateY(0px)" }}
       transition={{ delay: index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
@@ -29,13 +28,12 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       <Link to={`/events/${event.id}`} className="group block">
         <div className="rounded-2xl overflow-hidden border border-border/40 bg-card/50 card-hover">
 
-          {/* ── Image ── */}
+          {/* Image */}
           <div className="relative h-[200px] overflow-hidden">
             <div className="absolute inset-0 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]">
               <RandomEventImage />
             </div>
 
-            {/* Bottom gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.055_0.01_265)] via-[oklch(0.055_0.01_265)]/20 to-transparent" />
 
             {/* Date badge */}
@@ -50,20 +48,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               </div>
             )}
 
-            {/* Arrow — hover-only on pointer devices, slides up from y+6 */}
-            <div
-              className="hover-reveal absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-primary
-                         flex items-center justify-center shadow-lg shadow-primary/30
-                         opacity-0 translate-y-1.5
-                         group-hover:opacity-100 group-hover:translate-y-0
-                         transition-[opacity,transform] duration-200
-                         [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]"
-            >
-              <ArrowUpRight className="w-4 h-4 text-white" />
+            {/* Arrow — hover-only, slides up from below */}
+            <div className="hover-reveal absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30 opacity-0 translate-y-1.5 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]">
+              <ArrowUpRight weight="bold" size={16} color="white" />
             </div>
           </div>
 
-          {/* ── Content ── */}
+          {/* Content */}
           <div className="p-4 space-y-3">
             <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-150 line-clamp-2 leading-snug">
               {event.name}
@@ -72,14 +63,14 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
             <div className="space-y-1.5">
               {event.venue && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                  <MapPin weight="fill" size={13} className="flex-shrink-0 text-muted-foreground/60" />
                   <span className="truncate">{event.venue}</span>
                 </div>
               )}
 
               {parsedStart && parsedEnd && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                  <CalendarBlank weight="fill" size={13} className="flex-shrink-0 text-muted-foreground/60" />
                   <span>
                     {format(parsedStart, "EEE, MMM d")}
                     {format(parsedStart, "MMM d") !== format(parsedEnd, "MMM d") && (

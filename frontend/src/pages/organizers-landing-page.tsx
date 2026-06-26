@@ -12,48 +12,50 @@ import PageContainer from "@/components/layout/page-container"
 import { PageLoader } from "@/components/common/loading-skeleton"
 import { motion } from "framer-motion"
 import {
-  Calendar,
+  CalendarDots,
   Ticket,
   QrCode,
-  TrendingUp,
-  Users,
-  Shield,
+  ChartLineUp,
+  UsersThree,
+  ShieldCheck,
   ArrowRight,
-  Sparkles,
+  Lightning,
   CheckCircle,
-  BarChart3,
-} from "lucide-react"
+  ChartBar,
+  CurrencyDollar,
+  Broadcast,
+} from "@/components/icons"
 
 const features = [
   {
-    icon: Calendar,
+    Icon: CalendarDots,
     title: "Easy Event Creation",
-    description: "Create and customize events in minutes with our intuitive event builder.",
+    description: "Create and configure events in minutes with a clear, step-by-step builder.",
   },
   {
-    icon: Ticket,
+    Icon: Ticket,
     title: "Flexible Ticketing",
-    description: "Multiple ticket types, early bird pricing, and promotional codes support.",
+    description: "Multiple ticket tiers, early bird pricing, and capacity limits — all in one place.",
   },
   {
-    icon: QrCode,
+    Icon: QrCode,
     title: "QR Code Validation",
-    description: "Seamless check-in with instant QR code scanning and validation.",
+    description: "Instant check-in via QR scanning. Staff see validated/rejected status in real time.",
   },
   {
-    icon: BarChart3,
+    Icon: ChartBar,
     title: "Real-time Analytics",
-    description: "Track sales, attendance, and revenue with comprehensive dashboards.",
+    description: "Track ticket sales, revenue, and attendance live as your event fills up.",
   },
   {
-    icon: Shield,
+    Icon: ShieldCheck,
     title: "Secure Payments",
-    description: "PCI-compliant payment processing with multiple payment methods.",
+    description: "Payment processing built with security at the core. No PCI liability for you.",
   },
   {
-    icon: Users,
+    Icon: UsersThree,
     title: "Attendee Management",
-    description: "Manage attendees, send updates, and handle refunds effortlessly.",
+    description: "View attendee lists, manage refunds, and send updates — without leaving the dashboard.",
   },
 ]
 
@@ -123,7 +125,7 @@ const OrganizersLandingPage: React.FC = () => {
               className="space-y-8"
             >
               <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full">
-                <Sparkles className="w-4 h-4 text-primary" />
+                <Lightning weight="fill" size={15} className="text-primary" />
                 <span className="text-sm text-foreground">For Event Organizers</span>
               </div>
 
@@ -141,11 +143,11 @@ const OrganizersLandingPage: React.FC = () => {
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     size="lg"
-                    className="gradient-primary text-white shadow-lg shadow-primary/25 px-8 gap-2"
+                    className="btn-press gradient-primary text-white shadow-lg shadow-primary/25 px-8 gap-2"
                     onClick={handlePrimaryAction}
                   >
                     {getPrimaryButtonText()}
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight weight="bold" size={16} />
                   </Button>
                 </motion.div>
                 <Link to="/">
@@ -215,7 +217,7 @@ const OrganizersLandingPage: React.FC = () => {
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -top-4 -right-4 glass rounded-xl p-3 shadow-lg"
               >
-                <TrendingUp className="w-6 h-6 text-green-500" />
+                <ChartLineUp weight="fill" size={24} className="text-emerald-500" />
               </motion.div>
               <motion.div
                 animate={{ y: [0, 10, 0] }}
@@ -250,7 +252,7 @@ const OrganizersLandingPage: React.FC = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature, index) => {
-              const Icon = feature.icon
+              const Icon = feature.Icon
               return (
                 <motion.div
                   key={feature.title}
@@ -261,7 +263,7 @@ const OrganizersLandingPage: React.FC = () => {
                   className="rounded-xl border border-border/40 bg-card/40 p-6 hover:border-primary/30 hover:bg-card/60 transition-all duration-200 group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
-                    <Icon className="w-5 h-5 text-primary" />
+                    <Icon weight="fill" size={20} className="text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground mb-1.5 text-sm">{feature.title}</h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
@@ -322,7 +324,7 @@ const OrganizersLandingPage: React.FC = () => {
           >
             <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
             <div className="relative">
-              <CheckCircle className="w-12 h-12 text-white mx-auto mb-4" />
+              <CheckCircle weight="fill" size={48} className="text-white mx-auto mb-4" />
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                 Ready to Create Your First Event?
               </h2>
@@ -336,7 +338,7 @@ const OrganizersLandingPage: React.FC = () => {
                 onClick={handlePrimaryAction}
               >
                 {isOrganizer ? "Create Your Event" : "Get Started"}
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight weight="bold" size={16} className="ml-2" />
               </Button>
             </div>
           </motion.div>
