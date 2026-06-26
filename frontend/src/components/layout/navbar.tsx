@@ -104,13 +104,9 @@ const Navbar: React.FC = () => {
           <div className="flex h-16 lg:h-18 items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 group">
-              <motion.div
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0"
-              >
+              <div className="btn-press w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
                 <Sparkles className="w-4.5 h-4.5 text-white" />
-              </motion.div>
+              </div>
               <span className="text-[17px] font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-150">
                 VenueSync
               </span>
@@ -125,18 +121,16 @@ const Navbar: React.FC = () => {
                   const isActive = location.pathname === link.to
                   return (
                     <Link key={link.to} to={link.to}>
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      <div
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
                           isActive
-                            ? "text-primary bg-primary/10 shadow-sm"
+                            ? "text-primary bg-primary/10"
                             : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                         }`}
                       >
                         <Icon className="w-4 h-4" />
                         {link.label}
-                      </motion.div>
+                      </div>
                     </Link>
                   )
                 })}
@@ -214,23 +208,19 @@ const Navbar: React.FC = () => {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      variant="ghost"
-                      onClick={() => signinRedirect()}
-                      className="hover:bg-secondary/50 font-medium hidden sm:flex"
-                    >
-                      Log In
-                    </Button>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      onClick={() => signinRedirect({ prompt: "create" })}
-                      className="gradient-primary text-white hover:opacity-90 transition-all duration-300 shadow-lg shadow-primary/25 px-6"
-                    >
-                      Sign Up
-                    </Button>
-                  </motion.div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => signinRedirect()}
+                    className="btn-press hover:bg-secondary/50 font-medium hidden sm:flex"
+                  >
+                    Log In
+                  </Button>
+                  <Button
+                    onClick={() => signinRedirect({ prompt: "create" })}
+                    className="btn-press gradient-primary text-white hover:opacity-90 transition-opacity duration-150 shadow-lg shadow-primary/25 px-6"
+                  >
+                    Sign Up
+                  </Button>
                 </div>
               )}
 

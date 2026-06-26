@@ -129,7 +129,7 @@ const OrganizersLandingPage: React.FC = () => {
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
                 Create, Manage & Sell{" "}
-                <span className="gradient-text">Event Tickets</span> with Ease
+                <span className="text-primary italic">Event Tickets</span> with Ease
               </h1>
 
               <p className="text-lg text-muted-foreground max-w-xl">

@@ -21,22 +21,24 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      /* transform string — NOT x/y shorthand — stays on GPU compositor thread */
+      initial={{ opacity: 0, transform: "translateY(22px)" }}
+      animate={{ opacity: 1, transform: "translateY(0px)" }}
+      transition={{ delay: index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link to={`/events/${event.id}`} className="group block">
         <div className="rounded-2xl overflow-hidden border border-border/40 bg-card/50 card-hover">
+
           {/* ── Image ── */}
           <div className="relative h-[200px] overflow-hidden">
-            <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.04]">
+            <div className="absolute inset-0 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.05]">
               <RandomEventImage />
             </div>
 
-            {/* Gradient overlay — clean bottom fade */}
+            {/* Bottom gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.055_0.01_265)] via-[oklch(0.055_0.01_265)]/20 to-transparent" />
 
-            {/* Date badge — top left */}
+            {/* Date badge */}
             {parsedStart && (
               <div className="absolute top-3 left-3 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-3 py-2 text-center min-w-[48px]">
                 <p className="text-[10px] font-semibold text-primary uppercase tracking-widest">
@@ -48,8 +50,15 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               </div>
             )}
 
-            {/* Arrow indicator — bottom right on hover */}
-            <div className="absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-primary flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 shadow-lg shadow-primary/30">
+            {/* Arrow — hover-only on pointer devices, slides up from y+6 */}
+            <div
+              className="hover-reveal absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-primary
+                         flex items-center justify-center shadow-lg shadow-primary/30
+                         opacity-0 translate-y-1.5
+                         group-hover:opacity-100 group-hover:translate-y-0
+                         transition-[opacity,transform] duration-200
+                         [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]"
+            >
               <ArrowUpRight className="w-4 h-4 text-white" />
             </div>
           </div>
