@@ -4,7 +4,7 @@ import type React from "react"
 
 import type { PublishedEventTicketTypeDetails } from "@/domain/domain"
 import { motion } from "framer-motion"
-import { Check, Ticket, AlertCircle, Calendar } from "lucide-react"
+import { Check, Ticket, Info, Calendar, ArrowRight } from "lucide-react"
 import { Button } from "../ui/button"
 import { Link } from "react-router"
 import { useRoles } from "@/hooks/use-roles"
@@ -24,51 +24,52 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
 }) => {
   const { isLoading: isRolesLoading, isOrganizer, isAttendee, isStaff } = useRoles()
 
-  if (isRolesLoading) {
-    return null
-  }
+  if (isRolesLoading) return null
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-        <Ticket className="w-5 h-5 text-primary" />
-        Select Tickets
-      </h3>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-4">
+        <Ticket className="w-4 h-4 text-primary" />
+        <h3 className="font-semibold text-foreground text-sm">Select Ticket Type</h3>
+      </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {ticketTypes.map((ticketType, index) => {
           const isSelected = selectedTicketType?.id === ticketType.id
 
           return (
             <motion.button
               key={ticketType.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.07, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               onClick={() => onSelect(ticketType)}
-              className={`w-full p-4 rounded-xl text-left transition-all ${
-                isSelected ? "glass border-primary bg-primary/10" : "glass hover:border-primary/30"
+              className={`w-full p-4 rounded-xl text-left transition-all duration-150 border ${
+                isSelected
+                  ? "border-primary/50 bg-primary/[0.07]"
+                  : "border-border/40 bg-card/30 hover:border-border/70 hover:bg-card/50"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-foreground">{ticketType.name}</h4>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="w-5 h-5 rounded-full bg-primary flex items-center justify-center"
-                      >
-                        <Check className="w-3 h-3 text-white" />
-                      </motion.div>
-                    )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    {/* Selection indicator */}
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                        isSelected ? "border-primary bg-primary" : "border-border/60"
+                      }`}
+                    >
+                      {isSelected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                    </div>
+                    <span className="font-medium text-foreground text-sm">{ticketType.name}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">{ticketType.description}</p>
+                  {ticketType.description && (
+                    <p className="text-xs text-muted-foreground mt-1 pl-6 leading-relaxed">{ticketType.description}</p>
+                  )}
                 </div>
-                <div className="text-right ml-4">
-                  <p className="text-xl font-bold text-primary">${ticketType.price}</p>
-                </div>
+                <span className={`text-lg font-bold flex-shrink-0 ${isSelected ? "text-primary" : "text-foreground"}`}>
+                  ${ticketType.price}
+                </span>
               </div>
             </motion.button>
           )
@@ -77,40 +78,44 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
 
       {selectedTicketType && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pt-4 border-t border-border"
+          transition={{ duration: 0.3 }}
+          className="pt-4 border-t border-border/30 space-y-4"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Total</span>
-            <span className="text-2xl font-bold text-foreground">${selectedTicketType.price}</span>
+            <span className="text-xl font-bold text-foreground tracking-tight">${selectedTicketType.price}</span>
           </div>
 
           {isAttendee && (
             <Link to={`/events/${eventId}/purchase/${selectedTicketType.id}`}>
-              <Button className="w-full gradient-primary text-white h-12 text-lg font-semibold">Get Tickets</Button>
+              <Button className="w-full gradient-primary text-white h-11 font-semibold shadow-md shadow-primary/20">
+                Get Tickets
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </Link>
           )}
 
           {isOrganizer && (
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-              <Calendar className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-400">Manage Events</p>
-                <p className="text-xs text-blue-400/80 mt-1">
-                  As an organizer, you create and manage events. Attend events and purchase tickets by switching to an attendee account.
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-500/[0.06] border border-blue-500/20">
+              <Calendar className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-medium text-blue-400">Organizer Account</p>
+                <p className="text-xs text-blue-400/70 mt-0.5 leading-relaxed">
+                  Switch to an attendee account to purchase tickets.
                 </p>
               </div>
             </div>
           )}
 
           {isStaff && (
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
-              <AlertCircle className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-purple-400">Validate Tickets</p>
-                <p className="text-xs text-purple-400/80 mt-1">
-                  As staff, you validate tickets at events. Visit the QR validation page to scan attendee tickets.
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-primary/[0.06] border border-primary/20">
+              <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-medium text-primary">Staff Account</p>
+                <p className="text-xs text-primary/70 mt-0.5 leading-relaxed">
+                  Use the QR validation page to scan attendee tickets.
                 </p>
               </div>
             </div>

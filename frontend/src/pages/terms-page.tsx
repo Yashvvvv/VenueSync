@@ -10,11 +10,11 @@ import PageContainer from "@/components/layout/page-container"
 const sections = [
   {
     title: "1. Acceptance of Terms",
-    content: `By accessing and using EventHub, you accept and agree to be bound by the terms and provisions of this agreement. If you do not agree to abide by these terms, please do not use this service.`,
+    content: `By accessing and using VenueSync, you accept and agree to be bound by the terms and provisions of this agreement. If you do not agree to abide by these terms, please do not use this service.`,
   },
   {
     title: "2. Description of Service",
-    content: `EventHub provides a platform for event organizers to create, manage, and sell tickets for events, and for attendees to discover and purchase tickets. Our services include event listing, ticket sales, QR code validation, and attendee management.`,
+    content: `VenueSync provides a platform for event organizers to create, manage, and sell tickets for events, and for attendees to discover and purchase tickets. Our services include event listing, ticket sales, QR code validation, and attendee management.`,
   },
   {
     title: "3. User Accounts",
@@ -32,11 +32,11 @@ Each role comes with specific responsibilities and access levels within the plat
   },
   {
     title: "5. Event Listings and Tickets",
-    content: `Event organizers are solely responsible for the accuracy of event information, including dates, venues, and ticket details. EventHub does not guarantee the occurrence of any event or the accuracy of event listings. Ticket purchases are subject to availability and the organizer's terms.`,
+    content: `Event organizers are solely responsible for the accuracy of event information, including dates, venues, and ticket details. VenueSync does not guarantee the occurrence of any event or the accuracy of event listings. Ticket purchases are subject to availability and the organizer's terms.`,
   },
   {
     title: "6. Payments and Refunds",
-    content: `All payments are processed securely through our platform. Refund policies are determined by individual event organizers. EventHub facilitates refund requests but the final decision rests with the event organizer. Service fees may be non-refundable.`,
+    content: `All payments are processed securely through our platform. Refund policies are determined by individual event organizers. VenueSync facilitates refund requests but the final decision rests with the event organizer. Service fees may be non-refundable.`,
   },
   {
     title: "7. Prohibited Conduct",
@@ -46,16 +46,16 @@ Each role comes with specific responsibilities and access levels within the plat
 • Create fraudulent events or listings
 • Attempt to circumvent our security measures
 • Resell tickets at inflated prices without authorization
-• Harass other users or EventHub staff
+• Harass other users or VenueSync staff
 • Upload malicious content or code`,
   },
   {
     title: "8. Intellectual Property",
-    content: `All content on EventHub, including logos, designs, and software, is the property of EventHub or its licensors. Users retain ownership of content they create but grant EventHub a license to use such content for platform operations.`,
+    content: `All content on VenueSync, including logos, designs, and software, is the property of VenueSync or its licensors. Users retain ownership of content they create but grant VenueSync a license to use such content for platform operations.`,
   },
   {
     title: "9. Limitation of Liability",
-    content: `EventHub is provided "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the platform. Our liability is limited to the amount paid for our services.`,
+    content: `VenueSync is provided "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the platform. Our liability is limited to the amount paid for our services.`,
   },
   {
     title: "10. Changes to Terms",
@@ -63,7 +63,7 @@ Each role comes with specific responsibilities and access levels within the plat
   },
   {
     title: "11. Contact Information",
-    content: `For questions about these Terms of Service, please contact us through our Contact page or email support@eventhub.com.`,
+    content: `For questions about these Terms of Service, please contact us through our Contact page or email support@VenueSync.com.`,
   },
 ]
 

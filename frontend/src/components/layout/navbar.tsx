@@ -94,25 +94,25 @@ const Navbar: React.FC = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "bg-background/70 backdrop-blur-heavy border-b border-border/40 shadow-lg shadow-background/20"
+            ? "bg-background/80 backdrop-blur-[24px] border-b border-border/30 shadow-[0_1px_0_0_oklch(0.19_0.012_265/0.6)]"
             : "bg-transparent"
         }`}
       >
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex h-16 lg:h-18 items-center justify-between">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="flex items-center gap-2.5 group">
               <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/25"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0"
               >
-                <Sparkles className="w-5 h-5 text-white" />
+                <Sparkles className="w-4.5 h-4.5 text-white" />
               </motion.div>
-              <span className="text-xl font-bold text-foreground group-hover:text-gradient transition-all duration-300">
-                EventHub
+              <span className="text-[17px] font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-150">
+                VenueSync
               </span>
             </Link>
 

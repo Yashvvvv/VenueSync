@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -42,101 +43,133 @@
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
-/* Enhanced color palette with deeper, richer tones */
+/* Refined color palette — deep, precise, editorial */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.06 0.01 260);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.1 0.012 260);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.1 0.012 260);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.2 280);
+  --background: oklch(0.055 0.01 265);
+  --foreground: oklch(0.97 0.003 265);
+  --card: oklch(0.09 0.011 265);
+  --card-foreground: oklch(0.97 0.003 265);
+  --popover: oklch(0.09 0.011 265);
+  --popover-foreground: oklch(0.97 0.003 265);
+  --primary: oklch(0.68 0.19 278);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.15 0.015 260);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.15 0.01 260);
-  --muted-foreground: oklch(0.6 0.015 260);
-  --accent: oklch(0.6 0.18 320);
+  --secondary: oklch(0.13 0.013 265);
+  --secondary-foreground: oklch(0.97 0.003 265);
+  --muted: oklch(0.13 0.01 265);
+  --muted-foreground: oklch(0.55 0.012 265);
+  --accent: oklch(0.58 0.17 316);
   --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.22 0.015 260);
-  --input: oklch(0.15 0.015 260);
-  --ring: oklch(0.7 0.2 280);
-  --chart-1: oklch(0.7 0.2 280);
-  --chart-2: oklch(0.65 0.18 200);
-  --chart-3: oklch(0.72 0.16 150);
-  --chart-4: oklch(0.78 0.14 60);
-  --chart-5: oklch(0.6 0.18 320);
-  --sidebar: oklch(0.08 0.012 260);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.7 0.2 280);
+  --destructive: oklch(0.58 0.2 25);
+  --border: oklch(0.19 0.012 265);
+  --input: oklch(0.13 0.013 265);
+  --ring: oklch(0.68 0.19 278);
+  --chart-1: oklch(0.68 0.19 278);
+  --chart-2: oklch(0.63 0.17 200);
+  --chart-3: oklch(0.70 0.16 150);
+  --chart-4: oklch(0.76 0.14 60);
+  --chart-5: oklch(0.58 0.17 316);
+  --sidebar: oklch(0.075 0.01 265);
+  --sidebar-foreground: oklch(0.97 0.003 265);
+  --sidebar-primary: oklch(0.68 0.19 278);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.15 0.015 260);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.22 0.015 260);
-  --sidebar-ring: oklch(0.7 0.2 280);
+  --sidebar-accent: oklch(0.13 0.013 265);
+  --sidebar-accent-foreground: oklch(0.97 0.003 265);
+  --sidebar-border: oklch(0.19 0.012 265);
+  --sidebar-ring: oklch(0.68 0.19 278);
 
-  /* Additional custom properties for enhanced theming */
-  --success: oklch(0.65 0.2 145);
-  --warning: oklch(0.75 0.18 85);
-  --info: oklch(0.65 0.18 230);
+  --success: oklch(0.63 0.19 145);
+  --warning: oklch(0.73 0.17 85);
+  --info: oklch(0.63 0.17 230);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground antialiased;
-  }
 
-  /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Subtle dot grid — Linear-style precision background */
+    background-image:
+      radial-gradient(circle, oklch(0.2 0.012 265 / 0.45) 1px, transparent 0);
+    background-size: 24px 24px;
+    background-attachment: fixed;
   }
 }
 
-/* Enhanced glassmorphism utilities */
+/* ─── Glass utilities — refined for editorial minimal feel ─── */
 .glass {
-  @apply bg-card/50 backdrop-blur-xl border border-border/40;
-  background: linear-gradient(135deg, oklch(0.1 0.012 260 / 0.6) 0%, oklch(0.08 0.01 260 / 0.4) 100%);
+  background: oklch(0.1 0.011 265 / 0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid oklch(0.22 0.012 265 / 0.5);
 }
 
 .glass-hover {
-  @apply hover:bg-card/70 hover:border-border/60 transition-all duration-300;
+  @apply transition-all duration-200;
+}
+.glass-hover:hover {
+  background: oklch(0.12 0.011 265 / 0.65);
+  border-color: oklch(0.28 0.012 265 / 0.6);
 }
 
 .glass-strong {
-  @apply bg-card/80 backdrop-blur-2xl border border-border/50;
+  background: oklch(0.11 0.011 265 / 0.85);
+  backdrop-filter: blur(32px) saturate(160%);
+  border: 1px solid oklch(0.24 0.012 265 / 0.55);
 }
 
-/* Improved gradient backgrounds */
+/* ─── Gradient utilities ─── */
 .gradient-primary {
-  background: linear-gradient(135deg, oklch(0.7 0.2 280) 0%, oklch(0.6 0.18 320) 100%);
+  background: linear-gradient(135deg, oklch(0.68 0.19 278) 0%, oklch(0.58 0.17 316) 100%);
 }
 
 .gradient-secondary {
-  background: linear-gradient(135deg, oklch(0.6 0.18 320) 0%, oklch(0.65 0.18 230) 100%);
+  background: linear-gradient(135deg, oklch(0.58 0.17 316) 0%, oklch(0.63 0.17 230) 100%);
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, oklch(0.65 0.2 145) 0%, oklch(0.6 0.18 180) 100%);
+  background: linear-gradient(135deg, oklch(0.63 0.19 145) 0%, oklch(0.58 0.17 180) 100%);
 }
 
+/* Subtle ambient mesh — much quieter than before */
 .gradient-mesh {
-  background: radial-gradient(at 20% 20%, oklch(0.7 0.2 280 / 0.25) 0px, transparent 50%),
-    radial-gradient(at 80% 10%, oklch(0.6 0.18 320 / 0.2) 0px, transparent 45%),
-    radial-gradient(at 0% 60%, oklch(0.65 0.18 230 / 0.15) 0px, transparent 50%),
-    radial-gradient(at 90% 60%, oklch(0.7 0.2 280 / 0.12) 0px, transparent 45%),
-    radial-gradient(at 30% 90%, oklch(0.6 0.18 320 / 0.18) 0px, transparent 50%);
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 20%, oklch(0.68 0.19 278 / 0.12) 0px, transparent 100%),
+    radial-gradient(ellipse 40% 30% at 85% 15%, oklch(0.58 0.17 316 / 0.09) 0px, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 50% 90%, oklch(0.63 0.17 230 / 0.07) 0px, transparent 100%);
 }
 
+/* Editorial gradient text — precise, not rainbow */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.7 0.2 280) 0%, oklch(0.6 0.18 320) 50%, oklch(0.65 0.18 230) 100%);
+  background: linear-gradient(135deg, oklch(0.68 0.19 278) 0%, oklch(0.78 0.14 316) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Eyebrow label pill */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: oklch(0.68 0.19 278);
+  border: 1px solid oklch(0.68 0.19 278 / 0.3);
+  background: oklch(0.68 0.19 278 / 0.08);
+  padding: 5px 14px;
+  border-radius: 999px;
 }
 
 /* Enhanced animations */
@@ -280,9 +313,14 @@
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
 }
 
-/* Card hover effects */
+/* ─── Card interactions ─── */
 .card-hover {
-  @apply transition-all duration-300 hover:translate-y-[-4px] hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  border-color: oklch(0.35 0.015 265 / 0.7);
+  box-shadow: 0 16px 40px -12px oklch(0 0 0 / 0.5);
 }
 
 /* Interactive elements */
@@ -293,7 +331,25 @@
 /* Text utilities */
 .text-gradient {
   @apply bg-clip-text text-transparent;
-  background-image: linear-gradient(135deg, oklch(0.7 0.2 280) 0%, oklch(0.6 0.18 320) 100%);
+  background-image: linear-gradient(135deg, oklch(0.68 0.19 278) 0%, oklch(0.78 0.14 316) 100%);
+}
+
+/* Section heading utility */
+.section-heading {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: oklch(0.97 0.003 265);
+}
+
+/* Precise hero heading — maximum impact */
+.hero-heading {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: oklch(0.97 0.003 265);
 }
 
 /* Backdrop utilities */

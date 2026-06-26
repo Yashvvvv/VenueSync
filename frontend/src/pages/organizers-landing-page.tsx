@@ -108,10 +108,10 @@ const OrganizersLandingPage: React.FC = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16 overflow-hidden">
-        <div className="absolute inset-0 gradient-mesh opacity-50" />
-        <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-accent/15 rounded-full blur-3xl" />
+      <section className="relative pt-32 pb-20 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[300px] bg-primary/[0.06] rounded-full blur-[100px]" />
+        </div>
 
         <div className="container mx-auto px-4 lg:px-8 relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -230,39 +230,41 @@ const OrganizersLandingPage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <div className="eyebrow mx-auto mb-5">Platform Features</div>
+            <h2 className="section-heading mb-4">
               Everything You Need to Succeed
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
               Powerful tools designed to help you create memorable events and maximize ticket sales.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature, index) => {
               const Icon = feature.icon
               return (
                 <motion.div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass rounded-2xl p-6 hover:border-primary/30 transition-all card-hover"
+                  transition={{ delay: index * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="rounded-xl border border-border/40 bg-card/40 p-6 hover:border-primary/30 hover:bg-card/60 transition-all duration-200 group"
                 >
-                  <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
+                    <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm">{feature.description}</p>
+                  <h3 className="font-semibold text-foreground mb-1.5 text-sm">{feature.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
                 </motion.div>
               )
             })}
@@ -325,7 +327,7 @@ const OrganizersLandingPage: React.FC = () => {
                 Ready to Create Your First Event?
               </h2>
               <p className="text-white/80 max-w-xl mx-auto mb-8">
-                Join thousands of organizers who trust EventHub to manage their events. 
+                Join thousands of organizers who trust VenueSync to manage their events.
                 Start selling tickets in minutes.
               </p>
               <Button

@@ -95,7 +95,7 @@ You can control cookies through your browser settings, though this may affect pl
     title: "11. Contact Us",
     content: `If you have questions about this Privacy Policy or our data practices, please contact us at:
 
-Email: privacy@eventhub.com
+Email: privacy@VenueSync.com
 Or through our Contact page.`,
   },
 ]
@@ -142,7 +142,7 @@ const PrivacyPage: React.FC = () => {
             className="glass rounded-2xl p-8 md:p-12 space-y-8"
           >
             <p className="text-muted-foreground leading-relaxed">
-              At EventHub, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our event management platform.
+              At VenueSync, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our event management platform.
             </p>
 
             {sections.map((section, index) => (

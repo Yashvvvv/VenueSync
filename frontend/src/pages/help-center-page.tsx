@@ -104,7 +104,7 @@ const categories = [
     questions: [
       {
         q: "What browsers are supported?",
-        a: "EventHub works best on the latest versions of Chrome, Firefox, Safari, and Edge.",
+        a: "VenueSync works best on the latest versions of Chrome, Firefox, Safari, and Edge.",
       },
       {
         q: "I'm having trouble logging in. What should I do?",
@@ -158,7 +158,7 @@ const HelpCenterPage: React.FC = () => {
             </h1>
 
             <p className="text-lg text-muted-foreground mb-8">
-              Find answers to common questions about using EventHub.
+              Find answers to common questions about using VenueSync.
             </p>
 
             {/* Search */}

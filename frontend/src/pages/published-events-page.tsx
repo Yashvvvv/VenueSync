@@ -114,32 +114,32 @@ const PublishedEventsPage: React.FC = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Event Info */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="lg:col-span-2 space-y-8"
+              transition={{ delay: 0.2, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="lg:col-span-2 space-y-6"
             >
-              <div className="glass rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-4">About This Event</h2>
-                <p className="text-muted-foreground leading-relaxed">
+              <div className="rounded-xl border border-border/40 bg-card/40 p-6">
+                <h2 className="font-semibold text-foreground mb-3">About This Event</h2>
+                <p className="text-muted-foreground leading-relaxed text-sm">
                   Join us for an unforgettable experience at {publishedEvent?.name}. This event promises to deliver an
                   amazing time for all attendees. Don't miss out on this incredible opportunity to be part of something
                   special.
                 </p>
               </div>
 
-              <div className="glass rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Venue</h2>
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50 border border-border/30">
-                  <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="rounded-xl border border-border/40 bg-card/40 p-6">
+                <h2 className="font-semibold text-foreground mb-3">Venue</h2>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/30">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4.5 h-4.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-foreground font-medium mb-1">Event Location</p>
-                    <p className="text-muted-foreground">{publishedEvent?.venue}</p>
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="font-medium text-foreground text-sm">{publishedEvent?.venue}</p>
                   </div>
                 </div>
               </div>

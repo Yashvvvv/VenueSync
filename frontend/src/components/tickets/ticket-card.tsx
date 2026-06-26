@@ -14,107 +14,109 @@ interface TicketCardProps {
   index?: number
 }
 
-const statusConfig: Record<TicketStatus, { label: string; className: string; icon: React.ReactNode }> = {
+const statusConfig: Record<TicketStatus, { label: string; dotColor: string; textColor: string; icon: React.ReactNode }> = {
   [TicketStatus.PURCHASED]: {
     label: "Active",
-    className: "status-published",
+    dotColor: "bg-emerald-500",
+    textColor: "text-emerald-400",
     icon: <Ticket className="w-3 h-3" />,
   },
   [TicketStatus.USED]: {
     label: "Used",
-    className: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+    dotColor: "bg-blue-400",
+    textColor: "text-blue-400",
     icon: <CheckCircle className="w-3 h-3" />,
   },
   [TicketStatus.EXPIRED]: {
     label: "Expired",
-    className: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30",
+    dotColor: "bg-yellow-400",
+    textColor: "text-yellow-400",
     icon: <Clock className="w-3 h-3" />,
   },
   [TicketStatus.CANCELLED]: {
     label: "Cancelled",
-    className: "status-cancelled",
+    dotColor: "bg-red-400",
+    textColor: "text-red-400",
     icon: <XCircle className="w-3 h-3" />,
   },
 }
 
 export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => {
-  // Check if event has ended (for visual display purposes)
   const eventEnd = ticket.eventEnd ? parseWallClockDate(ticket.eventEnd) : null
   const isEventEnded = eventEnd ? eventEnd < new Date() : false
-  
-  // Determine the display status:
-  // - If ticket is PURCHASED but event has ended, show as "Expired" visually
-  // - Otherwise, use the actual ticket status
-  const displayStatus = (ticket.status === TicketStatus.PURCHASED && isEventEnded) 
-    ? TicketStatus.EXPIRED 
-    : ticket.status
-  
+
+  const displayStatus =
+    ticket.status === TicketStatus.PURCHASED && isEventEnded ? TicketStatus.EXPIRED : ticket.status
+
   const status = statusConfig[displayStatus]
-  const isPast = displayStatus === TicketStatus.USED || 
-                 displayStatus === TicketStatus.EXPIRED || 
-                 displayStatus === TicketStatus.CANCELLED
+  const isPast =
+    displayStatus === TicketStatus.USED ||
+    displayStatus === TicketStatus.EXPIRED ||
+    displayStatus === TicketStatus.CANCELLED
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.08 }}
-      whileHover={{ x: 4 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
-      <Link to={`/dashboard/tickets/${ticket.id}`}>
-        <div className={`glass rounded-2xl p-5 hover:border-primary/30 transition-all group card-hover ${isPast ? 'opacity-75' : ''}`}>
-          <div className="flex items-center gap-4">
-            <motion.div
-              whileHover={{ rotate: 10 }}
-              className={`relative w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg ${
-                isPast 
-                  ? 'bg-muted/50' 
-                  : 'gradient-primary shadow-primary/25'
+      <Link to={`/dashboard/tickets/${ticket.id}`} className="group block">
+        <div
+          className={`relative rounded-xl border transition-all duration-200 overflow-hidden ${
+            isPast
+              ? "border-border/30 bg-card/30 opacity-70"
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card/70"
+          }`}
+        >
+          {/* Left accent stripe */}
+          <div
+            className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${isPast ? "bg-border/30" : "gradient-primary"}`}
+          />
+
+          <div className="flex items-center gap-4 px-5 py-4 pl-6">
+            {/* Icon */}
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
+                isPast ? "bg-secondary/50" : "gradient-primary shadow-md shadow-primary/20"
               }`}
             >
-              <Ticket className={`w-8 h-8 ${isPast ? 'text-muted-foreground' : 'text-white'}`} />
-              {/* QR indicator - dimmed for past tickets */}
-              <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-background border border-border flex items-center justify-center ${isPast ? 'opacity-50' : ''}`}>
-                <QrCode className={`w-3.5 h-3.5 ${isPast ? 'text-muted-foreground' : 'text-primary'}`} />
+              <Ticket className={`w-6 h-6 ${isPast ? "text-muted-foreground" : "text-white"}`} />
+              <div
+                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-background border border-border flex items-center justify-center ${
+                  isPast ? "opacity-40" : ""
+                }`}
+              >
+                <QrCode className={`w-3 h-3 ${isPast ? "text-muted-foreground" : "text-primary"}`} />
               </div>
-            </motion.div>
+            </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-1">
-                <h3 className="font-semibold text-foreground truncate text-lg group-hover:text-primary transition-colors">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="font-semibold text-foreground truncate text-sm group-hover:text-primary transition-colors duration-150">
                   {ticket.eventName}
                 </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${status.className}`}>
-                  {status.icon}
+                {/* Status dot + label */}
+                <span className={`flex items-center gap-1 text-[10px] font-semibold ${status.textColor} flex-shrink-0`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${status.dotColor} inline-block`} />
                   {status.label}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-1.5 truncate">
-                {ticket.ticketType.name}
-              </p>
-              <div className="flex items-center gap-4 text-sm">
+              <p className="text-xs text-muted-foreground mb-1.5 truncate">{ticket.ticketType.name}</p>
+              <div className="flex items-center gap-3 text-xs">
                 <span className="font-semibold text-primary">${ticket.ticketType.price.toFixed(2)}</span>
                 {ticket.eventStart && (
-                  <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                  <span className="flex items-center gap-1 text-muted-foreground">
                     <Calendar className="w-3 h-3" />
                     {format(parseWallClockDate(ticket.eventStart)!, "MMM d, yyyy")}
                   </span>
                 )}
-                <span className="text-muted-foreground font-mono text-xs bg-secondary/50 px-2 py-0.5 rounded">
-                  #{ticket.id.slice(0, 8)}
-                </span>
+                <span className="font-mono text-muted-foreground/60">#{ticket.id.slice(0, 8)}</span>
               </div>
             </div>
 
             {/* Arrow */}
-            <motion.div
-              initial={{ x: 0 }}
-              whileHover={{ x: 4 }}
-              className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors"
-            >
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </motion.div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 flex-shrink-0" />
           </div>
         </div>
       </Link>

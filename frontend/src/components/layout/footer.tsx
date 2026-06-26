@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
   }
 
   return (
-    <footer className="relative bg-card/30 border-t border-border/40">
+    <footer className="relative border-t border-border/30" style={{ background: "oklch(0.07 0.01 265 / 0.95)" }}>
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-mesh opacity-20 pointer-events-none" />
 
@@ -65,7 +65,7 @@ const Footer: React.FC = () => {
                 <Sparkles className="w-5 h-5 text-white" />
               </motion.div>
               <span className="text-xl font-bold text-foreground group-hover:text-gradient transition-all">
-                EventHub
+                VenueSync
               </span>
             </Link>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs leading-relaxed">
@@ -147,7 +147,7 @@ const Footer: React.FC = () => {
 
         {/* Bottom Section */}
         <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">{currentYear} EventHub. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">{currentYear} VenueSync. All rights reserved.</p>
           <div className="flex gap-6">
             <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Terms of Service

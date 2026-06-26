@@ -52,7 +52,7 @@ const AboutPage: React.FC = () => {
           >
             <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full mb-6">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-foreground">About EventHub</span>
+              <span className="text-sm text-foreground">About VenueSync</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
@@ -61,7 +61,7 @@ const AboutPage: React.FC = () => {
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              EventHub is your complete event management platform. We help organizers create,
+              VenueSync is your complete event management platform. We help organizers create,
               manage, and sell tickets for events of all sizes, while providing attendees with
               seamless discovery and booking experiences.
             </p>
@@ -81,7 +81,7 @@ const AboutPage: React.FC = () => {
               <h2 className="text-3xl font-bold text-foreground mb-6">Our Mission</h2>
               <p className="text-muted-foreground mb-6 leading-relaxed">
                 We're on a mission to democratize event management. Whether you're hosting a small
-                community meetup or a large-scale conference, EventHub provides the tools you need
+                community meetup or a large-scale conference, VenueSync provides the tools you need
                 to succeed.
               </p>
               <p className="text-muted-foreground leading-relaxed">
@@ -122,7 +122,7 @@ const AboutPage: React.FC = () => {
           >
             <h2 className="text-3xl font-bold text-foreground mb-4">Our Values</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              These principles guide everything we do at EventHub.
+              These principles guide everything we do at VenueSync.
             </p>
           </motion.div>
 
@@ -164,7 +164,7 @@ const AboutPage: React.FC = () => {
                 Ready to Get Started?
               </h2>
               <p className="text-white/80 max-w-xl mx-auto mb-8">
-                Join thousands of organizers who trust EventHub for their events.
+                Join thousands of organizers who trust VenueSync for their events.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link to="/organizers">

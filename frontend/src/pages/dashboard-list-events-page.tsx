@@ -183,54 +183,29 @@ const DashboardListEventsPage: React.FC = () => {
         {/* Stats Summary */}
         {eventCounts && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+            transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8"
           >
-            <div className="glass rounded-xl p-4 border border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                  <FileEdit className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{eventCounts.draft}</p>
-                  <p className="text-sm text-muted-foreground">Drafts</p>
-                </div>
-              </div>
-            </div>
-            <div className="glass rounded-xl p-4 border border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{eventCounts.published}</p>
-                  <p className="text-sm text-muted-foreground">Published</p>
+            {[
+              { icon: FileEdit, value: eventCounts.draft, label: "Drafts", iconColor: "text-muted-foreground", bg: "bg-secondary/50" },
+              { icon: Globe, value: eventCounts.published, label: "Published", iconColor: "text-emerald-400", bg: "bg-emerald-500/10" },
+              { icon: CheckCircle2, value: eventCounts.completed, label: "Completed", iconColor: "text-primary", bg: "bg-primary/10" },
+              { icon: XCircle, value: eventCounts.cancelled, label: "Cancelled", iconColor: "text-destructive", bg: "bg-destructive/10" },
+            ].map(({ icon: Icon, value, label, iconColor, bg }) => (
+              <div key={label} className="rounded-xl border border-border/40 bg-card/40 p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-4.5 h-4.5 ${iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-foreground tracking-tight">{value}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="glass rounded-xl p-4 border border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{eventCounts.completed}</p>
-                  <p className="text-sm text-muted-foreground">Completed</p>
-                </div>
-              </div>
-            </div>
-            <div className="glass rounded-xl p-4 border border-border/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
-                  <XCircle className="w-5 h-5 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{eventCounts.cancelled}</p>
-                  <p className="text-sm text-muted-foreground">Cancelled</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </motion.div>
         )}
 
