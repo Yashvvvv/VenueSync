@@ -1,12 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
 import { useAuth } from "react-oidc-context"
 import { useEffect, useState } from "react"
 import type { PublishedEventSummary, SpringBootPagination } from "@/domain/domain"
 import { listPublishedEvents, searchPublishedEvents } from "@/lib/api"
-import { motion, useInView } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   MusicNotes, Barbell, PaintBrush, Terminal, ForkKnife, Confetti,
   CalendarCheck, UsersThree, ChartLineUp,
@@ -85,14 +84,6 @@ const LINE_DUR = 0.68
 
 const AttendeeLandingPage: React.FC = () => {
   const { isLoading: isAuthLoading } = useAuth()
-
-  const brandsRef = useRef<HTMLDivElement>(null)
-  const testimonialsRef = useRef<HTMLDivElement>(null)
-  const ctaRef = useRef<HTMLDivElement>(null)
-
-  const brandsInView = useInView(brandsRef, { once: true, margin: "-60px" })
-  const testimonialsInView = useInView(testimonialsRef, { once: true, margin: "-80px" })
-  const ctaInView = useInView(ctaRef, { once: true, margin: "-80px" })
 
   const [page, setPage] = useState(0)
   const [publishedEvents, setPublishedEvents] = useState<SpringBootPagination<PublishedEventSummary> | undefined>()
@@ -271,29 +262,22 @@ const AttendeeLandingPage: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════
-          TRUSTED BY
-          Horizontal brand name strip.
-          Scroll-triggered fade per brand.
+          TRUSTED BY — auto-scrolling marquee
       ══════════════════════════════ */}
-      <section className="py-14 border-y border-border/20" ref={brandsRef}>
-        <div className="container mx-auto px-4 lg:px-8">
-          <p className="text-center text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground/50 mb-8">
-            Trusted by leading organizations
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {brands.map((name, i) => (
-              <motion.span
-                key={name}
-                initial={{ opacity: 0, transform: "translateY(6px)" }}
-                animate={brandsInView ? { opacity: 1, transform: "translateY(0px)" } : {}}
-                transition={{ delay: i * 0.055, duration: 0.38, ease: [0.25, 1, 0.5, 1] }}
-                className="text-sm font-semibold text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors duration-200 tracking-tight cursor-default select-none"
-              >
-                {name}
-              </motion.span>
-            ))}
-          </div>
+      <section className="py-14 border-y border-border/20 overflow-hidden">
+        <p className="text-center text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground/50 mb-8">
+          Trusted by leading organizations
+        </p>
+        {/* Duplicate array for seamless infinite loop */}
+        <div className="marquee-track gap-14 items-center">
+          {[...brands, ...brands].map((name, i) => (
+            <span
+              key={i}
+              className="text-sm font-semibold text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors duration-200 tracking-tight cursor-default select-none whitespace-nowrap px-2"
+            >
+              {name}
+            </span>
+          ))}
         </div>
       </section>
 
@@ -335,17 +319,23 @@ const AttendeeLandingPage: React.FC = () => {
           Lu.ma style: clean avatar,
           quote, name + role.
       ══════════════════════════════ */}
-      <section className="py-20 border-t border-border/20" ref={testimonialsRef}>
+      <section className="py-20 border-t border-border/20">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Section header */}
-          <div className="max-w-xl mb-14">
+          <motion.div
+            className="max-w-xl mb-14"
+            initial={{ opacity: 0, transform: "translateY(14px)" }}
+            whileInView={{ opacity: 1, transform: "translateY(0px)" }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
             <h2 className="section-heading mb-3">
               Loved by organizers<br />and attendees alike
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               From first-time creators to large-scale festival producers, people trust VenueSync to handle the details.
             </p>
-          </div>
+          </motion.div>
 
           {/* Cards */}
           <div className="grid md:grid-cols-3 gap-5">
@@ -353,7 +343,8 @@ const AttendeeLandingPage: React.FC = () => {
               <motion.div
                 key={t.name}
                 initial={{ opacity: 0, transform: "translateY(18px)" }}
-                animate={testimonialsInView ? { opacity: 1, transform: "translateY(0px)" } : {}}
+                whileInView={{ opacity: 1, transform: "translateY(0px)" }}
+                viewport={{ once: true, amount: 0.15 }}
                 transition={{ delay: i * 0.10, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col gap-5 rounded-2xl border border-border/40 bg-card/30 p-6 hover:border-border/60 transition-colors duration-200"
               >
@@ -394,9 +385,9 @@ const AttendeeLandingPage: React.FC = () => {
       <section className="py-20 border-t border-border/20">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
-            ref={ctaRef}
             initial={{ opacity: 0, transform: "translateY(20px)" }}
-            animate={ctaInView ? { opacity: 1, transform: "translateY(0px)" } : {}}
+            whileInView={{ opacity: 1, transform: "translateY(0px)" }}
+            viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             className="relative overflow-hidden rounded-2xl border border-border/40 p-12 md:p-16 text-center"
             style={{

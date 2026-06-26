@@ -216,6 +216,20 @@
   }
 }
 
+/* ─── Brands marquee ─── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
 /* ─── Button press feedback ─── */
 .btn-press {
   transition: transform 120ms var(--ease-expo);
@@ -493,5 +507,11 @@
   .stagger-item {
     opacity: 1;
     animation: none;
+  }
+
+  .marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
