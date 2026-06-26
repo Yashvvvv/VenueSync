@@ -22,8 +22,6 @@ import {
   Lightning,
   CheckCircle,
   ChartBar,
-  CurrencyDollar,
-  Broadcast,
 } from "@/components/icons"
 
 const features = [

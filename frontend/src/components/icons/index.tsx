@@ -85,9 +85,9 @@ export {
   MusicNotes,
   Barbell,
   PaintBrush,
-  CircuitBoard,
+  Terminal,
   ForkKnife,
-  TheaterMasks,
+  Confetti,
 
   /* Landing — stats / social proof */
   CalendarCheck,
@@ -114,16 +114,11 @@ export {
   ShieldCheck,
   SlidersHorizontal,
   Lightning,
-  Broadcast,
-  CurrencyDollar,
 
   /* Form / utility */
   MagnifyingGlass,
   Check,
   Info,
   WarningCircle,
-  Confetti,
-  Sparkle,
-  ArrowUpLeft,
 
 } from "@phosphor-icons/react"

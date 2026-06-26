@@ -8,7 +8,7 @@ import type { PublishedEventSummary, SpringBootPagination } from "@/domain/domai
 import { listPublishedEvents, searchPublishedEvents } from "@/lib/api"
 import { motion, useInView } from "framer-motion"
 import {
-  MusicNotes, Barbell, PaintBrush, CircuitBoard, ForkKnife, TheaterMasks,
+  MusicNotes, Barbell, PaintBrush, Terminal, ForkKnife, Confetti,
   CalendarCheck, UsersThree, ChartLineUp,
   ArrowRight, Star, Quotes,
 } from "@/components/icons"
@@ -30,12 +30,12 @@ const stats = [
 ]
 
 const categories = [
-  { name: "Music",   Icon: MusicNotes    },
-  { name: "Sports",  Icon: Barbell       },
-  { name: "Arts",    Icon: PaintBrush    },
-  { name: "Tech",    Icon: CircuitBoard  },
-  { name: "Food",    Icon: ForkKnife     },
-  { name: "Comedy",  Icon: TheaterMasks  },
+  { name: "Music",   Icon: MusicNotes },
+  { name: "Sports",  Icon: Barbell    },
+  { name: "Arts",    Icon: PaintBrush },
+  { name: "Tech",    Icon: Terminal   },
+  { name: "Food",    Icon: ForkKnife  },
+  { name: "Comedy",  Icon: Confetti   },
 ]
 
 const brands = [
