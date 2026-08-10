@@ -26,8 +26,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog"
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useState } from "react"
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion"
+import toast from "react-hot-toast"
 import { API_BASE } from "@/lib/api"
 import {
   VenueSyncMark,
@@ -39,8 +40,10 @@ import {
   SignOut,
   List,
   X,
-  Lightning,
+  DeviceMobile,
 } from "@/components/icons"
+import { AudienceSwitch } from "../audience-switch"
+import { useAudience } from "@/hooks/use-audience"
 
 const Navbar: React.FC = () => {
   const { user, signoutRedirect, signinRedirect, isAuthenticated, signinSilent } = useAuth()
@@ -49,12 +52,19 @@ const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
   const location = useLocation()
+  const { audience } = useAudience()
 
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  /* In the hype experience the bottom tab bar is the navigation. The top
+     bar collapses to brand plus account so the two do not compete. */
+  const isHype = audience === "hype"
+
+  /* Motion's scroll value is batched off the main render path. A raw
+     `window.addEventListener("scroll")` re-rendered this tree on every
+     scroll frame. */
+  const { scrollY } = useScroll()
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 16)
+  })
 
   useEffect(() => {
     setIsMobileMenuOpen(false)
@@ -71,14 +81,14 @@ const Navbar: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        await user?.profile
         await signinSilent()
+        toast.success("You can create events now.")
       } else {
-        alert("Failed to upgrade account. Please try again.")
+        toast.error("Could not upgrade your account. Try again in a moment.")
       }
     } catch (e) {
       console.error(e)
-      alert("Network error while trying to upgrade account.")
+      toast.error("Network problem while upgrading your account.")
     } finally {
       setIsUpgrading(false)
     }
@@ -86,238 +96,232 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { to: "/", label: "Discover", Icon: House, public: true },
-    ...(isOrganizer ? [{ to: "/dashboard/events", label: "My Events", Icon: CalendarDots, public: false }] : []),
-    ...(isAttendee  ? [{ to: "/dashboard/tickets", label: "My Tickets", Icon: Ticket, public: false }] : []),
-    ...(isStaff     ? [{ to: "/dashboard/validate-qr", label: "Validate", Icon: QrCode, public: false }] : []),
+    ...(isOrganizer
+      ? [{ to: "/dashboard/events", label: "My events", Icon: CalendarDots, public: false }]
+      : []),
+    ...(isAttendee
+      ? [{ to: "/dashboard/tickets", label: "My tickets", Icon: Ticket, public: false }]
+      : []),
+    ...(isStaff
+      ? [{ to: "/dashboard/validate-qr", label: "Validate", Icon: QrCode, public: false }]
+      : []),
   ]
+
+  const visibleLinks = navLinks.filter((l) => l.public || isAuthenticated)
 
   return (
     <>
-      <motion.nav
-        initial={{ opacity: 0, transform: "translateY(-100%)" }}
-        animate={{ opacity: 1, transform: "translateY(0%)" }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-[background,border-color,box-shadow] duration-300 ${
-          isScrolled
-            ? "bg-background/80 backdrop-blur-[24px] border-b border-border/30 shadow-[0_1px_0_0_oklch(0.19_0.012_265/0.6)]"
-            : "bg-transparent"
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300 ${
+          isScrolled ? "chrome-blur border-b border-border" : "border-b border-transparent"
         }`}
       >
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex h-16 lg:h-18 items-center justify-between">
-
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="btn-press flex-shrink-0">
-                <VenueSyncMark size={38} />
-              </div>
-              <span className="text-[17px] font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-150">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          {/* 64px. A nav bar is chrome; it does not get to eat the viewport. */}
+          <div className="flex h-16 items-center justify-between gap-6">
+            <Link to="/" className="focus-ring group flex shrink-0 items-center gap-2.5 rounded-sm">
+              <VenueSyncMark size={30} />
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">
                 VenueSync
               </span>
             </Link>
 
-            {/* Desktop nav */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navLinks
-                .filter((l) => l.public || isAuthenticated)
-                .map(({ to, label, Icon }) => {
-                  const isActive = location.pathname === to
-                  return (
-                    <Link key={to} to={to}>
-                      <div
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-                          isActive
-                            ? "text-primary bg-primary/10"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                        }`}
-                      >
-                        <Icon weight={isActive ? "fill" : "regular"} size={16} />
-                        {label}
-                      </div>
-                    </Link>
-                  )
-                })}
-            </div>
+            {/* Desktop nav. Underline marks the active route instead of a
+                filled chip, which reads as a button the link is not. */}
+            <nav className={`items-center gap-7 ${isHype ? "hidden" : "hidden lg:flex"}`}>
+              {visibleLinks.map(({ to, label }) => {
+                const isActive = location.pathname === to
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`focus-ring relative rounded-sm py-1 text-sm transition-colors duration-150 ${
+                      isActive
+                        ? "font-medium text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                    {isActive && (
+                      <motion.span
+                        layoutId="nav-active"
+                        className="absolute -bottom-0.5 left-0 h-px w-full bg-primary"
+                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                      />
+                    )}
+                  </Link>
+                )
+              })}
+            </nav>
 
-            {/* Right section */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {isAuthenticated ? (
                 <>
                   {isAttendee && !isOrganizer && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          className="hidden lg:flex btn-press gap-2 border-primary/50 text-primary hover:bg-primary/10 mr-2"
+                          className="hidden lg:inline-flex"
                           disabled={isUpgrading}
                         >
-                          <Lightning weight="fill" size={15} />
-                          {isUpgrading ? "Upgrading..." : "Host an Event"}
+                          {isUpgrading ? "Upgrading" : "Host an event"}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Become an Organizer</AlertDialogTitle>
+                          <AlertDialogTitle>Start hosting events</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Ready to host your own events? Upgrading to an Organizer account is free and gives you full access to create events, manage tickets, and track sales on your dashboard.
+                            Organizer access is free and it does not change anything about the
+                            tickets you already hold. You get event creation, ticket tiers and
+                            a sales dashboard.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction onClick={handleUpgradeToOrganizer} disabled={isUpgrading}>
-                            Yes, Upgrade My Account
+                            Enable organizer access
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
 
-                  <Link to="/dashboard" className="hidden lg:block">
-                    <Button variant="ghost" size="sm" className="btn-press gap-2 hover:bg-secondary/50">
-                      <SquaresFour weight="fill" size={16} />
+                  <Link to="/dashboard" className={isHype ? "hidden" : "hidden lg:block"}>
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <SquaresFour weight="fill" size={15} />
                       Dashboard
                     </Button>
                   </Link>
 
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="focus-ring rounded-full">
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Avatar className="h-9 w-9 border-2 border-primary/30 hover:border-primary/60 transition-colors shadow-lg shadow-primary/10">
-                          <AvatarFallback className="bg-gradient-to-br from-primary/30 to-accent/30 text-foreground text-xs font-bold">
-                            {user?.profile?.preferred_username?.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </motion.div>
+                    <DropdownMenuTrigger className="focus-ring ml-1 rounded-md">
+                      <Avatar className="h-8 w-8 rounded-md border border-border transition-colors hover:border-primary">
+                        <AvatarFallback className="rounded-md bg-secondary font-mono text-[11px] font-semibold tracking-wider text-foreground">
+                          {user?.profile?.preferred_username?.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-60 glass-strong p-2" align="end" sideOffset={8}>
-                      <DropdownMenuLabel className="font-normal p-3">
-                        <p className="text-sm font-semibold text-foreground">{user?.profile?.preferred_username}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{user?.profile?.email}</p>
+                    <DropdownMenuContent className="glass-strong w-60 p-1.5" align="end" sideOffset={10}>
+                      <DropdownMenuLabel className="p-2.5 font-normal">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {user?.profile?.preferred_username}
+                        </p>
+                        <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                          {user?.profile?.email}
+                        </p>
                       </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-border/50" />
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 rounded-lg p-3 mt-1 gap-3"
-                        onClick={() => signoutRedirect({ post_logout_redirect_uri: window.location.origin })}
+                        className="cursor-pointer gap-2.5 rounded-sm p-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        onClick={() =>
+                          signoutRedirect({ post_logout_redirect_uri: window.location.origin })
+                        }
                       >
-                        <SignOut weight="regular" size={16} />
-                        Sign Out
+                        <SignOut weight="bold" size={15} />
+                        Sign out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
+                <div className="flex items-center gap-1">
+                  {/* Only one button box. The secondary action is a text
+                      link so the eye is never asked to rank two fills. */}
+                  <button
                     onClick={() => signinRedirect()}
-                    className="btn-press hover:bg-secondary/50 font-medium hidden sm:flex"
+                    className="focus-ring hidden rounded-sm px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground sm:block"
                   >
-                    Log In
-                  </Button>
-                  <Button
-                    onClick={() => signinRedirect({ prompt: "create" })}
-                    className="btn-press gradient-primary text-white hover:opacity-90 transition-opacity duration-150 shadow-lg shadow-primary/25 px-6"
-                  >
-                    Sign Up
+                    Log in
+                  </button>
+                  <Button onClick={() => signinRedirect({ prompt: "create" })} size="sm" className="px-4">
+                    Sign up
                   </Button>
                 </div>
               )}
 
-              {/* Mobile toggle */}
-              <button
-                className="btn-press lg:hidden p-2.5 rounded-xl hover:bg-secondary/50 transition-colors"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label="Toggle menu"
-              >
-                <AnimatePresence mode="wait">
+              {/* The tab bar already covers navigation in hype, so the
+                  hamburger would open a menu duplicating it. */}
+              {!isHype && (
+                <button
+                  className="focus-ring -mr-1 rounded-sm p-2 text-foreground transition-colors hover:bg-secondary lg:hidden"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-expanded={isMobileMenuOpen}
+                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                >
                   {isMobileMenuOpen ? (
-                    <motion.div
-                      key="close"
-                      initial={{ rotate: -90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 90, opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      <X weight="bold" size={20} />
-                    </motion.div>
+                    <X weight="bold" size={19} />
                   ) : (
-                    <motion.div
-                      key="menu"
-                      initial={{ rotate: 90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: -90, opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      <List weight="bold" size={20} />
-                    </motion.div>
+                    <List weight="bold" size={19} />
                   )}
-                </AnimatePresence>
-              </button>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Mobile menu */}
         <AnimatePresence>
-          {isMobileMenuOpen && (
+          {isMobileMenuOpen && !isHype && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-              className="lg:hidden bg-background/95 backdrop-blur-[24px] border-b border-border/40 overflow-hidden"
+              transition={{ duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
+              className="overflow-hidden border-b border-border bg-background lg:hidden"
             >
-              <div className="container mx-auto px-4 py-4 space-y-1">
-                {navLinks
-                  .filter((l) => l.public || isAuthenticated)
-                  .map(({ to, label, Icon }, index) => {
-                    const isActive = location.pathname === to
-                    return (
-                      <motion.div
-                        key={to}
-                        initial={{ opacity: 0, transform: "translateX(-12px)" }}
-                        animate={{ opacity: 1, transform: "translateX(0px)" }}
-                        transition={{ delay: index * 0.045, duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                      >
-                        <Link
-                          to={to}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-colors ${
-                            isActive
-                              ? "text-primary bg-primary/10"
-                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                          }`}
-                        >
-                          <Icon weight={isActive ? "fill" : "regular"} size={18} />
-                          <span className="font-medium">{label}</span>
-                        </Link>
-                      </motion.div>
-                    )
-                  })}
-                {isAuthenticated && (
-                  <motion.div
-                    initial={{ opacity: 0, transform: "translateX(-12px)" }}
-                    animate={{ opacity: 1, transform: "translateX(0px)" }}
-                    transition={{ delay: navLinks.length * 0.045, duration: 0.25 }}
-                  >
+              <nav className="mx-auto max-w-[1400px] px-5 py-3">
+                {visibleLinks.map(({ to, label, Icon }) => {
+                  const isActive = location.pathname === to
+                  return (
                     <Link
-                      to="/dashboard"
+                      key={to}
+                      to={to}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                      className={`flex items-center gap-3 border-b border-border/60 py-3.5 text-[0.9375rem] transition-colors last:border-b-0 ${
+                        isActive ? "text-primary" : "text-muted-foreground"
+                      }`}
                     >
-                      <SquaresFour weight="regular" size={18} />
-                      <span className="font-medium">Dashboard</span>
+                      <Icon weight={isActive ? "fill" : "regular"} size={17} />
+                      {label}
                     </Link>
-                  </motion.div>
+                  )
+                })}
+                {isAuthenticated && (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 border-t border-border py-3.5 text-[0.9375rem] text-muted-foreground"
+                  >
+                    <SquaresFour weight="regular" size={17} />
+                    Dashboard
+                  </Link>
                 )}
-              </div>
+
+                <Link
+                  to="/app"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 border-t border-border py-3.5 text-[0.9375rem] text-muted-foreground"
+                >
+                  <DeviceMobile weight="regular" size={17} />
+                  Get the app
+                </Link>
+
+                {/* The footer copy of this control is a long scroll away on a
+                    phone, so the choice is reachable from the menu too. */}
+                <div className="flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-sm text-muted-foreground">Experience</span>
+                  <AudienceSwitch />
+                </div>
+              </nav>
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.nav>
+      </header>
 
-      <div className="h-16 lg:h-18" />
+      {/* Spacer matching the fixed header */}
+      <div className="h-16" />
     </>
   )
 }

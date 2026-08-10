@@ -2,14 +2,58 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="VenueSync — Discover and book tickets to the best events near you. Built for attendees, organizers, and staff." />
-    <meta name="theme-color" content="#0e0d15" />
-    <!-- Inter font preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <title>VenueSync — Event Ticketing Platform</title>
+    <meta
+      name="description"
+      content="VenueSync is event ticketing without the friction. Find something to go to, buy in two taps, and walk in with the code on your phone."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#14120f" />
+    <!--
+      Site-wide link preview. These are static: the app renders on the
+      client, so a crawler fetching /events/:id sees this file, not the
+      event. Per-event previews need SSR or a prerender step; until then
+      every shared link unfurls as the VenueSync card rather than the night.
+    -->
+    <meta property="og:site_name" content="VenueSync" />
+    <meta property="og:title" content="VenueSync" />
+    <meta
+      property="og:description"
+      content="Find something worth leaving the house for. Buy in two taps, walk in with the code on your phone."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/event-image-2.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="VenueSync" />
+    <meta
+      name="twitter:description"
+      content="Find something worth leaving the house for. Buy in two taps, walk in with the code on your phone."
+    />
+    <title>VenueSync - Event Ticketing</title>
+    <!--
+      Applies the saved audience, and the vibe it paints with, before the
+      first paint.
+
+      This has to be a blocking inline script in the head. Doing it in React
+      would mean the page paints on the default tokens and then repaints on
+      the saved ones, which is a visible colour flash on every load. The
+      duplication with src/lib/audience.ts is intentional and the cheapest
+      correct fix; keep the storage key and the mapping in step.
+    -->
+    <script>
+      (function () {
+        try {
+          var a = window.localStorage.getItem("venuesync:audience")
+          var ok = a === "hype" || a === "classic"
+          var audience = ok ? a : "classic"
+          document.documentElement.dataset.audience = audience
+          document.documentElement.dataset.vibe = audience === "hype" ? "acid" : "calm"
+        } catch (e) {
+          document.documentElement.dataset.vibe = "calm"
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

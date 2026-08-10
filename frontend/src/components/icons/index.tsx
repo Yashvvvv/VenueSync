@@ -1,10 +1,13 @@
 /**
  * VenueSync icon system
  *
- * Custom SVG brand mark + Phosphor Icons replacing generic Lucide icons.
- * Phosphor has duotone/fill/bold variants — far more contextual than Lucide's
- * single-weight strokes. All semantic icons use "fill" weight for presence.
- * Utility icons (close, chevron, menu) use "regular" for restraint.
+ * One icon family only (Phosphor). Mixing families is the fastest way to
+ * make an interface look assembled rather than designed, so lucide-react
+ * is not imported anywhere in the app.
+ *
+ * Weight convention:
+ *   fill    - semantic icons that carry meaning (status, category, action)
+ *   regular - utility chrome (close, menu, caret)
  */
 
 import { useId } from "react"
@@ -16,8 +19,12 @@ interface MarkProps {
   className?: string
 }
 
-/** Custom ticket-shaped VenueSync logomark. */
-export const VenueSyncMark: React.FC<MarkProps> = ({ size = 36, className = "" }) => {
+/**
+ * The logomark is a ticket stub: a rounded body with two notches punched
+ * out of the sides and a perforation you would tear along. Flat ember,
+ * no gradient. The bolt on the right half is the "sync".
+ */
+export const VenueSyncMark: React.FC<MarkProps> = ({ size = 34, className = "" }) => {
   const uid = useId().replace(/:/g, "")
 
   return (
@@ -31,43 +38,130 @@ export const VenueSyncMark: React.FC<MarkProps> = ({ size = 36, className = "" }
       aria-hidden
     >
       <defs>
-        {/* Cut the circular notches out of the ticket body */}
         <mask id={`tm-${uid}`}>
-          <rect width="40" height="29" rx="5" fill="white" />
-          <circle cx="0"  cy="14.5" r="4.8" fill="black" />
-          <circle cx="40" cy="14.5" r="4.8" fill="black" />
+          <rect width="40" height="29" rx="4.5" fill="white" />
+          <circle cx="0" cy="14.5" r="4.6" fill="black" />
+          <circle cx="40" cy="14.5" r="4.6" fill="black" />
         </mask>
-        <linearGradient id={`bg-${uid}`} x1="0" y1="0" x2="40" y2="29" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="oklch(0.72 0.20 275)" />
-          <stop offset="100%" stopColor="oklch(0.60 0.18 318)" />
-        </linearGradient>
       </defs>
 
-      {/* Ticket body */}
-      <rect width="40" height="29" rx="5" fill={`url(#bg-${uid})`} mask={`url(#tm-${uid})`} />
+      {/* Painted from the theme tokens rather than fixed ember, so the mark
+          follows whichever vibe is active instead of clashing with it. */}
+      <rect width="40" height="29" rx="4.5" fill="var(--primary)" mask={`url(#tm-${uid})`} />
 
-      {/* Perforation line — dashed, centered */}
+      {/* Tear line */}
       <line
-        x1="20" y1="3.5" x2="20" y2="25.5"
-        stroke="white" strokeWidth="1.1" strokeDasharray="2.8 2.2"
-        strokeOpacity="0.32"
+        x1="15"
+        y1="4"
+        x2="15"
+        y2="25"
+        stroke="var(--primary-foreground)"
+        strokeWidth="1.2"
+        strokeDasharray="2.4 2.2"
+        strokeOpacity="0.55"
       />
 
-      {/* Lightning bolt — the "sync" spark, right of perforation */}
+      {/* The spark, on the stub side of the tear */}
       <path
-        d="M24.5 5.5 L18 15.5 H23 L20.5 23.5 L29 13 H23.5 Z"
-        fill="white"
-        fillOpacity="0.93"
+        d="M28 5.5 L21.5 15.5 H26 L23.5 23.5 L31.5 13 H26.5 Z"
+        fill="var(--primary-foreground)"
+        fillOpacity="0.9"
       />
     </svg>
   )
 }
 
-/* ─── Re-exports from Phosphor ──────────────────────────────────────────── */
-/*
- * Import only what the app uses. All with explicit weight so the bundle
- * only includes the variants we need (Phosphor is tree-shakeable).
+/* ─── Organizer monograms ─────────────────────────────────────────────── */
+
+/**
+ * The organizers on the landing page are demo tenants, so there is no real
+ * logo to license. Rather than setting their names as plain text (which
+ * always reads as a placeholder), each gets a distinct geometric glyph.
+ * Deliberately varied shapes so the wall does not look like one mark
+ * repeated eight times.
  */
+export type MonogramGlyph =
+  | "bar-circle"
+  | "triangle"
+  | "pulse"
+  | "asterisk"
+  | "diamond"
+  | "chevrons"
+  | "arc"
+  | "orbit"
+
+export const OrganizerGlyph: React.FC<{ glyph: MonogramGlyph; size?: number }> = ({
+  glyph,
+  size = 20,
+}) => {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  }
+
+  switch (glyph) {
+    case "bar-circle":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M3.5 12h17" />
+        </svg>
+      )
+    case "triangle":
+      return (
+        <svg {...common}>
+          <path d="M12 4 21 20H3z" />
+        </svg>
+      )
+    case "pulse":
+      return (
+        <svg {...common}>
+          <path d="M2 12h4l3-7 5 14 3-7h5" />
+        </svg>
+      )
+    case "asterisk":
+      return (
+        <svg {...common}>
+          <path d="M12 3v18M4 7l16 10M20 7 4 17" />
+        </svg>
+      )
+    case "diamond":
+      return (
+        <svg {...common}>
+          <rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" />
+        </svg>
+      )
+    case "chevrons":
+      return (
+        <svg {...common}>
+          <path d="m4 14 8-7 8 7M4 20l8-7 8 7" />
+        </svg>
+      )
+    case "arc":
+      return (
+        <svg {...common}>
+          <path d="M3 18a9 9 0 0 1 18 0" />
+          <path d="M3 18h18" />
+        </svg>
+      )
+    case "orbit":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="4" />
+          <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-24 12 12)" />
+        </svg>
+      )
+  }
+}
+
+/* ─── Re-exports from Phosphor ──────────────────────────────────────────── */
 
 export {
   /* Navigation */
@@ -81,7 +175,7 @@ export {
   X,
   UserCircle,
 
-  /* Landing — categories */
+  /* Categories */
   MusicNotes,
   Barbell,
   PaintBrush,
@@ -89,7 +183,7 @@ export {
   ForkKnife,
   Confetti,
 
-  /* Landing — stats / social proof */
+  /* Social proof */
   CalendarCheck,
   UsersThree,
   ChartLineUp,
@@ -101,24 +195,41 @@ export {
   CalendarBlank,
   ArrowUpRight,
   ArrowRight,
+  ArrowLeft,
+  ArrowDown,
   CaretRight,
+  CaretLeft,
 
-  /* Ticket status */
+  /* Ticket lifecycle */
   CheckCircle,
   XCircle,
   Clock,
   SealCheck,
+  DeviceMobile,
+  Receipt,
 
   /* Organizer features */
   ChartBar,
   ShieldCheck,
   SlidersHorizontal,
   Lightning,
+  Storefront,
+
+  /* Feed actions */
+  ShareNetwork,
+  BookmarkSimple,
+  CaretDown,
 
   /* Form / utility */
   MagnifyingGlass,
   Check,
   Info,
   WarningCircle,
+  EnvelopeSimple,
 
+  /* Social */
+  XLogo,
+  InstagramLogo,
+  GithubLogo,
+  LinkedinLogo,
 } from "@phosphor-icons/react"

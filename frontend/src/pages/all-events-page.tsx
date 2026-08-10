@@ -2,11 +2,10 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { PublishedEventSummary, SpringBootPagination } from "@/domain/domain"
 import { listAllPublishedEvents, searchAllPublishedEvents } from "@/lib/api"
-import { motion } from "framer-motion"
-import { Calendar, ArrowLeft } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageContainer from "@/components/layout/page-container"
@@ -14,141 +13,123 @@ import SearchBar from "@/components/forms/search-bar"
 import EventGrid from "@/components/events/event-grid"
 import { Pagination } from "@/components/common/pagination"
 import { Button } from "@/components/ui/button"
+import { ArrowLeft, WarningCircle } from "@/components/icons"
 import { Link } from "react-router"
 
 const AllEventsPage: React.FC = () => {
+  const reduce = useReducedMotion()
   const [page, setPage] = useState(0)
-  const [publishedEvents, setPublishedEvents] = useState<SpringBootPagination<PublishedEventSummary> | undefined>()
+  const [publishedEvents, setPublishedEvents] = useState<
+    SpringBootPagination<PublishedEventSummary> | undefined
+  >()
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
 
-  useEffect(() => {
-    if (query && query.length > 0) {
-      queryPublishedEvents()
-    } else {
-      refreshPublishedEvents()
-    }
-  }, [page])
-
-  const refreshPublishedEvents = async () => {
+  const runSearch = useCallback(async (term: string, pageNum: number) => {
     setIsLoading(true)
+    setError(null)
     try {
-      setPublishedEvents(await listAllPublishedEvents(page))
+      const result = term.trim()
+        ? await searchAllPublishedEvents(term.trim(), pageNum)
+        : await listAllPublishedEvents(pageNum)
+      setPublishedEvents(result)
     } catch (err) {
       console.error("Failed to load events:", err)
+      setError("We could not reach the events service.")
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const queryPublishedEvents = async () => {
-    if (!query) {
-      await refreshPublishedEvents()
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      setPublishedEvents(await searchAllPublishedEvents(query, page))
-    } catch (err) {
-      console.error("Failed to search events:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  useEffect(() => {
+    runSearch(query, page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
 
   const handleSearch = () => {
     setPage(0)
-    queryPublishedEvents()
+    runSearch(query, 0)
   }
+
+  const total = publishedEvents?.totalElements
 
   return (
     <PageContainer>
       <Navbar />
 
-      {/* Header Section */}
-      <section className="relative pt-24 pb-12 overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 gradient-mesh opacity-30" />
-
-        <div className="container mx-auto px-4 lg:px-8 relative">
+      <section className="border-b border-border py-12 lg:py-16">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Back Button */}
-            <Link to="/">
-              <Button variant="ghost" className="mb-6 gap-2 text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Home
-              </Button>
+            <Link
+              to="/"
+              className="focus-ring inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft weight="bold" size={14} />
+              Discover
             </Link>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
+            <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground">All Events</h1>
-                <p className="text-muted-foreground">
-                  {publishedEvents?.totalElements 
-                    ? `${publishedEvents.totalElements} events available`
-                    : "Browse all available events"}
+                <h1 className="display-section">All events</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {typeof total === "number" ? (
+                    <>
+                      <span className="font-mono tabular-nums text-foreground">{total}</span>{" "}
+                      {total === 1 ? "event" : "events"} listed
+                    </>
+                  ) : (
+                    "Everything currently published on VenueSync"
+                  )}
                 </p>
               </div>
-            </div>
 
-            {/* Search Bar */}
-            <div className="mt-8">
-              <SearchBar 
-                value={query} 
-                onChange={setQuery} 
-                onSearch={handleSearch} 
-                className="max-w-2xl" 
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                onSearch={handleSearch}
+                className="w-full max-w-xl"
               />
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Events Grid Section */}
-      <section className="py-8 pb-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          {query && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6"
-            >
-              <p className="text-muted-foreground">
-                Showing results for "<span className="text-foreground font-medium">{query}</span>"
-              </p>
-            </motion.div>
-          )}
-
-          <EventGrid events={publishedEvents?.content || []} isLoading={isLoading} />
-
-          {publishedEvents && publishedEvents.totalPages > 1 && (
-            <div className="mt-12">
-              <Pagination pagination={publishedEvents} onPageChange={setPage} />
-            </div>
-          )}
-
-          {!isLoading && publishedEvents?.content.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16"
-            >
-              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-muted-foreground" />
+      <section className="py-12 lg:py-16">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          {error ? (
+            <div className="flex flex-col items-center gap-4 rounded-md border border-destructive/40 bg-destructive/5 px-6 py-16 text-center">
+              <WarningCircle weight="fill" size={26} className="text-destructive" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{error}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This is usually temporary. Try again in a moment.
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No events found</h3>
-              <p className="text-muted-foreground">
-                {query ? "Try adjusting your search terms" : "Check back later for new events"}
-              </p>
-            </motion.div>
+              <Button variant="outline" size="sm" onClick={() => runSearch(query, page)}>
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* EventGrid already renders the empty state, so there is no
+                  second "no events found" block competing with it. */}
+              <EventGrid
+                events={publishedEvents?.content || []}
+                isLoading={isLoading}
+                query={query.trim() || undefined}
+              />
+
+              {publishedEvents && publishedEvents.totalPages > 1 && (
+                <div className="mt-14">
+                  <Pagination pagination={publishedEvents} onPageChange={setPage} />
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

@@ -2,70 +2,105 @@
 
 import type React from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { PublishedEventDetails, PublishedEventTicketTypeDetails } from "@/domain/domain"
 import { getPublishedEvent } from "@/lib/api"
-import { AlertCircle } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useAuth } from "react-oidc-context"
-import { useParams } from "react-router"
+import { Link, useParams } from "react-router"
+import { format } from "date-fns"
+import { motion, useReducedMotion } from "framer-motion"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageContainer from "@/components/layout/page-container"
 import EventHero from "@/components/events/event-hero"
 import TicketSelector from "@/components/events/ticket-selector"
-import { motion } from "framer-motion"
 import { Skeleton } from "@/components/common/loading-skeleton"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft, CalendarBlank, MapPin, WarningCircle } from "@/components/icons"
+import { parseWallClockDate } from "@/lib/date-utils"
+import { downloadIcs } from "@/lib/calendar"
+
+const EASE = [0.16, 1, 0.3, 1] as const
 
 const PublishedEventsPage: React.FC = () => {
   const { isLoading: isAuthLoading } = useAuth()
   const { id } = useParams()
+  const reduce = useReducedMotion()
+
   const [error, setError] = useState<string | undefined>()
   const [isLoading, setIsLoading] = useState(true)
   const [publishedEvent, setPublishedEvent] = useState<PublishedEventDetails | undefined>()
-  const [selectedTicketType, setSelectedTicketType] = useState<PublishedEventTicketTypeDetails | undefined>()
+  const [selectedTicketType, setSelectedTicketType] = useState<
+    PublishedEventTicketTypeDetails | undefined
+  >()
 
-  useEffect(() => {
+  const fetchEvent = useCallback(async () => {
     if (!id) {
-      setError("Event ID must be provided!")
+      setError("No event was specified.")
+      setIsLoading(false)
       return
     }
 
-    const fetchEvent = async () => {
-      setIsLoading(true)
-      try {
-        const eventData = await getPublishedEvent(id)
-        setPublishedEvent(eventData)
-        if (eventData.ticketTypes.length > 0) {
-          setSelectedTicketType(eventData.ticketTypes[0])
-        }
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message)
-        } else if (typeof err === "string") {
-          setError(err)
-        } else {
-          setError("An unknown error has occurred")
-        }
-      } finally {
-        setIsLoading(false)
+    setIsLoading(true)
+    setError(undefined)
+    try {
+      const eventData = await getPublishedEvent(id)
+      setPublishedEvent(eventData)
+      if (eventData.ticketTypes.length > 0) {
+        setSelectedTicketType(eventData.ticketTypes[0])
       }
+    } catch (err) {
+      console.error("Failed to load event:", err)
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "We could not load this event just now.",
+      )
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchEvent()
   }, [id])
+
+  useEffect(() => {
+    fetchEvent()
+  }, [fetchEvent])
+
+  const start = publishedEvent?.start ? parseWallClockDate(publishedEvent.start) : undefined
+  const end = publishedEvent?.end ? parseWallClockDate(publishedEvent.end) : undefined
+  const sameDay = start && end && format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd")
+
+  const handleAddToCalendar = () => {
+    if (!publishedEvent || !start) return
+    downloadIcs({
+      id: publishedEvent.id,
+      name: publishedEvent.name,
+      venue: publishedEvent.venue,
+      start,
+      end,
+      url: window.location.href,
+    })
+  }
 
   if (error) {
     return (
       <PageContainer>
         <Navbar />
-        <div className="container mx-auto px-4 pt-24">
-          <Alert variant="destructive" className="glass border-destructive/50">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+        <div className="mx-auto flex min-h-[60dvh] max-w-[1400px] flex-col items-center justify-center gap-5 px-5 text-center lg:px-8">
+          <WarningCircle weight="fill" size={28} className="text-destructive" />
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              This event did not load
+            </h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{error}</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            <Button onClick={fetchEvent}>Try again</Button>
+            <Link to="/events">
+              <Button variant="outline">Browse events</Button>
+            </Link>
+          </div>
         </div>
+        <Footer />
       </PageContainer>
     )
   }
@@ -74,22 +109,21 @@ const PublishedEventsPage: React.FC = () => {
     return (
       <PageContainer>
         <Navbar />
-        <div className="pt-24">
-          <Skeleton className="h-[50vh] w-full rounded-none" />
-          <div className="container mx-auto px-4 lg:px-8 py-12">
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-4">
-                <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-              <div className="space-y-4">
-                <Skeleton className="h-40 w-full rounded-xl" />
-                <Skeleton className="h-40 w-full rounded-xl" />
-              </div>
+        {/* Mirrors the loaded layout so nothing jumps when data arrives. */}
+        <Skeleton className="h-[46vh] min-h-[320px] w-full rounded-none" />
+        <div className="mx-auto max-w-[1400px] px-5 py-12 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-7">
+              <Skeleton className="h-10 w-3/4 rounded-sm" />
+              <Skeleton className="h-4 w-1/3 rounded-sm" />
+              <Skeleton className="h-4 w-1/2 rounded-sm" />
+            </div>
+            <div className="lg:col-span-4 lg:col-start-9">
+              <Skeleton className="h-72 w-full rounded-md" />
             </div>
           </div>
         </div>
+        <Footer />
       </PageContainer>
     )
   }
@@ -98,61 +132,89 @@ const PublishedEventsPage: React.FC = () => {
     <PageContainer>
       <Navbar />
 
-      {/* Hero Section */}
       {publishedEvent && (
         <EventHero
           name={publishedEvent.name}
           venue={publishedEvent.venue}
           start={publishedEvent.start}
           end={publishedEvent.end}
+          seed={publishedEvent.id}
         />
       )}
 
-      {/* Content */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - Event Info */}
+      <section className="py-14 lg:py-20">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-2 space-y-6"
+              transition={{ delay: 0.1, duration: 0.5, ease: EASE }}
+              className="lg:col-span-7"
             >
-              <div className="rounded-xl border border-border/40 bg-card/40 p-6">
-                <h2 className="font-semibold text-foreground mb-3">About This Event</h2>
-                <p className="text-muted-foreground leading-relaxed text-sm">
-                  Join us for an unforgettable experience at {publishedEvent?.name}. This event promises to deliver an
-                  amazing time for all attendees. Don't miss out on this incredible opportunity to be part of something
-                  special.
-                </p>
-              </div>
+              <Link
+                to="/events"
+                className="focus-ring inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft weight="bold" size={14} />
+                All events
+              </Link>
 
-              <div className="rounded-xl border border-border/40 bg-card/40 p-6">
-                <h2 className="font-semibold text-foreground mb-3">Venue</h2>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4.5 h-4.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+              {/*
+                There is no description on PublishedEventDetails, so this
+                block shows what the event record actually contains. It
+                previously printed a generated blurb ("an unforgettable
+                experience...") on every event, which read as the organizer's
+                own words and was not.
+              */}
+              <h2 className="mt-9 text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Details
+              </h2>
+
+              <dl className="mt-6">
+                {start && (
+                  <div className="flex items-start gap-4 border-t border-border py-5">
+                    <CalendarBlank weight="fill" size={17} className="mt-0.5 shrink-0 text-primary" />
+                    <div>
+                      <dt className="text-sm font-medium text-foreground">
+                        {format(start, "EEEE d MMMM yyyy")}
+                      </dt>
+                      <dd className="mt-1 font-mono text-sm tabular-nums text-muted-foreground">
+                        {format(start, "HH:mm")}
+                        {end && !sameDay && <> until {format(end, "EEE d MMM, HH:mm")}</>}
+                        {end && sameDay && <> until {format(end, "HH:mm")}</>}
+                      </dd>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="font-medium text-foreground text-sm">{publishedEvent?.venue}</p>
+                )}
+
+                {publishedEvent?.venue && (
+                  <div className="flex items-start gap-4 border-t border-border py-5">
+                    <MapPin weight="fill" size={17} className="mt-0.5 shrink-0 text-primary" />
+                    <div>
+                      <dt className="text-sm font-medium text-foreground">
+                        {publishedEvent.venue}
+                      </dt>
+                      <dd className="mt-1 text-sm text-muted-foreground">Venue</dd>
+                    </div>
                   </div>
-                </div>
-              </div>
+                )}
+              </dl>
+
+              {start && (
+                <Button variant="outline" className="mt-7 gap-2" onClick={handleAddToCalendar}>
+                  <CalendarBlank weight="bold" size={15} />
+                  Add to calendar
+                </Button>
+              )}
             </motion.div>
 
-            {/* Right Column - Ticket Selection */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={reduce ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="lg:sticky lg:top-24 h-fit"
+              transition={{ delay: 0.18, duration: 0.5, ease: EASE }}
+              className="lg:col-span-4 lg:col-start-9"
             >
-              <div className="glass rounded-2xl p-6">
+              <div className="rounded-md border border-border bg-card p-5 lg:sticky lg:top-24">
                 {publishedEvent && publishedEvent.ticketTypes.length > 0 ? (
                   <TicketSelector
                     ticketTypes={publishedEvent.ticketTypes}
@@ -161,8 +223,11 @@ const PublishedEventsPage: React.FC = () => {
                     eventId={publishedEvent.id}
                   />
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No tickets available at this time.</p>
+                  <div className="py-10 text-center">
+                    <p className="text-sm font-medium text-foreground">No tickets on sale</p>
+                    <p className="mt-1.5 text-sm text-muted-foreground">
+                      Nothing is released for this event yet.
+                    </p>
                   </div>
                 )}
               </div>

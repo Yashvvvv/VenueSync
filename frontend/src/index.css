@@ -1,14 +1,27 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════════
+   VenueSync design system
+
+   Concept: the ticket stub. A ticket is a printed object - warm
+   paper stock, a perforation you tear along, a serial number set
+   in monospace. Every decision below traces back to that.
+
+   Palette: ember on warm black. One accent, no gradients.
+   Type:    Archivo (display + text) / JetBrains Mono (all data).
+   Shape:   6px radius everywhere. No pills, no sharp corners.
+   ═══════════════════════════════════════════════════════════════ */
+
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Clamped: the acid vibe sets --radius to 0, and a bare calc would give
+     -2px, which is invalid and drops the declaration entirely. */
+  --radius-sm: max(0px, calc(var(--radius) - 2px));
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -40,53 +53,255 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "Archivo Variable", "Archivo", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Refined color palette — deep, precise, editorial */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.375rem;
 
-  /* ─── Motion easing curves (Emil Kowalski) ─── */
-  --ease-expo:   cubic-bezier(0.16, 1, 0.3, 1);    /* decisive, confident */
-  --ease-quint:  cubic-bezier(0.22, 1, 0.36, 1);   /* snappy entrances */
-  --ease-quart:  cubic-bezier(0.25, 1, 0.5, 1);    /* gentle state changes */
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);   /* iOS drawer feel */
-  --background: oklch(0.055 0.01 265);
-  --foreground: oklch(0.97 0.003 265);
-  --card: oklch(0.09 0.011 265);
-  --card-foreground: oklch(0.97 0.003 265);
-  --popover: oklch(0.09 0.011 265);
-  --popover-foreground: oklch(0.97 0.003 265);
-  --primary: oklch(0.68 0.19 278);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.13 0.013 265);
-  --secondary-foreground: oklch(0.97 0.003 265);
-  --muted: oklch(0.13 0.01 265);
-  --muted-foreground: oklch(0.55 0.012 265);
-  --accent: oklch(0.58 0.17 316);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.58 0.2 25);
-  --border: oklch(0.19 0.012 265);
-  --input: oklch(0.13 0.013 265);
-  --ring: oklch(0.68 0.19 278);
-  --chart-1: oklch(0.68 0.19 278);
-  --chart-2: oklch(0.63 0.17 200);
-  --chart-3: oklch(0.70 0.16 150);
-  --chart-4: oklch(0.76 0.14 60);
-  --chart-5: oklch(0.58 0.17 316);
-  --sidebar: oklch(0.075 0.01 265);
-  --sidebar-foreground: oklch(0.97 0.003 265);
-  --sidebar-primary: oklch(0.68 0.19 278);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.13 0.013 265);
-  --sidebar-accent-foreground: oklch(0.97 0.003 265);
-  --sidebar-border: oklch(0.19 0.012 265);
-  --sidebar-ring: oklch(0.68 0.19 278);
+  /* Motion curves. Named for what they do, not for a library. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --success: oklch(0.63 0.19 145);
-  --warning: oklch(0.73 0.17 85);
-  --info: oklch(0.63 0.17 230);
+  /* ── Neutrals: warm, hue 60, near-zero chroma.
+        Deliberately not the blue-tinted greys every dark SaaS ships. ── */
+  --background: oklch(0.09 0.004 60);
+  --foreground: oklch(0.96 0.002 60);
+  --card: oklch(0.125 0.005 60);
+  --card-foreground: oklch(0.96 0.002 60);
+  --popover: oklch(0.135 0.005 60);
+  --popover-foreground: oklch(0.96 0.002 60);
+  --secondary: oklch(0.165 0.005 60);
+  --secondary-foreground: oklch(0.96 0.002 60);
+  --muted: oklch(0.165 0.005 60);
+  --muted-foreground: oklch(0.62 0.008 60);
+  --accent: oklch(0.19 0.005 60);
+  --accent-foreground: oklch(0.96 0.002 60);
+  --border: oklch(0.235 0.006 60);
+  --input: oklch(0.19 0.005 60);
+
+  /* ── The single accent. Ember.
+        Foreground is near-black on purpose: white on ember is 2.3:1
+        and fails AA. Ink on ember is 6.9:1 and passes. ── */
+  --primary: oklch(0.7 0.175 48);
+  --primary-foreground: oklch(0.15 0.03 48);
+  --ring: oklch(0.7 0.175 48);
+
+  /* ── Semantic state only. Never decoration. ── */
+  --destructive: oklch(0.58 0.19 27);
+  --success: oklch(0.66 0.14 152);
+  --warning: oklch(0.78 0.14 95);
+  --info: oklch(0.68 0.11 230);
+
+  --chart-1: oklch(0.7 0.175 48);
+  --chart-2: oklch(0.66 0.14 152);
+  --chart-3: oklch(0.68 0.11 230);
+  --chart-4: oklch(0.78 0.14 95);
+  --chart-5: oklch(0.55 0.02 60);
+
+  --sidebar: oklch(0.11 0.004 60);
+  --sidebar-foreground: oklch(0.96 0.002 60);
+  --sidebar-primary: oklch(0.7 0.175 48);
+  --sidebar-primary-foreground: oklch(0.15 0.03 48);
+  --sidebar-accent: oklch(0.165 0.005 60);
+  --sidebar-accent-foreground: oklch(0.96 0.002 60);
+  --sidebar-border: oklch(0.235 0.006 60);
+  --sidebar-ring: oklch(0.7 0.175 48);
+
+  /* Knobs the vibe blocks below turn. Defaults match "calm". */
+  --display-scale: 1;
+  --display-tracking: -0.035em;
+  --grain: 0.035;
+  --motion-scale: 1;
+  /* Headline family. Body and data never change face; only display does. */
+  --font-display: var(--font-sans);
+  /* Second print plate. Unused until a vibe defines one. */
+  --plate-2: var(--primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Vibe variants
+
+   One component tree, two token sets. `data-vibe` is stamped on
+   <html> by a blocking script in index.html before first paint, so
+   there is no flash and no layout shift on load.
+
+   Both variants keep ink on ember for primary fills. Ember sits at
+   L≈0.72 in each, so white text would measure ~2.3:1 and fail AA in
+   both. That rule is not a knob.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Softer. Surfaces sit closer together, edges are rounder, the accent
+   is desaturated, motion has more follow-through. */
+:root[data-vibe="calm"] {
+  --background: oklch(0.105 0.005 60);
+  --card: oklch(0.142 0.006 60);
+  --popover: oklch(0.15 0.006 60);
+  --secondary: oklch(0.175 0.006 60);
+  --muted: oklch(0.175 0.006 60);
+  --accent: oklch(0.2 0.006 60);
+  --muted-foreground: oklch(0.645 0.008 60);
+  --border: oklch(0.245 0.006 60);
+
+  --primary: oklch(0.72 0.142 50);
+  --ring: oklch(0.72 0.142 50);
+  --primary-foreground: oklch(0.16 0.028 50);
+
+  --radius: 0.625rem;
+  --display-scale: 0.95;
+  --display-tracking: -0.028em;
+  --grain: 0.022;
+  --motion-scale: 1.15;
+}
+
+/* Harder. Deeper ground, panels that separate clearly from it, an
+   almost square corner, hotter accent, snappier motion. This is the
+   tactile end of the range. */
+:root[data-vibe="bold"] {
+  --background: oklch(0.062 0.004 60);
+  --card: oklch(0.118 0.006 60);
+  --popover: oklch(0.128 0.006 60);
+  --secondary: oklch(0.158 0.006 60);
+  --muted: oklch(0.158 0.006 60);
+  --accent: oklch(0.185 0.006 60);
+  --foreground: oklch(0.985 0.002 60);
+  --muted-foreground: oklch(0.665 0.011 60);
+  --border: oklch(0.285 0.009 60);
+
+  --primary: oklch(0.72 0.205 45);
+  --ring: oklch(0.72 0.205 45);
+  --primary-foreground: oklch(0.145 0.035 45);
+
+  --radius: 0.125rem;
+  --display-scale: 1.08;
+  --display-tracking: -0.044em;
+  --grain: 0.055;
+  --motion-scale: 0.85;
+}
+
+/* ── Acid ──────────────────────────────────────────────────────────
+   The gig flyer, photocopied.
+
+   Reference is the wall of risograph and xerox flyers outside a venue,
+   not a generic "bold UI": two ink plates on cheap black stock, a
+   halftone dot screen, condensed poster type in caps, square corners,
+   hard offset shadows instead of soft elevation.
+
+   Neutrals drop to zero chroma on purpose. The warm greys that carry
+   the other two vibes are a printing nicety a photocopier does not
+   have.
+
+   Every colour here was converted to linear sRGB and measured, not
+   eyeballed, and every one sits inside the sRGB gamut so it renders the
+   same on a P3 display as on a cheap laptop panel:
+
+     lime on ground      14.38:1  AAA
+     magenta on ground    7.64:1  AAA
+     ink on lime         13.27:1  AAA
+     muted grey on ground 8.45:1  AAA
+
+   Chroma is capped by gamut, not taste: at L 0.16 and hue 128 the most
+   sRGB can hold is C 0.041, and at L 0.72 hue 352 it is C 0.268. Going
+   past those hands the browser an out-of-range colour to gamut-map,
+   which quietly changes the design per display.
+   ────────────────────────────────────────────────────────────────── */
+:root[data-vibe="acid"] {
+  --background: oklch(0.045 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.085 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.1 0 0);
+  --popover-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.14 0 0);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.14 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.17 0 0);
+  --accent-foreground: oklch(0.98 0 0);
+  --border: oklch(0.45 0 0);
+  --input: oklch(0.14 0 0);
+
+  /* Plate one: acid lime. */
+  --primary: oklch(0.86 0.21 128);
+  --ring: oklch(0.86 0.21 128);
+  --primary-foreground: oklch(0.16 0.03 128);
+
+  /* Plate two: hot magenta. A real riso print is two passes, so the
+     second colour earns its place rather than being decoration. */
+  --plate-2: oklch(0.72 0.205 352);
+
+  --radius: 0rem;
+  --display-scale: 1.22;
+  --display-tracking: -0.005em;
+  --grain: 0.075;
+  --motion-scale: 0.7;
+  --font-display: "Anton", "Archivo Variable", system-ui, sans-serif;
+}
+
+/* Poster type. Uppercase has no descenders, so the sub-1 line height that
+   would clip a "g" in the other vibes is safe here. Anton ships a single
+   weight, so anything above 400 would be a synthesised smear. */
+:root[data-vibe="acid"] .display-hero,
+:root[data-vibe="acid"] .display-section,
+:root[data-vibe="acid"] .hero-heading,
+:root[data-vibe="acid"] .section-heading {
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 0.9;
+}
+
+/* The second plate, used where small type wants to sing against the lime. */
+:root[data-vibe="acid"] .eyebrow {
+  color: var(--plate-2);
+}
+
+:root[data-vibe="acid"] ::selection {
+  background: var(--plate-2);
+  color: oklch(0.98 0 0);
+}
+
+/* Halftone screen. Fixed and pointer-events-none for the same reason as the
+   grain: a texture layer inside a scrolling container repaints every frame. */
+:root[data-vibe="acid"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: radial-gradient(circle at center, oklch(0.98 0 0) 0.5px, transparent 1.2px);
+  background-size: 4px 4px;
+}
+
+/* Hard rules and offset shadows. Photocopied paper, not soft elevation. */
+:root[data-vibe="acid"] .border {
+  border-width: 2px;
+}
+
+:root[data-vibe="acid"] .perf,
+:root[data-vibe="acid"] .perf-strong {
+  border-top-width: 2px;
+}
+
+:root[data-vibe="acid"] .card-hover {
+  box-shadow: 5px 5px 0 0 var(--border);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-vibe="acid"] .card-hover:hover {
+    box-shadow: 7px 7px 0 0 var(--primary);
+  }
+}
+
+/* Recolouring the whole page on a click is a state change worth showing,
+   but only where it cannot fight a layout animation. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-vibe] body {
+    transition: background-color 320ms var(--ease-soft);
+  }
 }
 
 @layer base {
@@ -103,95 +318,299 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    /* Subtle dot grid — Linear-style precision background */
-    background-image:
-      radial-gradient(circle, oklch(0.2 0.012 265 / 0.45) 1px, transparent 0);
-    background-size: 24px 24px;
-    background-attachment: fixed;
+    font-family: var(--font-sans);
+    /* Flat stock. The old dot-grid was borrowed, not earned. */
+  }
+
+  /* Every number, date, code and serial is monospace. That is the
+     ticket-stub rule and it holds everywhere in the app. */
+  time,
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* ─── Glass utilities — refined for editorial minimal feel ─── */
+/* ── Paper grain. Fixed + pointer-events-none so it never repaints
+      on scroll (a grain layer inside a scroll container destroys
+      mobile framerate). ── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: var(--grain, 0.035);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ═══ Typography ═══════════════════════════════════════════════ */
+
+.display-hero {
+  font-family: var(--font-display);
+  font-size: calc(clamp(2.75rem, 6.4vw, 5rem) * var(--display-scale, 1));
+  font-weight: 700;
+  letter-spacing: var(--display-tracking, -0.035em);
+  /* 1.06 not 1.0: italic descenders (y, g, j) clip at leading-none */
+  line-height: 1.06;
+  color: var(--foreground);
+}
+
+.display-section {
+  font-family: var(--font-display);
+  font-size: calc(clamp(1.875rem, 3.6vw, 2.75rem) * var(--display-scale, 1));
+  font-weight: 650;
+  letter-spacing: calc(var(--display-tracking, -0.035em) + 0.005em);
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+/* Legacy aliases so pages outside this pass keep their hierarchy. */
+.hero-heading {
+  font-size: clamp(2.75rem, 6.4vw, 5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  color: var(--foreground);
+}
+
+.section-heading {
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+/* Printed metadata: dates, venues, seat rows, serials. */
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Referenced by the About, Contact and Help pages, which are outside this
+   pass. It had no definition left, so those emphasis words were rendering
+   unstyled. Solid ember rather than a gradient: gradient text is
+   decorative, and these words carry meaning. */
+.text-gradient {
+  color: var(--primary);
+}
+
+/* Quiet label. No pill, no border, no glow - those read as a badge,
+   and a badge implies status this text does not carry. */
+.eyebrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+/* ═══ The ticket motif ═════════════════════════════════════════ */
+
+/* Tear line. Used instead of a plain border wherever the divide is
+   meaningful: stub from body, section from section. */
+.perf {
+  border: 0;
+  border-top: 1px dashed color-mix(in oklab, var(--border) 100%, transparent);
+  height: 0;
+}
+
+.perf-strong {
+  border: 0;
+  border-top: 1.5px dashed color-mix(in oklab, var(--primary) 42%, transparent);
+  height: 0;
+}
+
+/* Punched hole sitting on a tear line. Colour matches the page, so it
+   reads as a hole rather than a dot. Requires a flat page background,
+   which is why the dot-grid had to go. */
+.notch {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.notch-l {
+  left: -11px;
+}
+.notch-r {
+  right: -11px;
+}
+
+/* ═══ Surfaces ═════════════════════════════════════════════════ */
+
+/* Cards are stock, not glass. Kept as `.glass` so the ~20 files
+   outside this pass pick up the new material automatically. */
 .glass {
-  background: oklch(0.1 0.011 265 / 0.55);
-  backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid oklch(0.22 0.012 265 / 0.5);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.glass-strong {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px -20px oklch(0 0 0 / 0.7);
 }
 
 .glass-hover {
-  transition: background 180ms ease, border-color 180ms ease;
+  transition: background 160ms var(--ease-soft), border-color 160ms var(--ease-soft);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .glass-hover:hover {
-    background: oklch(0.12 0.011 265 / 0.65);
-    border-color: oklch(0.28 0.012 265 / 0.6);
+    background: var(--secondary);
+    border-color: color-mix(in oklab, var(--primary) 34%, var(--border));
   }
 }
 
-.glass-strong {
-  background: oklch(0.11 0.011 265 / 0.85);
-  backdrop-filter: blur(32px) saturate(160%);
-  border: 1px solid oklch(0.24 0.012 265 / 0.55);
+/* Navbar only. The one place a translucent layer earns its cost,
+   because content genuinely passes underneath it. */
+.chrome-blur {
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 
-/* ─── Gradient utilities ─── */
-.gradient-primary {
-  background: linear-gradient(135deg, oklch(0.68 0.19 278) 0%, oklch(0.58 0.17 316) 100%);
+@media (prefers-reduced-transparency: reduce) {
+  .chrome-blur {
+    background: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
+/* ═══ Fills ════════════════════════════════════════════════════
+   These were gradients. They are now flat ember. The class names
+   survive so unedited pages restyle themselves; the colour rule is
+   unlayered CSS, so it correctly overrides any `text-white`
+   utility left on those elements and keeps contrast at AA.
+   ═══════════════════════════════════════════════════════════════ */
+
+.gradient-primary,
 .gradient-secondary {
-  background: linear-gradient(135deg, oklch(0.58 0.17 316) 0%, oklch(0.63 0.17 230) 100%);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.gradient-primary svg,
+.gradient-secondary svg {
+  color: currentColor;
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, oklch(0.63 0.19 145) 0%, oklch(0.58 0.17 180) 100%);
+  background: var(--success);
+  color: oklch(0.14 0.03 152);
 }
 
-/* Subtle ambient mesh — much quieter than before */
+/* Was a three-blob mesh. Now one faint warm wash, barely there. */
 .gradient-mesh {
-  background:
-    radial-gradient(ellipse 60% 40% at 15% 20%, oklch(0.68 0.19 278 / 0.12) 0px, transparent 100%),
-    radial-gradient(ellipse 40% 30% at 85% 15%, oklch(0.58 0.17 316 / 0.09) 0px, transparent 100%),
-    radial-gradient(ellipse 50% 40% at 50% 90%, oklch(0.63 0.17 230 / 0.07) 0px, transparent 100%);
+  background: radial-gradient(
+    ellipse 70% 50% at 50% 0%,
+    color-mix(in oklab, var(--primary) 7%, transparent) 0%,
+    transparent 70%
+  );
 }
 
-/* gradient-text intentionally removed — use solid color for text emphasis */
-
-/* Eyebrow label pill */
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: oklch(0.68 0.19 278);
-  border: 1px solid oklch(0.68 0.19 278 / 0.3);
-  background: oklch(0.68 0.19 278 / 0.08);
-  padding: 5px 14px;
-  border-radius: 999px;
+/* Neon glows are the loudest AI tell in the file. Retired to tinted
+   elevation - the class names stay valid, the neon does not. */
+.glow-primary,
+.glow-accent,
+.glow-success {
+  box-shadow: 0 18px 44px -16px oklch(0.7 0.175 48 / 0.3);
 }
 
-/* ─── Hero text line reveal ─── */
-@keyframes line-rise {
-  from {
-    transform: translateY(110%);
-    opacity: 0;
+.border-gradient {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* ═══ Interaction ══════════════════════════════════════════════ */
+
+.btn-press {
+  transition: transform calc(110ms * var(--motion-scale, 1)) var(--ease-out-expo),
+    background-color calc(140ms * var(--motion-scale, 1)) var(--ease-soft),
+    border-color calc(140ms * var(--motion-scale, 1)) var(--ease-soft),
+    color calc(140ms * var(--motion-scale, 1)) var(--ease-soft);
+}
+
+.btn-press:active {
+  transform: translateY(1px);
+}
+
+.card-hover {
+  transition: border-color 180ms var(--ease-soft), background 180ms var(--ease-soft),
+    transform 240ms var(--ease-out-expo), box-shadow 180ms var(--ease-soft);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    border-color: color-mix(in oklab, var(--primary) 40%, var(--border));
+    transform: translateY(-2px);
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }
 
-/* ─── Stagger item (use with --i CSS custom property) ─── */
+.card-hover:active {
+  transform: translateY(0);
+}
+
+.focus-ring {
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* Underline that draws from the leading edge. Used on text links in
+   place of a second button, so a section never shows two button
+   boxes competing for the same eye. */
+.link-underline {
+  position: relative;
+}
+
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms var(--ease-out-expo);
+}
+
+.link-underline:hover::after {
+  transform: scaleX(1);
+}
+
+/* ═══ Motion ═══════════════════════════════════════════════════
+   Entrances and state changes only. Nothing loops forever.
+   ═══════════════════════════════════════════════════════════════ */
+
 @keyframes stagger-up {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -201,83 +620,8 @@
 
 .stagger-item {
   opacity: 0;
-  animation: stagger-up 0.4s var(--ease-expo) calc(var(--i, 0) * 55ms) forwards;
-}
-
-/* ─── Card enter animation ─── */
-@keyframes card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ─── Brands marquee ─── */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee 28s linear infinite;
-}
-.marquee-track:hover {
-  animation-play-state: paused;
-}
-
-/* ─── Button press feedback ─── */
-.btn-press {
-  transition: transform 120ms var(--ease-expo);
-}
-.btn-press:active {
-  transform: scale(0.97);
-}
-
-/* Enhanced animations */
-@keyframes gradient-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 20px oklch(0.7 0.2 280 / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px oklch(0.7 0.2 280 / 0.5);
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: stagger-up calc(0.42s * var(--motion-scale, 1)) var(--ease-out-expo)
+    calc(var(--i, 0) * 45ms * var(--motion-scale, 1)) forwards;
 }
 
 @keyframes fade-in {
@@ -289,10 +633,21 @@
   }
 }
 
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
   to {
     opacity: 1;
@@ -300,45 +655,48 @@
   }
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient-shift 15s ease infinite;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+.animate-fade-in {
+  animation: fade-in 0.4s var(--ease-soft) forwards;
 }
 
 .animate-slide-up {
-  animation: slide-up 0.5s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out forwards;
+  animation: slide-up 0.5s var(--ease-out-expo) forwards;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.3s ease-out forwards;
+  animation: scale-in 0.3s var(--ease-out-expo) forwards;
 }
 
-/* Enhanced glow effects */
-.glow-primary {
-  box-shadow: 0 0 40px oklch(0.7 0.2 280 / 0.35), 0 0 80px oklch(0.7 0.2 280 / 0.15);
+/* Perpetual float / pulse-glow / gradient-shift were decoration with
+   no message. Neutralised rather than deleted, so pages outside this
+   pass simply render still. */
+.animate-float,
+.animate-pulse-glow,
+.animate-gradient {
+  animation: none;
 }
 
-.glow-accent {
-  box-shadow: 0 0 40px oklch(0.6 0.18 320 / 0.35), 0 0 80px oklch(0.6 0.18 320 / 0.15);
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
-.glow-success {
-  box-shadow: 0 0 40px oklch(0.65 0.2 145 / 0.35);
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 42s linear infinite;
 }
 
-/* Enhanced skeleton loading animation */
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ═══ Loading ══════════════════════════════════════════════════ */
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -349,123 +707,68 @@
 }
 
 .skeleton {
-  background: linear-gradient(90deg, oklch(0.15 0.015 260) 0%, oklch(0.22 0.015 260) 50%, oklch(0.15 0.015 260) 100%);
+  background: linear-gradient(
+    90deg,
+    oklch(0.15 0.005 60) 0%,
+    oklch(0.21 0.006 60) 50%,
+    oklch(0.15 0.005 60) 100%
+  );
   background-size: 200% 100%;
-  animation: shimmer 1.8s infinite ease-in-out;
+  animation: shimmer 1.6s infinite ease-in-out;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* ═══ Status ═══════════════════════════════════════════════════ */
 
-::-webkit-scrollbar-track {
-  background: oklch(0.08 0.01 260);
-}
-
-::-webkit-scrollbar-thumb {
-  background: oklch(0.25 0.015 260);
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.35 0.015 260);
-}
-
-/* Focus ring */
-.focus-ring {
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-}
-
-/* ─── Card interactions — gated to pointer devices ─── */
-.card-hover {
-  transition: transform 220ms var(--ease-expo), border-color 150ms ease, box-shadow 220ms ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .card-hover:hover {
-    transform: translateY(-3px);
-    border-color: oklch(0.35 0.015 265 / 0.7);
-    box-shadow: 0 20px 48px -12px oklch(0 0 0 / 0.6);
-  }
-}
-
-.card-hover:active {
-  transform: scale(0.99);
-}
-
-/* text-gradient intentionally removed — gradient text is decorative, never meaningful */
-
-/* Section heading utility */
-.section-heading {
-  font-size: clamp(1.75rem, 4vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: oklch(0.97 0.003 265);
-}
-
-/* Precise hero heading — maximum impact */
-.hero-heading {
-  font-size: clamp(3rem, 8vw, 6rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.0;
-  color: oklch(0.97 0.003 265);
-}
-
-/* Backdrop utilities */
-.backdrop-blur-heavy {
-  backdrop-filter: blur(24px) saturate(180%);
-}
-
-/* Border gradient effect */
-.border-gradient {
-  position: relative;
-  background: oklch(0.08 0.01 260);
-  border-radius: var(--radius);
-}
-
-.border-gradient::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, oklch(0.7 0.2 280 / 0.5), oklch(0.6 0.18 320 / 0.3));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Status badge colors */
 .status-draft {
-  @apply bg-muted/50 text-muted-foreground border border-border/50;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
 }
 
 .status-published {
-  background: oklch(0.65 0.2 145 / 0.15);
-  color: oklch(0.72 0.18 145);
-  border: 1px solid oklch(0.65 0.2 145 / 0.3);
+  background: color-mix(in oklab, var(--success) 16%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in oklab, var(--success) 34%, transparent);
 }
 
 .status-cancelled {
-  background: oklch(0.6 0.2 25 / 0.15);
-  color: oklch(0.68 0.18 25);
-  border: 1px solid oklch(0.6 0.2 25 / 0.3);
+  background: color-mix(in oklab, var(--destructive) 16%, transparent);
+  color: oklch(0.7 0.16 27);
+  border: 1px solid color-mix(in oklab, var(--destructive) 34%, transparent);
 }
 
 .status-completed {
-  background: oklch(0.7 0.2 280 / 0.15);
-  color: oklch(0.78 0.18 280);
-  border: 1px solid oklch(0.7 0.2 280 / 0.3);
+  background: color-mix(in oklab, var(--primary) 16%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary) 34%, transparent);
 }
 
-/* Confetti animation for success states */
+/* ═══ Chrome ═══════════════════════════════════════════════════ */
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 32%, transparent);
+  color: var(--foreground);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 3px solid var(--background);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.34 0.008 60);
+}
+
 @keyframes confetti-fall {
   0% {
     transform: translateY(-100%) rotate(0deg);
@@ -485,15 +788,14 @@
   pointer-events: none;
 }
 
-/* ─── Pointer-only hover reveals ─── */
-/* Elements only meaningful on hover — hide on touch-only devices */
 @media not all and (hover: hover) {
   .hover-reveal {
     display: none !important;
   }
 }
 
-/* ─── Reduced motion — accessibility requirement ─── */
+/* ═══ Reduced motion ═══════════════════════════════════════════ */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -513,5 +815,9 @@
     animation: none;
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .link-underline::after {
+    display: none;
   }
 }

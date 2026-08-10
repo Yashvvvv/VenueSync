@@ -1,14 +1,52 @@
-import { useEffect, useState } from "react";
+/**
+ * Stand-in photography for events that have no uploaded image yet.
+ *
+ * The picture is derived from a seed (the event id) instead of Math.random,
+ * so a given event keeps the same photo across renders, pagination and
+ * revisits. Picking randomly on mount made an event visibly change identity
+ * every time the grid re-rendered.
+ */
 
-const RandomEventImage: React.FC = () => {
-  const [imageSrc, setImageSrc] = useState("");
+const IMAGE_COUNT = 4
 
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * 4) + 1;
-    setImageSrc(`/event-image-${randomIndex}.webp`);
-  }, []);
+function seedToIndex(seed: string): number {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i)
+    hash |= 0
+  }
+  return (Math.abs(hash) % IMAGE_COUNT) + 1
+}
 
-  return <img src={imageSrc} alt="Random Event" className="object-cover" />;
-};
+interface RandomEventImageProps {
+  /** Stable identifier. Same seed always resolves to the same photo. */
+  seed?: string
+  alt?: string
+  className?: string
+  /** Set on the first card of the first fold so it is not lazy-loaded. */
+  priority?: boolean
+}
 
-export default RandomEventImage;
+const RandomEventImage: React.FC<RandomEventImageProps> = ({
+  seed = "venuesync",
+  alt = "",
+  className = "",
+  priority = false,
+}) => {
+  const index = seedToIndex(seed)
+
+  return (
+    <img
+      src={`/event-image-${index}.webp`}
+      alt={alt}
+      width={800}
+      height={600}
+      loading={priority ? "eager" : "lazy"}
+      decoding={priority ? "sync" : "async"}
+      fetchPriority={priority ? "high" : "auto"}
+      className={`h-full w-full object-cover ${className}`}
+    />
+  )
+}
+
+export default RandomEventImage

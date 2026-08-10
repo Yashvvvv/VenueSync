@@ -12,21 +12,21 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
   return <div className={cn("skeleton rounded-lg", className)} />
 }
 
+/** Mirrors the real card exactly, notches included, so nothing shifts on load. */
 export const EventCardSkeleton: React.FC = () => {
   return (
-    <div className="rounded-2xl border border-border/30 bg-card/30 overflow-hidden">
-      <Skeleton className="h-[200px] w-full rounded-none" />
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-5 w-4/5" />
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-3.5 w-3.5 rounded" />
-            <Skeleton className="h-3.5 w-2/5" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-3.5 w-3.5 rounded" />
-            <Skeleton className="h-3.5 w-3/5" />
-          </div>
+    <div className="relative rounded-md border border-border bg-card">
+      <Skeleton className="aspect-[5/3] w-full rounded-none rounded-t-md" />
+      <div className="relative">
+        <div className="notch notch-l top-1/2 -translate-y-1/2" />
+        <div className="notch notch-r top-1/2 -translate-y-1/2" />
+        <hr className="perf mx-4" />
+      </div>
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-4 w-4/5 rounded-sm" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-2/5 rounded-sm" />
+          <Skeleton className="h-3 w-3/5 rounded-sm" />
         </div>
       </div>
     </div>
@@ -81,16 +81,17 @@ export const DashboardCardSkeleton: React.FC = () => {
 
 export const PageLoader: React.FC = () => {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
         className="flex flex-col items-center gap-4"
       >
-        {/* Minimal spinner */}
-        <div className="w-8 h-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-border border-t-primary" />
+        <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
+          Loading
+        </p>
       </motion.div>
     </div>
   )

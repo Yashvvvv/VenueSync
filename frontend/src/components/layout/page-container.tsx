@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import type { ReactNode } from "react"
 
 interface PageContainerProps {
@@ -10,21 +10,24 @@ interface PageContainerProps {
   className?: string
 }
 
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 },
-}
-
+/**
+ * Page-level entrance.
+ *
+ * Fade only. The previous version also translated the whole page on Y,
+ * which moved the largest element on screen and pushed out LCP for the
+ * sake of an effect nobody consciously sees. `100dvh` rather than
+ * `100vh` so the first paint does not jump when mobile Safari collapses
+ * its address bar.
+ */
 export const PageContainer: React.FC<PageContainerProps> = ({ children, className = "" }) => {
+  const reduce = useReducedMotion()
+
   return (
     <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className={`min-h-screen bg-background ${className}`}
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className={`min-h-[100dvh] bg-background ${className}`}
     >
       {children}
     </motion.div>
