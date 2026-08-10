@@ -1,9 +1,7 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
-import { Button } from "../ui/button"
+import { CaretLeft, CaretRight } from "@/components/icons"
 import type { SpringBootPagination } from "@/domain/domain"
-import { motion } from "framer-motion"
 
 interface PaginationProps<T> {
   pagination: SpringBootPagination<T>
@@ -15,90 +13,77 @@ export function Pagination<T>({ pagination, onPageChange }: PaginationProps<T>) 
 
   if (totalPages <= 1) return null
 
-  const getPageNumbers = () => {
-    const pages: (number | "ellipsis")[] = []
-
+  const getPageNumbers = (): (number | "ellipsis")[] => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i)
     }
 
-    // Always show first page
-    pages.push(0)
+    const pages: (number | "ellipsis")[] = [0]
 
-    if (currentPage > 3) {
-      pages.push("ellipsis")
-    }
+    if (currentPage > 3) pages.push("ellipsis")
 
-    // Show pages around current page
     for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages - 2, currentPage + 1); i++) {
       pages.push(i)
     }
 
-    if (currentPage < totalPages - 4) {
-      pages.push("ellipsis")
-    }
+    if (currentPage < totalPages - 4) pages.push("ellipsis")
 
-    // Always show last page
     pages.push(totalPages - 1)
 
     return pages
   }
 
-  const pages = getPageNumbers()
+  const arrow =
+    "focus-ring btn-press flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-center gap-2"
-    >
-      <Button
-        variant="outline"
-        size="sm"
+    <nav aria-label="Pagination" className="flex items-center justify-center gap-2">
+      <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={first}
-        className="gap-1.5 glass border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary disabled:opacity-40"
+        className={arrow}
+        aria-label="Previous page"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <CaretLeft weight="bold" size={14} />
         <span className="hidden sm:inline">Previous</span>
-      </Button>
+      </button>
 
       <div className="flex gap-1">
-        {pages.map((page, index) =>
+        {getPageNumbers().map((page, index) =>
           page === "ellipsis" ? (
-            <div key={`ellipsis-${index}`} className="w-9 h-9 flex items-center justify-center">
-              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <span
+              key={`ellipsis-${index}`}
+              className="flex h-9 w-6 items-center justify-center font-mono text-sm text-muted-foreground"
+            >
+              ...
+            </span>
           ) : (
-            <motion.div key={page} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant={page === currentPage ? "default" : "outline"}
-                size="sm"
-                onClick={() => onPageChange(page)}
-                className={
-                  page === currentPage
-                    ? "gradient-primary text-white w-9 h-9 p-0 shadow-lg shadow-primary/20"
-                    : "glass border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary w-9 h-9 p-0"
-                }
-              >
-                {page + 1}
-              </Button>
-            </motion.div>
+            <button
+              key={page}
+              onClick={() => onPageChange(page)}
+              aria-current={page === currentPage ? "page" : undefined}
+              className={`focus-ring btn-press h-9 w-9 rounded-md border font-mono text-sm tabular-nums transition-colors ${
+                page === currentPage
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              {page + 1}
+            </button>
           ),
         )}
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
+      <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={last}
-        className="gap-1.5 glass border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:text-primary disabled:opacity-40"
+        className={arrow}
+        aria-label="Next page"
       >
         <span className="hidden sm:inline">Next</span>
-        <ChevronRight className="w-4 h-4" />
-      </Button>
-    </motion.div>
+        <CaretRight weight="bold" size={14} />
+      </button>
+    </nav>
   )
 }
 

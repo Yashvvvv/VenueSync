@@ -7,13 +7,18 @@ import { NoEventsFound } from "../common/empty-state"
 interface EventGridProps {
   events: PublishedEventSummary[]
   isLoading?: boolean
-  emptyMessage?: string
+  /** Active search term, so the empty state can tell "no match" from
+      "nothing published yet". Omit when nothing was searched. */
+  query?: string
 }
 
-export const EventGrid: React.FC<EventGridProps> = ({ events, isLoading = false }) => {
+export const EventGrid: React.FC<EventGridProps> = ({ events, isLoading = false, query }) => {
+  const grid =
+    "grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className={grid}>
         {Array.from({ length: 8 }).map((_, i) => (
           <EventCardSkeleton key={i} />
         ))}
@@ -22,13 +27,13 @@ export const EventGrid: React.FC<EventGridProps> = ({ events, isLoading = false 
   }
 
   if (!events || events.length === 0) {
-    return <NoEventsFound />
+    return <NoEventsFound query={query} />
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className={grid}>
       {events.map((event, index) => (
-        <EventCard key={event.id} event={event} index={index} />
+        <EventCard key={event.id} event={event} index={index} priority={index < 4} />
       ))}
     </div>
   )

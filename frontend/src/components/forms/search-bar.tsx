@@ -2,10 +2,9 @@
 
 import type React from "react"
 
-import { Input } from "../ui/input"
 import { Button } from "../ui/button"
-import { motion, AnimatePresence } from "framer-motion"
-import { useState, useCallback } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { useCallback, useId, useState } from "react"
 import { MagnifyingGlass, X } from "@/components/icons"
 
 interface SearchBarProps {
@@ -15,17 +14,32 @@ interface SearchBarProps {
   placeholder?: string
   className?: string
   size?: "default" | "large"
+  /** Rendered above the field. Visually hidden when the context already says it. */
+  label?: string
+  hideLabel?: boolean
 }
 
+/**
+ * One bordered field with the action attached to its trailing edge.
+ *
+ * No blur glow behind the input on focus. The border changing to ember is
+ * a clearer focus signal and it survives `prefers-reduced-transparency`.
+ * The label exists in markup even when hidden, because placeholder text is
+ * not a label.
+ */
 export const SearchBar: React.FC<SearchBarProps> = ({
   value,
   onChange,
   onSearch,
-  placeholder = "Search events, venues, or artists...",
+  placeholder = "Search events, venues or artists",
   className = "",
   size = "default",
+  label = "Search events",
+  hideLabel = true,
 }) => {
   const [isFocused, setIsFocused] = useState(false)
+  const reduce = useReducedMotion()
+  const id = useId()
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -42,53 +56,57 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const isLarge = size === "large"
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Focus glow */}
-      {isFocused && (
-        <div className="absolute -inset-px rounded-2xl bg-primary/10 blur-md pointer-events-none" />
-      )}
+    <div className={className}>
+      <label
+        htmlFor={id}
+        className={
+          hideLabel
+            ? "sr-only"
+            : "mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+        }
+      >
+        {label}
+      </label>
 
       <div
-        className={`relative flex items-center gap-2 rounded-2xl border transition-[border-color,background] duration-200 ${
-          isLarge ? "p-2" : "p-1.5"
-        } ${
-          isFocused
-            ? "border-primary/40 bg-card/80"
-            : "border-border/50 bg-card/50 hover:border-border/70"
-        }`}
-        style={{ backdropFilter: "blur(20px)" }}
+        className={`flex items-center gap-2 rounded-md border bg-card transition-colors duration-150 ${
+          isLarge ? "p-1.5" : "p-1"
+        } ${isFocused ? "border-primary" : "border-border hover:border-foreground/25"}`}
       >
-        <div className={`flex-1 flex items-center gap-3 ${isLarge ? "px-4" : "px-3"}`}>
+        <div className={`flex flex-1 items-center gap-2.5 ${isLarge ? "pl-3.5" : "pl-3"}`}>
           <MagnifyingGlass
-            weight={isFocused ? "bold" : "regular"}
-            size={isLarge ? 18 : 15}
-            className={`flex-shrink-0 transition-colors duration-150 ${
+            weight="bold"
+            size={isLarge ? 17 : 15}
+            className={`shrink-0 transition-colors duration-150 ${
               isFocused ? "text-primary" : "text-muted-foreground"
             }`}
           />
-          <Input
-            type="text"
+          <input
+            id={id}
+            type="search"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
-            className={`border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground/60 px-0 ${
-              isLarge ? "text-base h-11" : "h-9 text-sm"
+            className={`min-w-0 flex-1 border-0 bg-transparent text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none ${
+              isLarge ? "h-11 text-[0.9375rem]" : "h-9 text-sm"
             }`}
           />
           <AnimatePresence>
             {value && (
               <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
+                type="button"
+                initial={reduce ? false : { opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+                exit={reduce ? undefined : { opacity: 0, scale: 0.85 }}
                 transition={{ duration: 0.12 }}
                 onClick={handleClear}
-                className="btn-press p-1 hover:bg-secondary/70 rounded-lg transition-colors flex-shrink-0"
+                aria-label="Clear search"
+                className="btn-press shrink-0 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                <X weight="bold" size={13} className="text-muted-foreground" />
+                <X weight="bold" size={13} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -96,9 +114,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
         <Button
           onClick={onSearch}
-          className={`btn-press gradient-primary text-white rounded-xl shadow-md shadow-primary/20 font-medium flex-shrink-0 ${
-            isLarge ? "px-7 h-11 text-sm" : "px-5 h-9 text-sm"
-          }`}
+          size={isLarge ? "lg" : "default"}
+          className={isLarge ? "shrink-0 px-7" : "shrink-0 px-5"}
         >
           Search
         </Button>

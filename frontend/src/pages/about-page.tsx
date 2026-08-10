@@ -1,190 +1,158 @@
 "use client"
 
 import type React from "react"
-import { motion } from "framer-motion"
-import { Sparkles, Users, Target, Heart, ArrowRight } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageContainer from "@/components/layout/page-container"
 import { Button } from "@/components/ui/button"
 import { Link } from "react-router"
+import { ArrowRight } from "@/components/icons"
 
-const values = [
+/* Positions, not adjectives. "Community first" and "Passion" describe how a
+   team would like to be seen; these describe what the product does when the
+   choice is inconvenient. */
+const principles = [
   {
-    icon: Users,
-    title: "Community First",
-    description: "We believe in bringing people together through unforgettable experiences.",
+    title: "The number on the card is the number you pay",
+    body: "Ticketing has spent fifteen years perfecting the art of adding the fee on the last screen, after you have already decided you are going. It works, and it is the single most disliked thing about buying a ticket. Anything we add to a price belongs next to the price, on the first screen you see it.",
   },
   {
-    icon: Target,
-    title: "Simplicity",
-    description: "Making event management accessible and straightforward for everyone.",
+    title: "A ticket should work when the signal does not",
+    body: "Venues are basements, fields and converted warehouses. Reception at the door is not a safe assumption, so the code renders once and stays on the device. Nobody should be the person holding up a queue while a page spins.",
   },
   {
-    icon: Heart,
-    title: "Passion",
-    description: "We're passionate about helping organizers create amazing events.",
+    title: "A room of forty counts as much as a room of forty thousand",
+    body: "The same tooling should serve the touring festival and the person putting on a poetry night above a pub. Capacity is a number in a form, not a tier of service, and it does not decide who gets the good software.",
   },
 ]
 
-const team = [
-  { name: "Event Organizers", count: "1,000+", description: "Trust our platform" },
-  { name: "Events Hosted", count: "10,000+", description: "Successfully completed" },
-  { name: "Tickets Sold", count: "500K+", description: "Happy attendees" },
+/* Verifiable claims about this repository, taken from the README and the
+   source tree. The page previously showed "10,000+ events" and "500K+
+   tickets sold" for a platform that has not launched. */
+const status = [
+  { label: "Backend", value: "Spring Boot", note: "Modular monolith, 5 domain modules" },
+  { label: "Concurrency", value: "Pessimistic locking", note: "No overselling under concurrent buys" },
+  { label: "Validation", value: "QR via ZXing", note: "Generated on purchase, scanned at the gate" },
+  { label: "Auth", value: "Keycloak OIDC", note: "Organizer, attendee and staff roles" },
+  { label: "Web", value: "React 19", note: "TypeScript, Vite, this app" },
+  { label: "Android", value: "v0.1.0-m0", note: "Event browsing, early beta" },
 ]
+
+const EASE = [0.16, 1, 0.3, 1] as const
 
 const AboutPage: React.FC = () => {
+  const reduce = useReducedMotion()
+
   return (
     <PageContainer>
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-16 overflow-hidden">
-        <div className="absolute inset-0 gradient-mesh opacity-50" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 rounded-full blur-3xl" />
+      {/* ═══ 1. Statement. Left aligned, no blob behind it. ═══ */}
+      <section className="relative overflow-hidden pb-16 pt-14 lg:pb-24 lg:pt-24">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[380px] gradient-mesh" />
 
-        <div className="container mx-auto px-4 lg:px-8 relative">
+        <div className="relative mx-auto max-w-[1400px] px-5 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={reduce ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-3xl mx-auto"
+            transition={{ duration: 0.6, ease: EASE }}
           >
-            <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm text-foreground">About VenueSync</span>
-            </div>
-
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              Connecting People Through{" "}
-              <span className="text-gradient">Amazing Events</span>
+            <h1 className="display-hero max-w-[17ch] text-balance">
+              Buying a ticket is the worst part of going out
             </h1>
-
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              VenueSync is your complete event management platform. We help organizers create,
-              manage, and sell tickets for events of all sizes, while providing attendees with
-              seamless discovery and booking experiences.
+            <p className="mt-7 max-w-[58ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
+              Everything either side of it has got better. Finding out a thing is happening,
+              deciding to go, getting there, telling people afterwards. The ninety seconds in the
+              middle where you actually pay have barely moved since 2011.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Mission Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl font-bold text-foreground mb-6">Our Mission</h2>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                We're on a mission to democratize event management. Whether you're hosting a small
-                community meetup or a large-scale conference, VenueSync provides the tools you need
-                to succeed.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                Our platform combines powerful features with an intuitive interface, making it easy
-                for anyone to create professional events. From ticket sales to QR code validation,
-                we've got you covered.
-              </p>
-            </motion.div>
+      {/* ═══ 2. Principles. Full-width rows on tear lines. ═══ */}
+      <section className="border-t border-border py-16 lg:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <h2 className="display-section max-w-[16ch] text-balance">What we hold to</h2>
 
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="glass rounded-2xl p-8"
-            >
-              <div className="grid grid-cols-3 gap-6">
-                {team.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <p className="text-3xl font-bold text-gradient mb-1">{stat.count}</p>
-                    <p className="text-sm text-foreground font-medium">{stat.name}</p>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+          <div className="mt-12">
+            {principles.map(({ title, body }, i) => (
+              <motion.article
+                key={title}
+                initial={reduce ? false : { opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ delay: i * 0.08, duration: 0.5, ease: EASE }}
+                className="grid gap-4 py-9 lg:grid-cols-12 lg:gap-10"
+              >
+                <h3 className="text-xl font-semibold leading-snug tracking-tight text-foreground lg:col-span-5">
+                  {title}
+                </h3>
+                <p className="text-[0.9375rem] leading-relaxed text-muted-foreground lg:col-span-6 lg:col-start-7">
+                  {body}
+                </p>
+                {i < principles.length - 1 && (
+                  <hr className="perf mt-9 lg:col-span-12" aria-hidden />
+                )}
+              </motion.article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold text-foreground mb-4">Our Values</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              These principles guide everything we do at VenueSync.
-            </p>
-          </motion.div>
+      {/* ═══ 3. Honest status, in place of invented traction. ═══ */}
+      <section className="border-t border-border py-16 lg:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <h2 className="display-section max-w-[18ch] text-balance">Where the build has got to</h2>
+          <p className="mt-5 max-w-[56ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+            VenueSync has not launched, so there are no attendance figures to quote and none are
+            invented here. This is what exists in the repository today.
+          </p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {values.map((value, index) => {
-              const Icon = value.icon
-              return (
-                <motion.div
-                  key={value.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="glass rounded-2xl p-6 text-center card-hover"
-                >
-                  <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">{value.title}</h3>
-                  <p className="text-muted-foreground">{value.description}</p>
-                </motion.div>
-              )
-            })}
-          </div>
+          <dl className="mt-12 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
+            {status.map(({ label, value, note }, i) => (
+              <motion.div
+                key={label}
+                initial={reduce ? false : { opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ delay: (i % 3) * 0.06, duration: 0.45, ease: EASE }}
+                className="border-t border-border py-7"
+              >
+                <dt className="font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground">
+                  {label}
+                </dt>
+                <dd className="mt-3 text-lg font-semibold tracking-tight text-foreground">
+                  {value}
+                </dd>
+                <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{note}</dd>
+              </motion.div>
+            ))}
+          </dl>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl gradient-primary p-8 md:p-12 text-center"
-          >
-            <div className="relative">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to Get Started?
+      {/* ═══ 4. Close. ═══ */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <div className="grid items-center gap-8 py-16 lg:grid-cols-12 lg:py-20">
+            <div className="lg:col-span-7">
+              <h2 className="display-section max-w-[16ch] text-balance">
+                Putting something on yourself?
               </h2>
-              <p className="text-white/80 max-w-xl mx-auto mb-8">
-                Join thousands of organizers who trust VenueSync for their events.
+              <p className="mt-4 max-w-[52ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+                Organizer access is free, and a poetry night gets the same dashboard as a festival.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link to="/organizers">
-                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold">
-                    Start Organizing
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-                <Link to="/">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white/30 text-white hover:bg-white/10"
-                  >
-                    Browse Events
-                  </Button>
-                </Link>
-              </div>
             </div>
-          </motion.div>
+            <div className="lg:col-span-4 lg:col-start-9 lg:justify-self-end">
+              <Link to="/organizers">
+                <Button size="lg" className="gap-2 px-7">
+                  Host an event
+                  <ArrowRight weight="bold" size={16} />
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 

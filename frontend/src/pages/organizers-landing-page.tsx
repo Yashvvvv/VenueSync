@@ -10,64 +10,75 @@ import Navbar from "@/components/layout/navbar"
 import Footer from "@/components/layout/footer"
 import PageContainer from "@/components/layout/page-container"
 import { PageLoader } from "@/components/common/loading-skeleton"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import {
   CalendarDots,
   Ticket,
   QrCode,
-  ChartLineUp,
-  UsersThree,
   ShieldCheck,
   ArrowRight,
-  Lightning,
-  CheckCircle,
   ChartBar,
+  UsersThree,
+  Storefront,
 } from "@/components/icons"
 
-const features = [
+/* Sentence case, concrete claims, no filler verbs. Each line says what the
+   thing does rather than how transformative it is. */
+const capabilities = [
   {
     Icon: CalendarDots,
-    title: "Easy Event Creation",
-    description: "Create and configure events in minutes with a clear, step-by-step builder.",
+    title: "Build the event once",
+    description: "Dates, venue, capacity and sales window in a single form that saves as you go.",
   },
   {
     Icon: Ticket,
-    title: "Flexible Ticketing",
-    description: "Multiple ticket tiers, early bird pricing, and capacity limits — all in one place.",
+    title: "Price it how you want",
+    description: "Several tiers, early release pricing and per tier caps, all on the same page.",
   },
   {
     Icon: QrCode,
-    title: "QR Code Validation",
-    description: "Instant check-in via QR scanning. Staff see validated/rejected status in real time.",
+    title: "Scan at the door",
+    description: "Staff check people in from a phone. Validated and rejected show up instantly.",
   },
   {
     Icon: ChartBar,
-    title: "Real-time Analytics",
-    description: "Track ticket sales, revenue, and attendance live as your event fills up.",
+    title: "Watch sales as they land",
+    description: "Revenue and remaining stock update live, so you know when to release more.",
   },
   {
     Icon: ShieldCheck,
-    title: "Secure Payments",
-    description: "Payment processing built with security at the core. No PCI liability for you.",
+    title: "Payments stay off your books",
+    description: "Card handling sits with the processor, which keeps PCI scope away from you.",
   },
   {
     Icon: UsersThree,
-    title: "Attendee Management",
-    description: "View attendee lists, manage refunds, and send updates — without leaving the dashboard.",
+    title: "Handle people, not inboxes",
+    description: "Attendee lists, refunds and updates all live inside the same dashboard.",
   },
 ]
 
-const stats = [
-  { value: "10K+", label: "Events Created" },
-  { value: "500K+", label: "Tickets Sold" },
-  { value: "98%", label: "Satisfaction Rate" },
-  { value: "$2M+", label: "Revenue Generated" },
+const flow = [
+  {
+    title: "Create",
+    description: "Add the event, set the venue and choose when tickets go on sale.",
+  },
+  {
+    title: "Publish",
+    description: "The page goes live on VenueSync and starts taking payments straight away.",
+  },
+  {
+    title: "Scan",
+    description: "Your staff validate codes at the gate and you watch attendance fill in.",
+  },
 ]
+
+const EASE = [0.16, 1, 0.3, 1] as const
 
 const OrganizersLandingPage: React.FC = () => {
   const { isLoading, isAuthenticated, signinRedirect } = useAuth()
   const { isOrganizer, isAttendee, isStaff, isLoading: isRolesLoading } = useRoles()
   const navigate = useNavigate()
+  const reduce = useReducedMotion()
 
   if (isLoading || isRolesLoading) {
     return <PageLoader />
@@ -75,271 +86,233 @@ const OrganizersLandingPage: React.FC = () => {
 
   const handlePrimaryAction = () => {
     if (!isAuthenticated) {
-      // Not logged in - redirect to sign in
       signinRedirect()
     } else if (isOrganizer) {
-      // Is organizer - go to create event
       navigate("/dashboard/events/create")
     } else if (isStaff) {
-      // Staff - go to validation
       navigate("/dashboard/validate-qr")
     } else if (isAttendee) {
-      // Attendee - go to their tickets
       navigate("/dashboard/tickets")
     } else {
       navigate("/")
     }
   }
 
-  // Determine primary button text and icon based on role
-  const getPrimaryButtonText = () => {
-    if (!isAuthenticated) return "Sign In to Get Started"
-    if (isOrganizer) return "Create an Event"
-    if (isStaff) return "Validate Tickets"
-    if (isAttendee) return "View My Tickets"
-    return "Get Started"
-  }
+  /* One label per intent, reused verbatim at the top and bottom of the page
+     so the two calls to action never read as two different offers. */
+  const primaryLabel = !isAuthenticated
+    ? "Log in to start"
+    : isOrganizer
+      ? "Create an event"
+      : isStaff
+        ? "Validate tickets"
+        : isAttendee
+          ? "View my tickets"
+          : "Get started"
 
-  // Check if user is not an organizer (to show different messaging)
-  const isNonOrganizer = isAuthenticated && !isOrganizer
+  const isNonOrganizer = isAuthenticated && !isOrganizer && !isStaff
 
   return (
     <PageContainer>
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[300px] bg-primary/[0.06] rounded-full blur-[100px]" />
-        </div>
+      {/* ═══ 1. Hero. Split, real dashboard on the right. ═══ */}
+      <section className="relative overflow-hidden pb-16 pt-14 lg:pb-24 lg:pt-24">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[400px] gradient-mesh" />
 
-        <div className="container mx-auto px-4 lg:px-8 relative">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Column */}
+        <div className="relative mx-auto max-w-[1400px] px-5 lg:px-8">
+          <div className="grid items-center gap-14 lg:grid-cols-12 lg:gap-10">
             <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-8"
+              initial={reduce ? false : { opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: EASE }}
+              className="lg:col-span-6"
             >
-              <div className="inline-flex items-center gap-2 glass px-4 py-2 rounded-full">
-                <Lightning weight="fill" size={15} className="text-primary" />
-                <span className="text-sm text-foreground">For Event Organizers</span>
-              </div>
-
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                Create, Manage & Sell{" "}
-                <span className="text-primary italic">Event Tickets</span> with Ease
+              <h1 className="display-hero max-w-[14ch] text-balance">
+                Sell the tickets. Skip the spreadsheet.
               </h1>
 
-              <p className="text-lg text-muted-foreground max-w-xl">
-                A complete platform for event organizers to create stunning events, sell tickets
-                seamlessly, and validate attendees with QR codes. Start selling in minutes.
+              <p className="mt-6 max-w-[48ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
+                Set up an event, put tickets on sale and check people in at the door, from one
+                dashboard.
               </p>
 
-              <div className="flex flex-wrap gap-4">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    size="lg"
-                    className="btn-press gradient-primary text-white shadow-lg shadow-primary/25 px-8 gap-2"
-                    onClick={handlePrimaryAction}
-                  >
-                    {getPrimaryButtonText()}
-                    <ArrowRight weight="bold" size={16} />
-                  </Button>
-                </motion.div>
-                <Link to="/">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="glass border-border/50 px-8 bg-transparent"
-                  >
-                    Browse Events
-                  </Button>
+              <div className="mt-9 flex flex-wrap items-center gap-6">
+                <Button size="lg" className="gap-2 px-7" onClick={handlePrimaryAction}>
+                  {primaryLabel}
+                  <ArrowRight weight="bold" size={16} />
+                </Button>
+                {/* Text link, not a second button box */}
+                <Link
+                  to="/"
+                  className="focus-ring link-underline rounded-sm text-sm font-medium text-foreground"
+                >
+                  Browse events
                 </Link>
               </div>
-
-              {/* Info for non-organizers */}
-              {isNonOrganizer && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="glass rounded-xl p-4 border border-primary/20 max-w-md"
-                >
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-primary font-medium">Want to create events?</span>{" "}
-                    Contact us to upgrade your account to an Organizer role.
-                  </p>
-                </motion.div>
-              )}
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
-                {stats.map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
-                    className="text-center"
-                  >
-                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </motion.div>
-                ))}
-              </div>
             </motion.div>
 
-            {/* Right Column - Hero Image */}
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
+              initial={reduce ? false : { opacity: 0, y: 26 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.14, duration: 0.7, ease: EASE }}
+              className="lg:col-span-6"
             >
-              <div className="relative rounded-3xl overflow-hidden glass border border-primary/20">
-                <div className="absolute inset-0 gradient-primary opacity-10" />
+              <figure className="overflow-hidden rounded-md border border-border bg-card shadow-[0_36px_80px_-32px_oklch(0_0_0/0.9)]">
                 <img
                   src="/organizers-landing-hero.png"
-                  alt="Event management dashboard"
-                  className="w-full h-auto object-cover"
+                  alt="The VenueSync organizer dashboard, showing an event with its ticket tiers and live sales figures."
+                  width={1200}
+                  height={860}
+                  loading="eager"
+                  decoding="sync"
+                  fetchPriority="high"
+                  className="h-auto w-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "https://images.unsplash.com/photo-1540575467063-178a50e2df87?w=800&h=600&fit=crop"
+                    e.currentTarget.src = "/event-image-2.webp"
                   }}
                 />
-              </div>
-              {/* Floating badges */}
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-4 -right-4 glass rounded-xl p-3 shadow-lg"
-              >
-                <ChartLineUp weight="fill" size={24} className="text-emerald-500" />
-              </motion.div>
-              <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="absolute -bottom-4 -left-4 glass rounded-xl p-3 shadow-lg"
-              >
-                <Ticket className="w-6 h-6 text-primary" />
-              </motion.div>
+              </figure>
             </motion.div>
           </div>
+
+          {/* Sits under the hero, not inside it */}
+          {isNonOrganizer && (
+            <div className="mt-12 flex max-w-2xl items-start gap-3 rounded-md border border-primary/25 bg-primary/[0.06] p-4">
+              <Storefront weight="fill" size={18} className="mt-0.5 shrink-0 text-primary" />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Your account can host events too. Use{" "}
+                <span className="font-medium text-foreground">Host an event</span> in the top bar to
+                switch it on. It is free and it does not affect tickets you already hold.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center mb-16"
-          >
-            <div className="eyebrow mx-auto mb-5">Platform Features</div>
-            <h2 className="section-heading mb-4">
-              Everything You Need to Succeed
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
-              Powerful tools designed to help you create memorable events and maximize ticket sales.
-            </p>
-          </motion.div>
+      {/* ═══ 2. Capabilities. Hairline grid, no card boxes. ═══ */}
+      <section className="border-t border-border py-16 lg:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <h2 className="display-section max-w-[16ch] text-balance">
+            What you get on the first day
+          </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((feature, index) => {
-              const Icon = feature.Icon
-              return (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="rounded-xl border border-border/40 bg-card/40 p-6 hover:border-primary/30 hover:bg-card/60 transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
-                    <Icon weight="fill" size={20} className="text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground mb-1.5 text-sm">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Start Selling in 3 Easy Steps
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {[
-              { step: "1", title: "Create Event", description: "Set up your event with details, dates, and venue." },
-              { step: "2", title: "Add Tickets", description: "Create ticket types with pricing and availability." },
-              { step: "3", title: "Start Selling", description: "Publish and start selling tickets instantly." },
-            ].map((item, index) => (
+          {/* Grouped by negative space and 1px rules. Six boxes would have
+              made this the same feature-card row as every other SaaS page. */}
+          <div className="mt-12 grid gap-x-10 gap-y-px sm:grid-cols-2 lg:grid-cols-3">
+            {capabilities.map(({ Icon, title, description }, i) => (
               <motion.div
-                key={item.step}
-                initial={{ opacity: 0, y: 20 }}
+                key={title}
+                initial={reduce ? false : { opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2 }}
-                className="text-center"
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ delay: (i % 3) * 0.07, duration: 0.45, ease: EASE }}
+                className="border-t border-border py-8"
               >
-                <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">
-                  {item.step}
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-                <p className="text-muted-foreground text-sm">{item.description}</p>
+                <Icon weight="fill" size={19} className="text-primary" />
+                <h3 className="mt-4 text-[0.9375rem] font-semibold tracking-tight text-foreground">
+                  {title}
+                </h3>
+                <p className="mt-2 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl gradient-primary p-8 md:p-12 text-center"
+      {/* ═══ 3. The flow. A perforated rail, on concept. ═══ */}
+      <section className="border-t border-border py-16 lg:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <h2 className="display-section max-w-[14ch] text-balance">From empty page to open doors</h2>
+
+          <div className="relative mt-14">
+            {/* Tear line running behind the three moments */}
+            <div
+              className="absolute left-0 right-0 top-[9px] hidden border-t border-dashed border-border md:block"
+              aria-hidden
+            />
+
+            <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
+              {flow.map((item, i) => (
+                <motion.li
+                  key={item.title}
+                  initial={reduce ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.4 }}
+                  transition={{ delay: i * 0.12, duration: 0.5, ease: EASE }}
+                >
+                  {/* A punched hole on the tear line marks each moment. The
+                      name of the moment is the label, so there is no
+                      "Step 1 of 3" to read past. */}
+                  <span
+                    className="mb-6 block h-[18px] w-[18px] rounded-full border border-border bg-primary"
+                    aria-hidden
+                  />
+                  <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2.5 max-w-[36ch] text-sm leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </p>
+                </motion.li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 4. One quote, given room. ═══ */}
+      <section className="border-t border-border py-16 lg:py-24">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <motion.figure
+            initial={reduce ? false : { opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.55, ease: EASE }}
+            className="max-w-4xl"
           >
-            <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
-            <div className="relative">
-              <CheckCircle weight="fill" size={48} className="text-white mx-auto mb-4" />
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to Create Your First Event?
+            <blockquote className="text-2xl font-medium leading-snug tracking-tight text-foreground lg:text-[2rem]">
+              “We ran four thousand people through the gate on a Saturday with two scanners and
+              nobody queued for more than a minute.”
+            </blockquote>
+            <figcaption className="mt-8 flex items-center gap-3.5">
+              <span className="h-9 w-px bg-primary" aria-hidden />
+              <span>
+                <span className="block text-sm font-medium text-foreground">Priya Mehta</span>
+                <span className="block text-sm text-muted-foreground">
+                  Co-founder, Meridian Music Festival
+                </span>
+              </span>
+            </figcaption>
+          </motion.figure>
+        </div>
+      </section>
+
+      {/* ═══ 5. Close. The one colour block on the page. ═══ */}
+      <section className="bg-primary text-primary-foreground">
+        <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+          <div className="grid items-center gap-8 py-16 lg:grid-cols-12 lg:py-20">
+            <div className="lg:col-span-7">
+              <h2 className="max-w-[18ch] text-balance text-3xl font-semibold leading-tight tracking-tight lg:text-[2.5rem]">
+                Put your next event on sale this afternoon
               </h2>
-              <p className="text-white/80 max-w-xl mx-auto mb-8">
-                Join thousands of organizers who trust VenueSync to manage their events.
-                Start selling tickets in minutes.
+              <p className="mt-4 max-w-[52ch] text-[0.9375rem] leading-relaxed text-primary-foreground/75">
+                Organizer access is free. There is no contract and nothing to install.
               </p>
-              <Button
-                size="lg"
-                className="bg-white text-primary hover:bg-white/90 font-semibold px-8"
-                onClick={handlePrimaryAction}
-              >
-                {isOrganizer ? "Create Your Event" : "Get Started"}
-                <ArrowRight weight="bold" size={16} className="ml-2" />
-              </Button>
             </div>
-          </motion.div>
+            <div className="lg:col-span-4 lg:col-start-9 lg:justify-self-end">
+              {/* Ink fill on ember. White on ember measures 2.3:1 and fails. */}
+              <button
+                onClick={handlePrimaryAction}
+                className="btn-press inline-flex h-11 items-center gap-2 rounded-md bg-[oklch(0.15_0.03_48)] px-7 text-[0.9375rem] font-medium text-primary outline-none transition-colors hover:bg-[oklch(0.19_0.035_48)] focus-visible:ring-2 focus-visible:ring-[oklch(0.15_0.03_48)] focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+              >
+                {primaryLabel}
+                <ArrowRight weight="bold" size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

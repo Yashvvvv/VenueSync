@@ -37,7 +37,7 @@ const CallbackPage: React.FC = () => {
   }, [isLoading, isAuthenticated, error, navigate])
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center">
       <div className="absolute inset-0 gradient-mesh opacity-30" />
 
       <motion.div

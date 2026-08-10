@@ -2,7 +2,7 @@
 
 import React from "react"
 import { motion } from "framer-motion"
-import { AlertTriangle, RefreshCw, Home } from "lucide-react"
+import { WarningCircle } from "@/components/icons"
 import { Button } from "../ui/button"
 import { Link } from "react-router"
 
@@ -54,45 +54,37 @@ interface ErrorFallbackProps {
 
 export const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, onReset }) => {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 gradient-mesh opacity-30" />
-
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-5">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative glass rounded-3xl p-8 max-w-md w-full text-center"
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md rounded-md border border-border bg-card p-8"
       >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-6"
-        >
-          <AlertTriangle className="w-10 h-10 text-destructive" />
-        </motion.div>
+        <WarningCircle weight="fill" size={26} className="text-destructive" />
 
-        <h1 className="text-2xl font-bold text-foreground mb-2">Something went wrong</h1>
-        <p className="text-muted-foreground mb-6">
-          We encountered an unexpected error. Please try again or return to the home page.
+        <h1 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
+          This page stopped working
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Something threw an error while rendering. Reloading usually clears it.
         </p>
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 mb-6 text-left">
-            <p className="text-sm text-destructive font-mono break-all">{error.message}</p>
-          </div>
+          <pre className="mt-5 overflow-x-auto rounded-md border border-destructive/30 bg-destructive/5 p-3.5 font-mono text-xs leading-relaxed text-destructive">
+            {error.message}
+          </pre>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
           {onReset && (
-            <Button onClick={onReset} className="flex-1 gradient-primary text-white gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Try Again
+            <Button onClick={onReset} className="flex-1">
+              Try again
             </Button>
           )}
           <Link to="/" className="flex-1">
-            <Button variant="outline" className="w-full glass border-border/50 gap-2 bg-transparent">
-              <Home className="w-4 h-4" />
-              Go Home
+            <Button variant="outline" className="w-full">
+              Back to events
             </Button>
           </Link>
         </div>

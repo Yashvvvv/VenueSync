@@ -2,116 +2,111 @@
 
 import type React from "react"
 
-import { motion } from "framer-motion"
-import { Calendar, MapPin, Clock, Share2 } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 import { format } from "date-fns"
 import RandomEventImage from "../random-event-image"
 import toast from "react-hot-toast"
 import { parseWallClockDate } from "@/lib/date-utils"
+import { ArrowUpRight } from "@/components/icons"
 
 interface EventHeroProps {
   name: string
   venue: string
   start?: string
   end?: string
+  /** Stable id so the stand-in photo does not change between visits. */
+  seed?: string
 }
 
-export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end }) => {
+/**
+ * Full-bleed photo with the detail set as a printed strip along the bottom.
+ *
+ * The meta used to sit in frosted pills floating on the image. Labels
+ * overlaid on photography always read as a template; a solid strip under
+ * the image is easier to read and holds up at any crop.
+ */
+export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end, seed }) => {
+  const reduce = useReducedMotion()
   const parsedStart = start ? parseWallClockDate(start) : null
   const parsedEnd = end ? parseWallClockDate(end) : null
 
   const handleShare = async () => {
     const eventUrl = window.location.href
-    const shareData = { title: name, text: `Check out this event: ${name}`, url: eventUrl }
+    const shareData = { title: name, text: `Have a look at ${name}`, url: eventUrl }
     try {
       if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData)
-        toast.success("Shared successfully!")
-      } else {
-        await navigator.clipboard.writeText(eventUrl)
-        toast.success("Link copied to clipboard!")
+        return
       }
+      await navigator.clipboard.writeText(eventUrl)
+      toast.success("Link copied")
     } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        try {
-          await navigator.clipboard.writeText(eventUrl)
-          toast.success("Link copied to clipboard!")
-        } catch {
-          toast.error("Failed to share event")
-        }
+      if ((error as Error).name === "AbortError") return
+      try {
+        await navigator.clipboard.writeText(eventUrl)
+        toast.success("Link copied")
+      } catch {
+        toast.error("Could not copy the link")
       }
     }
   }
 
   return (
-    <div className="relative min-h-[55vh] overflow-hidden">
-      {/* Full-bleed background image */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 w-full h-full">
-          <RandomEventImage />
-        </div>
-        {/* Multi-layer gradient for editorial text legibility */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to top, oklch(0.055 0.01 265) 0%, oklch(0.055 0.01 265 / 0.85) 30%, oklch(0.055 0.01 265 / 0.4) 60%, oklch(0.055 0.01 265 / 0.15) 100%)",
-          }}
-        />
+    <header className="relative">
+      <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden bg-secondary lg:h-[54vh]">
+        <RandomEventImage seed={seed ?? name} alt="" priority />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/10" />
       </div>
 
-      {/* Content — anchored to bottom of hero */}
-      <div className="relative container mx-auto px-4 lg:px-8 pt-40 pb-10 flex flex-col justify-end min-h-[55vh]">
+      <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={reduce ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-3xl"
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="relative -mt-24 lg:-mt-32"
         >
-          {/* Share button */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleShare}
-            className="mb-5 flex items-center gap-2 text-sm text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-1.5 transition-all backdrop-blur-sm bg-white/5"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            Share Event
-          </motion.button>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-3xl">
+              {parsedStart && (
+                <time
+                  dateTime={start}
+                  className="block text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-primary"
+                >
+                  {format(parsedStart, "EEEE d MMMM yyyy")}
+                </time>
+              )}
 
-          {/* Event Title */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight text-balance leading-[1.05]">
-            {name}
-          </h1>
+              <h1 className="display-hero mt-4 text-balance">{name}</h1>
 
-          {/* Meta pills */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 bg-white/[0.08] backdrop-blur-md border border-white/[0.12] rounded-full px-4 py-2">
-              <MapPin className="w-4 h-4 text-white/60" />
-              <span className="text-sm font-medium text-white">{venue}</span>
+              {/* Printed detail line. One separator, not a chain of dots. */}
+              <dl className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+                <div>
+                  <dt className="sr-only">Venue</dt>
+                  <dd className="text-foreground">{venue}</dd>
+                </div>
+                {parsedStart && (
+                  <div>
+                    <dt className="sr-only">Time</dt>
+                    <dd className="font-mono tabular-nums text-muted-foreground">
+                      {format(parsedStart, "HH:mm")}
+                      {parsedEnd && ` to ${format(parsedEnd, "HH:mm")}`}
+                    </dd>
+                  </div>
+                )}
+              </dl>
             </div>
 
-            {parsedStart && (
-              <div className="flex items-center gap-2 bg-white/[0.08] backdrop-blur-md border border-white/[0.12] rounded-full px-4 py-2">
-                <Calendar className="w-4 h-4 text-white/60" />
-                <span className="text-sm font-medium text-white">
-                  {format(parsedStart, "EEE, MMM d, yyyy")}
-                </span>
-              </div>
-            )}
-
-            {parsedStart && (
-              <div className="flex items-center gap-2 bg-white/[0.08] backdrop-blur-md border border-white/[0.12] rounded-full px-4 py-2">
-                <Clock className="w-4 h-4 text-white/60" />
-                <span className="text-sm font-medium text-white">
-                  {format(parsedStart, "h:mm a")}
-                  {parsedEnd && ` — ${format(parsedEnd, "h:mm a")}`}
-                </span>
-              </div>
-            )}
+            <button
+              onClick={handleShare}
+              className="btn-press focus-ring flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+            >
+              Share
+              <ArrowUpRight weight="bold" size={14} />
+            </button>
           </div>
         </motion.div>
       </div>
-    </div>
+    </header>
   )
 }
 

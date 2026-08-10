@@ -8,22 +8,24 @@ export const ToastProvider: React.FC = () => {
       toastOptions={{
         duration: 4000,
         style: {
-          background: "oklch(0.12 0.015 270)",
-          color: "oklch(0.98 0 0)",
-          border: "1px solid oklch(0.25 0.02 270)",
-          borderRadius: "12px",
-          padding: "16px",
+          background: "var(--popover)",
+          color: "var(--foreground)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+          padding: "12px 14px",
+          fontSize: "0.875rem",
+          boxShadow: "0 24px 60px -20px oklch(0 0 0 / 0.7)",
         },
         success: {
           iconTheme: {
-            primary: "oklch(0.65 0.25 280)",
-            secondary: "white",
+            primary: "var(--success)",
+            secondary: "var(--popover)",
           },
         },
         error: {
           iconTheme: {
-            primary: "oklch(0.55 0.22 25)",
-            secondary: "white",
+            primary: "var(--destructive)",
+            secondary: "var(--popover)",
           },
         },
       }}

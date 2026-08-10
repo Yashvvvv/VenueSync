@@ -1,161 +1,183 @@
 "use client"
 
 import type React from "react"
+import { useId, useState } from "react"
 import { Link } from "react-router"
-import { Sparkles, Instagram, Twitter, Github, Linkedin, ArrowUpRight, Mail } from "lucide-react"
-import { motion } from "framer-motion"
 import toast from "react-hot-toast"
+import { Button } from "../ui/button"
+import { AudienceSwitch } from "../audience-switch"
+import {
+  VenueSyncMark,
+  XLogo,
+  InstagramLogo,
+  GithubLogo,
+  LinkedinLogo,
+} from "@/components/icons"
 
-const Footer: React.FC = () => {
-  const currentYear = new Date().getFullYear()
-
-  const footerLinks = {
-    discover: [
-      { label: "Browse Events", href: "/" },
-      { label: "For Attendees", href: "/" },
-      { label: "For Organizers", href: "/organizers" },
+const footerLinks: { title: string; links: { label: string; href: string }[] }[] = [
+  {
+    title: "Attend",
+    links: [
+      { label: "Browse events", href: "/events" },
+      { label: "My tickets", href: "/dashboard/tickets" },
+      { label: "Get the app", href: "/app" },
+      { label: "Help center", href: "/help" },
     ],
-    company: [
+  },
+  {
+    title: "Organize",
+    links: [
+      { label: "Host an event", href: "/organizers" },
+      { label: "Dashboard", href: "/dashboard" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
     ],
-    support: [
-      { label: "Help Center", href: "/help" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Privacy Policy", href: "/privacy" },
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms", href: "/terms" },
+      { label: "Privacy", href: "/privacy" },
     ],
-    organizers: [
-      { label: "Create Events", href: "/organizers" },
-      { label: "Dashboard", href: "/dashboard" },
-    ],
-  }
+  },
+]
 
-  const socialLinks = [
-    { icon: Twitter, href: "https://twitter.com", label: "Twitter" },
-    { icon: Instagram, href: "https://instagram.com", label: "Instagram" },
-    { icon: Github, href: "https://github.com", label: "Github" },
-    { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn" },
-  ]
+const socials = [
+  { Icon: XLogo, href: "https://x.com", label: "VenueSync on X" },
+  { Icon: InstagramLogo, href: "https://instagram.com", label: "VenueSync on Instagram" },
+  { Icon: GithubLogo, href: "https://github.com", label: "VenueSync on GitHub" },
+  { Icon: LinkedinLogo, href: "https://linkedin.com", label: "VenueSync on LinkedIn" },
+]
+
+const Footer: React.FC = () => {
+  const year = new Date().getFullYear()
+  const emailId = useId()
+  const [email, setEmail] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubscribe = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const form = e.currentTarget
-    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement
-    if (emailInput?.value) {
-      toast.success("Thanks for subscribing! You'll hear from us soon.")
-      emailInput.value = ""
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter an email address we can actually reach.")
+      return
     }
+    setError(null)
+    setEmail("")
+    toast.success("You are on the list.")
   }
 
   return (
-    <footer className="relative border-t border-border/30" style={{ background: "oklch(0.07 0.01 265 / 0.95)" }}>
-      {/* Background gradient */}
-      <div className="absolute inset-0 gradient-mesh opacity-20 pointer-events-none" />
+    <footer className="border-t border-border bg-background">
+      <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
+        {/* Sign-up sits above the tear line, the sitemap below it */}
+        <div className="grid gap-10 py-14 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-5">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              Know before the tickets go
+            </h2>
+            <p className="mt-2.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              A short email when something worth going to opens up near you. Nothing else.
+            </p>
+          </div>
 
-      <div className="container mx-auto px-4 lg:px-8 py-16 relative">
-        {/* Top Section */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 lg:gap-12 mb-16">
-          {/* Brand Column */}
-          <div className="col-span-2">
-            <Link to="/" className="flex items-center gap-3 mb-5 group">
-              <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/25"
-              >
-                <Sparkles className="w-5 h-5 text-white" />
-              </motion.div>
-              <span className="text-xl font-bold text-foreground group-hover:text-gradient transition-all">
+          <form onSubmit={handleSubscribe} className="lg:col-span-7 lg:pt-1.5" noValidate>
+            {/* Label above the input, in markup and on screen. A placeholder
+                disappears the moment someone starts typing. */}
+            <label
+              htmlFor={emailId}
+              className="mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+            >
+              Email address
+            </label>
+            <div className="flex max-w-md gap-2">
+              <input
+                id={emailId}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                aria-invalid={!!error}
+                aria-describedby={error ? `${emailId}-error` : undefined}
+                className={`h-10 min-w-0 flex-1 rounded-md border bg-card px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary ${
+                  error ? "border-destructive" : "border-border"
+                }`}
+              />
+              <Button type="submit" className="shrink-0 px-5">
+                Subscribe
+              </Button>
+            </div>
+            {error && (
+              <p id={`${emailId}-error`} className="mt-2 text-xs text-destructive">
+                {error}
+              </p>
+            )}
+          </form>
+        </div>
+
+        <hr className="perf" />
+
+        <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <Link to="/" className="focus-ring inline-flex items-center gap-2.5 rounded-sm">
+              <VenueSyncMark size={30} />
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">
                 VenueSync
               </span>
             </Link>
-            <p className="text-sm text-muted-foreground mb-6 max-w-xs leading-relaxed">
-              Discover and experience unforgettable events. Your gateway to concerts, conferences, and everything in
-              between.
+            <p className="mt-4 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
+              Event ticketing without the friction, for the people running the show and the people
+              turning up to it.
             </p>
 
-            {/* Social Links */}
-            <div className="flex gap-2">
-              {socialLinks.map((social) => {
-                const Icon = social.icon
-                return (
-                  <motion.a
-                    key={social.label}
-                    href={social.href}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    aria-label={social.label}
-                    className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300"
-                  >
-                    <Icon className="w-4 h-4" />
-                  </motion.a>
-                )
-              })}
+            <div className="mt-6 flex gap-1">
+              {socials.map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="focus-ring rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <Icon weight="fill" size={17} />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Link Columns */}
-          {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="text-sm font-semibold text-foreground mb-4 capitalize">{title}</h4>
-              <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      to={link.href}
-                      className="group text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                    >
-                      {link.label}
-                      <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:col-span-8">
+            {footerLinks.map(({ title, links }) => (
+              <div key={title}>
+                <h3 className="text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {title}
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {links.map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        to={link.href}
+                        className="focus-ring rounded-sm text-sm text-foreground/75 transition-colors hover:text-primary"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Newsletter Section */}
-        <form onSubmit={handleSubscribe} className="glass rounded-2xl p-6 md:p-8 mb-12">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">Stay in the loop</h3>
-              <p className="text-sm text-muted-foreground">
-                Get the latest events and updates delivered to your inbox.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex items-center gap-3 glass-strong rounded-xl px-4 py-2 flex-1 md:w-64">
-                <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  required
-                  className="bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1 min-w-0"
-                />
-              </div>
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-5 py-2 rounded-xl gradient-primary text-white text-sm font-medium shadow-lg shadow-primary/25"
-              >
-                Subscribe
-              </motion.button>
-            </div>
-          </div>
-        </form>
-
-        {/* Bottom Section */}
-        <div className="pt-8 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">{currentYear} VenueSync. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Terms of Service
-            </Link>
-            <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Privacy Policy
-            </Link>
-          </div>
+        <div className="flex flex-col gap-5 border-t border-border py-7 sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-mono text-xs text-muted-foreground">© {year} VenueSync</p>
+          {/* Permanent way back to the other experience, so the first-run
+              choice is never a one-way door. */}
+          <AudienceSwitch />
         </div>
       </div>
     </footer>

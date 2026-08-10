@@ -1,7 +1,10 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import "@fontsource-variable/archivo"
+import "@fontsource-variable/jetbrains-mono"
+// Display face for the acid vibe only. Single weight, latin subset.
+import "@fontsource/anton/latin-400.css"
 import "./index.css"
-import AttendeeLandingPage from "./pages/attendee-landing-page.tsx"
 import { AuthProvider } from "react-oidc-context"
 import { createBrowserRouter, RouterProvider } from "react-router"
 import OrganizersLandingPage from "./pages/organizers-landing-page.tsx"
@@ -25,15 +28,20 @@ import ContactPage from "./pages/contact-page.tsx"
 import TermsPage from "./pages/terms-page.tsx"
 import PrivacyPage from "./pages/privacy-page.tsx"
 import AllEventsPage from "./pages/all-events-page.tsx"
+import AppDownloadPage from "./pages/app-download-page.tsx"
 import RootLayout from "./components/layout/root-layout.tsx"
+import RootLanding from "./pages/root-landing.tsx"
+import { AudienceProvider } from "./hooks/use-audience.tsx"
 
 const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
       {
+        /* Only this route can show the audience chooser. Everything else
+           renders its content immediately on the stored or default choice. */
         path: "/",
-        Component: AttendeeLandingPage,
+        Component: RootLanding,
       },
       {
         path: "/callback",
@@ -66,6 +74,10 @@ const router = createBrowserRouter([
       {
         path: "/events",
         Component: AllEventsPage,
+      },
+      {
+        path: "/app",
+        Component: AppDownloadPage,
       },
       {
         path: "/events/:id",
@@ -156,10 +168,12 @@ const oidcConfig = {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
-      <AuthProvider {...oidcConfig}>
-        <ToastProvider />
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <AudienceProvider>
+        <AuthProvider {...oidcConfig}>
+          <ToastProvider />
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </AudienceProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

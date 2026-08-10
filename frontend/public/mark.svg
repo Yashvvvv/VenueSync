@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <defs>
+    <mask id="stub">
+      <rect x="0" y="6" width="40" height="28" rx="5" fill="#fff"/>
+      <circle cx="0" cy="20" r="5" fill="#000"/>
+      <circle cx="40" cy="20" r="5" fill="#000"/>
+    </mask>
+  </defs>
+  <rect x="0" y="6" width="40" height="28" rx="5" fill="#F08A3C" mask="url(#stub)"/>
+  <line x1="15" y1="10.5" x2="15" y2="29.5" stroke="#20140A" stroke-width="1.4" stroke-dasharray="2.6 2.4" stroke-opacity="0.55"/>
+  <path d="M27.5 11 L21 21 H25 L22.5 29 L31 18.5 H26 Z" fill="#20140A" fill-opacity="0.9"/>
+</svg>

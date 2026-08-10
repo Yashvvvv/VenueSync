@@ -3,60 +3,52 @@
 import type React from "react"
 
 import { type TicketSummary, TicketStatus } from "@/domain/domain"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { Link } from "react-router"
 import { format } from "date-fns"
 import { parseWallClockDate } from "@/lib/date-utils"
-import {
-  Ticket,
-  CaretRight,
-  QrCode,
-  CalendarBlank,
-  CheckCircle,
-  XCircle,
-  Clock,
-} from "@/components/icons"
+import { CaretRight, CheckCircle, Clock, Ticket, XCircle } from "@/components/icons"
 
 interface TicketCardProps {
   ticket: TicketSummary
   index?: number
 }
 
+/* Status colours come from the semantic tokens, not from raw Tailwind
+   palette classes, so they stay in step with the rest of the theme. */
 const statusConfig: Record<
   TicketStatus,
-  { label: string; dotColor: string; textColor: string; Icon: typeof CheckCircle; weight: "fill" | "regular" }
+  { label: string; className: string; Icon: typeof CheckCircle }
 > = {
   [TicketStatus.PURCHASED]: {
-    label: "Active",
-    dotColor: "bg-emerald-500",
-    textColor: "text-emerald-400",
+    label: "Valid",
+    className: "text-[var(--success)]",
     Icon: Ticket,
-    weight: "fill",
   },
   [TicketStatus.USED]: {
     label: "Used",
-    dotColor: "bg-blue-400",
-    textColor: "text-blue-400",
+    className: "text-muted-foreground",
     Icon: CheckCircle,
-    weight: "fill",
   },
   [TicketStatus.EXPIRED]: {
     label: "Expired",
-    dotColor: "bg-yellow-400",
-    textColor: "text-yellow-400",
+    className: "text-[var(--warning)]",
     Icon: Clock,
-    weight: "fill",
   },
   [TicketStatus.CANCELLED]: {
     label: "Cancelled",
-    dotColor: "bg-red-400",
-    textColor: "text-red-400",
+    className: "text-destructive",
     Icon: XCircle,
-    weight: "fill",
   },
 }
 
+/**
+ * A ticket rendered the way a ticket is actually printed: a counterfoil on
+ * the left holding the price and serial, a vertical perforation with a
+ * punched hole at each end, and the event detail on the body.
+ */
 export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => {
+  const reduce = useReducedMotion()
   const eventEnd = ticket.eventEnd ? parseWallClockDate(ticket.eventEnd) : null
   const isEventEnded = eventEnd ? eventEnd < new Date() : false
 
@@ -64,89 +56,77 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
     ticket.status === TicketStatus.PURCHASED && isEventEnded ? TicketStatus.EXPIRED : ticket.status
 
   const status = statusConfig[displayStatus]
-  const isPast =
-    displayStatus === TicketStatus.USED ||
-    displayStatus === TicketStatus.EXPIRED ||
-    displayStatus === TicketStatus.CANCELLED
+  const StatusIcon = status.Icon
+  const isSpent = displayStatus !== TicketStatus.PURCHASED
 
   return (
     <motion.div
-      initial={{ opacity: 0, transform: "translateY(12px)" }}
-      animate={{ opacity: 1, transform: "translateY(0px)" }}
-      transition={{ delay: index * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
-      <Link to={`/dashboard/tickets/${ticket.id}`} className="group block">
-        <div
-          className={`relative rounded-xl border transition-colors duration-150 overflow-hidden ${
-            isPast
-              ? "border-border/30 bg-card/30 opacity-70"
-              : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card/70"
+      <Link to={`/dashboard/tickets/${ticket.id}`} className="group block focus-ring rounded-md">
+        <article
+          className={`card-hover relative flex items-stretch rounded-md border bg-card ${
+            isSpent ? "border-border/60 opacity-65" : "border-border"
           }`}
         >
-          {/* Left accent stripe */}
-          <div
-            className={`absolute left-0 top-0 bottom-0 w-[3px] ${
-              isPast ? "bg-border/30" : "gradient-primary"
-            }`}
-          />
-
-          <div className="flex items-center gap-4 px-5 py-4 pl-6">
-            {/* Icon */}
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
-                isPast ? "bg-secondary/50" : "gradient-primary shadow-md shadow-primary/20"
+          {/* Counterfoil */}
+          <div className="flex w-[104px] shrink-0 flex-col justify-center gap-1 px-4 py-4 sm:w-[124px]">
+            <p
+              className={`font-mono text-base font-semibold tabular-nums tracking-tight ${
+                isSpent ? "text-muted-foreground" : "text-primary"
               }`}
             >
-              <Ticket
-                weight="fill"
-                size={22}
-                color={isPast ? "oklch(0.55 0.012 265)" : "white"}
-              />
-              <div
-                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-md bg-background border border-border flex items-center justify-center ${
-                  isPast ? "opacity-40" : ""
-                }`}
-              >
-                <QrCode
-                  weight="bold"
-                  size={11}
-                  color={isPast ? "oklch(0.55 0.012 265)" : "oklch(0.68 0.19 278)"}
-                />
-              </div>
-            </div>
+              ${ticket.ticketType.price.toFixed(2)}
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+              {ticket.id.slice(0, 8)}
+            </p>
+          </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h3 className="font-semibold text-foreground truncate text-sm group-hover:text-primary transition-colors duration-150">
+          {/* Perforation, punched top and bottom */}
+          <div className="relative shrink-0 border-l border-dashed border-border" aria-hidden>
+            <span className="notch -left-[10px] -top-[10px]" />
+            <span className="notch -bottom-[10px] -left-[10px]" />
+          </div>
+
+          {/* Body */}
+          <div className="flex min-w-0 flex-1 items-center gap-4 px-4 py-4 sm:px-5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2.5">
+                <h3 className="truncate text-sm font-semibold tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary">
                   {ticket.eventName}
                 </h3>
-                <span className={`flex items-center gap-1 text-[10px] font-semibold ${status.textColor} flex-shrink-0`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${status.dotColor} inline-block`} />
+                <span
+                  className={`flex shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-[0.08em] ${status.className}`}
+                >
+                  <StatusIcon weight="fill" size={11} />
                   {status.label}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mb-1.5 truncate">{ticket.ticketType.name}</p>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="font-semibold text-primary">${ticket.ticketType.price.toFixed(2)}</span>
-                {ticket.eventStart && (
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <CalendarBlank weight="fill" size={11} />
-                    {format(parseWallClockDate(ticket.eventStart)!, "MMM d, yyyy")}
-                  </span>
-                )}
-                <span className="font-mono text-muted-foreground/60">#{ticket.id.slice(0, 8)}</span>
-              </div>
+
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {ticket.ticketType.name}
+              </p>
+
+              {ticket.eventStart && (
+                <time
+                  dateTime={ticket.eventStart}
+                  className="mt-1.5 block text-[0.6875rem] uppercase tracking-[0.08em] text-muted-foreground"
+                >
+                  {format(parseWallClockDate(ticket.eventStart)!, "EEE d MMM yyyy · HH:mm")}
+                </time>
+              )}
             </div>
 
-            {/* Arrow */}
             <CaretRight
               weight="bold"
               size={14}
-              className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors duration-150 flex-shrink-0"
+              className="shrink-0 text-muted-foreground transition-colors duration-150 group-hover:text-primary"
             />
           </div>
-        </div>
+        </article>
       </Link>
     </motion.div>
   )

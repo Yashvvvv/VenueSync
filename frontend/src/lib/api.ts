@@ -190,10 +190,13 @@ export const deleteEvent = async (
   }
 };
 
+// `size` defaults to 4 so existing callers are unchanged. The hype feed asks
+// for more, because a feed that ends after four panels is not a feed.
 export const listPublishedEvents = async (
   page: number,
+  size = 4,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
-  const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=4`, {
+  const response = await fetch(`${API_BASE}/api/v1/published-events?page=${page}&size=${size}`, {
     method: "GET",
   });
 
@@ -239,7 +242,7 @@ export const searchAllPublishedEvents = async (
   page: number,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(
-    `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=12`,
+    `${API_BASE}/api/v1/published-events?q=${encodeURIComponent(query)}&page=${page}&size=12`,
     {
       method: "GET",
     },
@@ -262,9 +265,10 @@ export const searchAllPublishedEvents = async (
 export const searchPublishedEvents = async (
   query: string,
   page: number,
+  size = 4,
 ): Promise<SpringBootPagination<PublishedEventSummary>> => {
   const response = await fetch(
-    `${API_BASE}/api/v1/published-events?q=${query}&page=${page}&size=4`,
+    `${API_BASE}/api/v1/published-events?q=${encodeURIComponent(query)}&page=${page}&size=${size}`,
     {
       method: "GET",
     },
