@@ -56,12 +56,19 @@ cd backend
 docker-compose up -d
 ```
 
+This starts Postgres, Adminer, and Keycloak only — no `.env` file needed, the
+backend reads matching localhost defaults from `application.properties`.
+
 ### 2. Run the Backend
 
 ```powershell
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
+
+(To instead run the backend itself in a container — e.g. to sanity-check the
+`prod` profile locally — copy `.env.example` to `.env` and run
+`docker-compose --profile full-stack up -d` instead of steps 1-2.)
 
 ### 3. Run the Frontend
 
