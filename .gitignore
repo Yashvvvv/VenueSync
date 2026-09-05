@@ -42,3 +42,8 @@ keycloak/event-ticket-platform-realm.json
 keycloak/event-ticket-platform-users-0.json
 keycloak/sync-to-render.ps1
 keycloak/RENDER_DEPLOY.md
+
+# GitHub Copilot app-modernization tool output (generated, not part of the repo)
+.github/appmod/
+.github/modernize/
+.github/java-upgrade/
