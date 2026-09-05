@@ -1,3 +1,16 @@
+# ============================================================================
+# CONFIG MAP (same header in all 5 config files, so any one orients you):
+#   .env.example                -> template for local Docker Compose overrides
+#   docker-compose.yml          -> builds THIS file for its opt-in backend
+#                                   service (--profile full-stack)
+#   Dockerfile                  -> YOU ARE HERE: builds a runnable jar image.
+#                                   Render also builds straight from this file
+#                                   for the real deploy - one recipe, two users.
+#   application.properties      -> base+dev config, read when run via `mvnw`
+#                                   (not through this file)
+#   application-prod.properties -> prod config, read by the app THIS file builds,
+#                                   whether run by docker-compose or by Render
+# ============================================================================
 # Stage 1: Build
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
