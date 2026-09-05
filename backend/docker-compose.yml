@@ -1,3 +1,19 @@
+# ============================================================================
+# CONFIG MAP (same header in all 5 config files, so any one orients you):
+#   .env.example                -> template you copy to .env to feed THIS file
+#   docker-compose.yml          -> YOU ARE HERE: reads .env (or the ${VAR:-default}
+#                                   fallbacks below if no .env exists). Default
+#                                   `docker-compose up -d` = db+adminer+keycloak
+#                                   only. `--profile full-stack` also builds and
+#                                   runs the backend service below, passing it
+#                                   the env vars it needs as container env.
+#   Dockerfile                  -> what the backend service (and Render) builds from
+#   application.properties      -> base+dev config the backend reads when YOU run
+#                                   it directly with `mvnw` instead of this file
+#   application-prod.properties -> prod config the backend reads when it runs
+#                                   AS a container here (--profile full-stack)
+#                                   or on Render
+# ============================================================================
 services:
   # Our PostgreSQL database
   db:
@@ -54,8 +70,16 @@ services:
       retries: 5
       start_period: 60s
 
-  # VenueSync Backend API
+  # VenueSync Backend API — containerized backend, OPT-IN only.
+  # `docker-compose up -d` (no flags) starts db + adminer + keycloak ONLY —
+  # that's the default local dev loop: run the app yourself with
+  # `mvnw spring-boot:run` (dev profile, defaults in application.properties,
+  # no .env required) against these containers.
+  # This service is for running the backend itself in a container too
+  # (prod profile, config from .env) — start it explicitly with:
+  #   docker-compose --profile full-stack up -d
   backend:
+    profiles: ["full-stack"]
     build:
       context: .
       dockerfile: Dockerfile
