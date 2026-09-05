@@ -3,7 +3,7 @@
 > **A high-performance event ticketing platform with race-condition-proof seat allocation and real-time QR validation**
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![React](https://img.shields.io/badge/React-19.0-blue.svg)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Keycloak](https://img.shields.io/badge/Keycloak-OAuth2-orange.svg)](https://www.keycloak.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791.svg)](https://www.postgresql.org/)
@@ -179,7 +179,7 @@ cd backend
 ### Frontend
 | Technology | Purpose |
 |------------|---------|
-| React 19 | UI library |
+| React 18.3 | UI library |
 | TypeScript | Type-safe JavaScript |
 | Vite | Build tool & dev server |
 | Tailwind CSS | Utility-first styling |
