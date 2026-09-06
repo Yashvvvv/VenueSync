@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,6 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class UserProvisioningFilter extends OncePerRequestFilter {
@@ -49,7 +52,20 @@ public class UserProvisioningFilter extends OncePerRequestFilter {
         user.setName(jwt.getClaimAsString(Auth0Claims.NAME));
         user.setEmail(jwt.getClaimAsString(Auth0Claims.EMAIL));
 
-        userRepository.save(user);
+        try {
+          userRepository.save(user);
+        } catch (DataIntegrityViolationException raced) {
+          // existsById + save is check-then-act, and the frontend fires several
+          // API calls in parallel on the first page after login. On a brand-new
+          // user they all reach this filter at once, all see no row, and all
+          // insert - one wins, the rest got a 500 on users_pkey.
+          //
+          // The intent here is "ensure this user exists", which the winner has
+          // already satisfied, so losing the race is success, not failure.
+          // Swallowing it is what makes the filter idempotent; a lock would not
+          // help anyway once more than one instance is running.
+          log.debug("User {} was provisioned concurrently by another request", userId);
+        }
       }
 
       // LEGACY: the Keycloak version of the three lines above.
