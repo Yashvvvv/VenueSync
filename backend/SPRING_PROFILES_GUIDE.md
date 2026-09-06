@@ -17,11 +17,31 @@ is invalid in a profile specific resource
 ### ✅ Main Configuration File (`application.properties`)
 
 ```properties
-# This is the ONLY place where spring.profiles.active should be defined
-spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}
+# spring.profiles.active is NOT set here, and must never be added.
+# Local defaults live in the `#---` document at the bottom of the file,
+# activated on the `default` profile:
+spring.config.activate.on-profile=default
 ```
 
-This sets the default profile to `dev`, but allows overriding via the `SPRING_PROFILES_ACTIVE` environment variable.
+**Do not put `spring.profiles.active` in this file.** Spring Boot rejects it in
+any file that also contains profile-activated (`#---`) documents, and fails at
+startup with `InactiveConfigDataAccessException` before a single bean is
+created. This bit us for real on 2026-09-06: the merge of
+`application-dev.properties` into `application.properties` left
+`spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}` in place, and every
+Render deploy crashed on boot. It went unnoticed because `mvnw test` uses
+`src/test/resources/application.properties` — a different file with no profile
+documents — and `docker compose config` never starts Spring at all.
+
+`default` is the profile Spring uses when nothing is set, so the local block
+applies to `mvnw spring-boot:run` automatically and switches itself off as soon
+as `SPRING_PROFILES_ACTIVE=prod` is present.
+
+> **Render must set `SPRING_PROFILES_ACTIVE=prod` explicitly.** There is no
+> in-file fallback any more. Without it the service runs the local block:
+> DEBUG logging, SQL echoing, and `application-prod.properties` never loads —
+> so `CORS_ALLOWED_ORIGINS` silently falls back to `localhost:5173` and the
+> deployed frontend gets blocked.
 
 ### ✅ Profile-Specific Config
 
@@ -31,10 +51,11 @@ of the base defaults plus a handful of genuinely dev-only lines, so it was
 merged into `application.properties` itself):
 
 - `application.properties` - base defaults (used by every profile) **plus** a
-  `dev`-profile section at the bottom, separated by a `#---` document marker
-  with `spring.config.activate.on-profile=dev`. DO NOT put `spring.profiles.active`
-  inside that section — Spring Boot forbids setting it inside a profile-specific
-  document, same rule as below.
+  local-development section at the bottom, separated by a `#---` document marker
+  with `spring.config.activate.on-profile=default`. `default` is the profile
+  Spring uses when `SPRING_PROFILES_ACTIVE` is unset, so this applies to local
+  runs automatically. DO NOT put `spring.profiles.active` anywhere in this file —
+  not in that section and not in the base document either.
 - `application-prod.properties` - prod-specific overrides, kept as its own file
   since it's substantively different (SSL, connection pool limits, `ddl-auto=validate`,
   restricted actuator exposure) and is the one file you'd want to open standalone
@@ -70,26 +91,33 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 
 ## Profile Loading Order
 
-When Spring Boot starts with `spring.profiles.active=dev` (the default):
+When `SPRING_PROFILES_ACTIVE` is unset (local development — Spring falls back to
+the `default` profile):
 
 1. Loads `application.properties`' base document (top section, above the `#---` marker)
-2. Loads `application.properties`' `dev`-profile document (below the `#---` marker) — overrides the base values with the dev-only ones (verbose SQL, DEBUG logging)
+2. Loads `application.properties`' `default`-profile document (below the `#---` marker) — overrides the base values with the local-only ones (verbose SQL, DEBUG logging)
 3. Environment variables override both
 4. Command-line arguments override everything
 
-With `spring.profiles.active=prod`, step 2 instead loads `application-prod.properties` over the same base.
+With `SPRING_PROFILES_ACTIVE=prod`, step 2 instead loads `application-prod.properties`
+over the same base, and the `default` document is skipped entirely.
 
 ## Current Configuration Summary
 
-| Property | application.properties (base) | application.properties (`dev` section) | application-prod.properties |
+| Property | application.properties (base) | application.properties (`default` section) | application-prod.properties |
 |----------|-------------------------------|------------------------------------------|------------------------------|
-| Profile selection | `spring.profiles.active=dev` | ❌ Not allowed here | ❌ Not allowed here |
+| Profile selection | ❌ Not allowed here | ❌ Not allowed here | ❌ Not allowed here |
 | Database URL | `localhost:5433` (env-overridable) | — (inherits base) | From `${DATABASE_URL}` or `${SPRING_DATASOURCE_URL}` |
 | Show SQL | `false` | `true` | `false` |
-| DDL Auto | `update` | — (inherits base) | `validate` |
+| DDL Auto | `update` | — (inherits base) | `update` (from `${JPA_DDL_AUTO}`) |
 | Logging | `INFO` | `DEBUG` | `WARN` |
-| Keycloak | `localhost:9090` (env-overridable) | — (inherits base) | From `${KEYCLOAK_ISSUER_URI}` |
+| IDP issuer | `https://${AUTH0_DOMAIN}/` (no fallback) | — (inherits base) | same, no fallback |
 | CORS origins | `http://localhost:5173` (env-overridable) | — (inherits base) | From `${CORS_ALLOWED_ORIGINS}` |
+
+> `DDL Auto` in prod is `update`, **not** `validate`. There is no migration tool
+> (Flyway/Liquibase) in this project yet, so `update` is a deliberate, documented
+> choice rather than an oversight — see the comment in `application-prod.properties`.
+> Best Practice 3 below is the goal, not the current state.
 
 ## Best Practices
 
@@ -100,7 +128,8 @@ With `spring.profiles.active=prod`, step 2 instead loads `application-prod.prope
 
 ## Running the Application Now
 
-Since the fix is applied and the default profile is `dev`, you can now run:
+With no `SPRING_PROFILES_ACTIVE` set, Spring uses the `default` profile and picks
+up the local overrides automatically, so you can just run:
 
 ```powershell
 # From IntelliJ (just click Run) - will use dev profile by default

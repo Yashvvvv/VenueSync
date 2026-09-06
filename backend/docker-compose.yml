@@ -94,7 +94,18 @@ services:
       DATABASE_URL: ${DATABASE_URL:-jdbc:postgresql://db:5432/postgres}
       DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-changemeinprod!}
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://localhost:9090/realms/event-ticket-platform}
+      # The local `db` container speaks no SSL; Render's Postgres requires it.
+      # Defaults to `require` so only an explicit opt-out in .env relaxes it.
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
+      # Auth0. No `:-default` on these on purpose: a wrong-but-present issuer
+      # fails as a silent 401 on every request, which is far harder to debug
+      # than a container that refuses to start. Values come from .env.
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_M2M_CLIENT_ID: ${AUTH0_M2M_CLIENT_ID}
+      AUTH0_M2M_CLIENT_SECRET: ${AUTH0_M2M_CLIENT_SECRET}
+      # LEGACY: Keycloak issuer, kept commented (see keycloak/README.md).
+      # KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://localhost:9090/realms/event-ticket-platform}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,https://venuesync.pages.dev,https://aeea1436.venuesync.pages.dev}
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Kolkata}
 

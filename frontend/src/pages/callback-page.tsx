@@ -17,9 +17,12 @@ const CallbackPage: React.FC = () => {
       return
     }
 
+    // Deliberately does NOT navigate to /login on error. /login immediately
+    // re-attempts signinRedirect, so bouncing back there turned every auth
+    // failure into an infinite redirect loop that trapped the tab. Render the
+    // error instead - it is the only place the IDP's reason is visible.
     if (error) {
       console.error("Authentication error:", error)
-      navigate("/login")
       return
     }
 
@@ -56,7 +59,12 @@ const CallbackPage: React.FC = () => {
         {error ? (
           <>
             <h2 className="text-xl font-semibold text-destructive mb-2">Authentication Failed</h2>
-            <p className="text-muted-foreground">Redirecting to login...</p>
+            <pre className="text-left text-xs bg-muted text-muted-foreground rounded-md p-3 overflow-x-auto max-w-lg mx-auto mb-4">
+              {error.message}
+            </pre>
+            <a href="/login" className="underline text-primary">
+              Back to sign in
+            </a>
           </>
         ) : (
           <>

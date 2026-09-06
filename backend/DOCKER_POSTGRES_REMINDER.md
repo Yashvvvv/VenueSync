@@ -92,7 +92,7 @@ docker-compose up -d --build
 
 Notes about security and actuator
 - The backend is protected by Spring Security / OAuth2. Requests to `/` and `/actuator/health` responded with `401 Unauthorized` when unauthenticated; that is expected if security is enabled.
-- For quick local testing you can run with the `dev` profile to switch to H2 (see `application-dev.properties`) but note that this uses an in-memory DB and will not use the Docker Postgres.
+- H2 is used by the **test** profile only (`src/test/resources/application.properties`). There is no profile that switches the running application to H2 — local runs always use the Docker Postgres on port 5433. (`application-dev.properties` no longer exists; its overrides live in the trailing `#---` document of `application.properties` and do not change the datasource.)
 
 How to revert my changes (if desired)
 - Revert the Docker port mapping to 5432:5432 in `backend/docker-compose.yml` and update `backend/src/main/resources/application.properties` to jdbc url using port 5432.

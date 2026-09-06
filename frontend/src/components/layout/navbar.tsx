@@ -48,6 +48,14 @@ import { useAudience } from "@/hooks/use-audience"
 const Navbar: React.FC = () => {
   const { user, signoutRedirect, signinRedirect, isAuthenticated, signinSilent } = useAuth()
   const { isOrganizer, isAttendee, isStaff } = useRoles()
+
+  // Keycloak sent `preferred_username`; Auth0 does not - it sends name / nickname
+  // / email from the `profile` and `email` scopes. Reading the old claim left the
+  // avatar fallback blank, which made the whole account dropdown (and the only
+  // sign-out control) invisible even though it was still rendered and clickable.
+  // The final fallback keeps the avatar visible even with no profile claims at all.
+  const displayName =
+    user?.profile?.name || user?.profile?.nickname || user?.profile?.email || "Account"
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
@@ -200,14 +208,14 @@ const Navbar: React.FC = () => {
                     <DropdownMenuTrigger className="focus-ring ml-1 rounded-md">
                       <Avatar className="h-8 w-8 rounded-md border border-border transition-colors hover:border-primary">
                         <AvatarFallback className="rounded-md bg-secondary font-mono text-[11px] font-semibold tracking-wider text-foreground">
-                          {user?.profile?.preferred_username?.slice(0, 2).toUpperCase()}
+                          {displayName.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="glass-strong w-60 p-1.5" align="end" sideOffset={10}>
                       <DropdownMenuLabel className="p-2.5 font-normal">
                         <p className="truncate text-sm font-medium text-foreground">
-                          {user?.profile?.preferred_username}
+                          {displayName}
                         </p>
                         <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
                           {user?.profile?.email}
