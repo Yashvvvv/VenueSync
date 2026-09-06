@@ -99,11 +99,25 @@
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.keycloak</groupId>
-      <artifactId>keycloak-admin-client</artifactId>
-      <version>26.0.0</version>
-    </dependency>
+    <!--
+      LEGACY - the Keycloak admin SDK, used only by KeycloakAdminServiceImpl
+      (now commented out) to assign the ORGANIZER role. Kept here, commented,
+      rather than deleted; see keycloak/README.md.
+
+      Its replacement, shared/idp/Auth0RoleService, adds NO dependency at all:
+      the same job is two REST calls, which spring-web's RestClient already
+      covers. That is the whole reason this can be removed - not because Auth0
+      is simpler, but because an SDK was never needed for two endpoints.
+
+      Uncommenting this means uncommenting KeycloakAdminServiceImpl,
+      KeycloakAdminConfig, and the keycloak.admin.* properties as well.
+
+      <dependency>
+        <groupId>org.keycloak</groupId>
+        <artifactId>keycloak-admin-client</artifactId>
+        <version>26.0.0</version>
+      </dependency>
+    -->
   </dependencies>
   <build>
     <plugins>

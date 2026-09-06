@@ -201,7 +201,7 @@ cd backend
 VenueSync currently targets a Render-based deployment with environment-driven configuration.
 
 - **Backend** reads production settings from environment variables in `backend/src/main/resources/application-prod.properties`
-- **Frontend** reads `VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, and `VITE_OIDC_CLIENT_ID` from `frontend/.env.production`
+- **Frontend** reads `VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, `VITE_OIDC_CLIENT_ID` and `VITE_OIDC_AUDIENCE` from `frontend/.env` locally, and from the Cloudflare Pages dashboard for deployed builds
 - **Keycloak authority** must match the backend `KEYCLOAK_ISSUER_URI`
 - **CORS** is controlled through `CORS_ALLOWED_ORIGINS`
 - **Render** uses `jdbcConnectionString` for the PostgreSQL service binding

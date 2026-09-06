@@ -157,12 +157,23 @@ const router = createBrowserRouter([
 
 const appOrigin = window.location.origin
 const oidcConfig = {
-  authority:
-    import.meta.env.VITE_OIDC_AUTHORITY ??
-    "http://localhost:9090/realms/event-ticket-platform",
-  client_id: import.meta.env.VITE_OIDC_CLIENT_ID ?? "event-ticket-platform-app",
+  // No fallbacks: the old Keycloak defaults pointed at a decommissioned server,
+  // so a missing env var redirected users somewhere dead instead of failing.
+  authority: import.meta.env.VITE_OIDC_AUTHORITY,
+  client_id: import.meta.env.VITE_OIDC_CLIENT_ID,
   redirect_uri: `${appOrigin}/callback`,
   post_logout_redirect_uri: appOrigin,
+  scope: "openid profile email",
+  // Auth0 only issues a JWT access token when the authorize request asks for an
+  // audience; without it the token is opaque and the backend cannot validate it.
+  // Must match the API identifier in Auth0 and AUTH0_AUDIENCE on the backend.
+  extraQueryParams: { audience: import.meta.env.VITE_OIDC_AUDIENCE },
+  // Strips ?code=&state= (or ?error=) from the URL once the library has handled
+  // it. Without this the params survive in the address bar and get reprocessed
+  // on refresh, which produces spurious "state not found" errors.
+  onSigninCallback: () => {
+    globalThis.history.replaceState({}, document.title, globalThis.location.pathname)
+  },
 }
 
 createRoot(document.getElementById("root")!).render(

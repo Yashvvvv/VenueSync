@@ -10,10 +10,23 @@ interface UseRolesReturn {
   isStaff: boolean;
 }
 
+// Must match ROLES_CLAIM in the backend's JwtAuthenticationConverter and the
+// namespace in the Auth0 Post-Login Action. Auth0 drops custom claims that are
+// not URI-namespaced, so a plain "roles" claim would arrive missing, not empty.
+const ROLES_CLAIM = "https://venuesync.app/roles";
+
 interface JwtPayload {
-  realm_access?: {
-    roles?: string[];
-  };
+  [ROLES_CLAIM]?: string[];
+
+  // LEGACY: Keycloak nested its roles one level deeper, as
+  //   "realm_access": { "roles": ["ROLE_ATTENDEE"] }
+  // Auth0 emits a flat array instead. That claim shape is the only thing this
+  // hook had to change - the ROLE_ filter and everything below it are identical
+  // for both providers. See the commented block in JwtAuthenticationConverter.
+  //
+  // realm_access?: {
+  //   roles?: string[];
+  // };
 }
 
 export const useRoles = (): UseRolesReturn => {
@@ -38,7 +51,7 @@ export const useRoles = (): UseRolesReturn => {
 
     try {
       const payload = jwtDecode<JwtPayload>(user?.access_token);
-      const allRoles = payload.realm_access?.roles || [];
+      const allRoles = payload[ROLES_CLAIM] || [];
       const filteredRoles = allRoles.filter((role) => role.startsWith("ROLE_"));
       setRoles(filteredRoles);
       setIsOrganizer(filteredRoles.includes("ROLE_ORGANIZER"));
