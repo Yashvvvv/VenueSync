@@ -9,9 +9,11 @@ import com.venuesync.app.core.network.EventsApi
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
 import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.ContentConvertException
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.serialization.SerializationException
 
 /** A page of domain events plus whether the server has more. */
 data class EventPage(val events: List<Event>, val isLast: Boolean)
@@ -21,8 +23,9 @@ interface EventsRepository {
 }
 
 /**
- * The only place in the app that knows HTTP exists. Wire DTOs go in, domain models and
- * [ApiError]s come out. Failures are always an [ApiException] inside [Result.failure].
+ * The only place in the app that knows HTTP exists — and the trust boundary: input going out
+ * is validated, data coming in is validated, every failure becomes an [ApiError].
+ * Failures are always an [ApiException] inside [Result.failure]; only cancellation escapes.
  */
 class EventsRepositoryImpl @Inject constructor(
     private val api: EventsApi,
@@ -37,10 +40,16 @@ class EventsRepositoryImpl @Inject constructor(
         Result.success(block())
     } catch (e: CancellationException) {
         throw e // never swallow coroutine cancellation
+    } catch (e: ApiException) {
+        Result.failure(e) // already classified inside the block
     } catch (e: ResponseException) {
         Result.failure(ApiException(e.toApiError()))
     } catch (e: IOException) {
         Result.failure(ApiException(ApiError.Network))
+    } catch (e: ContentConvertException) {
+        Result.failure(ApiException(ApiError.InvalidResponse))
+    } catch (e: SerializationException) {
+        Result.failure(ApiException(ApiError.InvalidResponse))
     } catch (e: Exception) {
         Result.failure(ApiException(ApiError.Unknown(e.message)))
     }
@@ -51,6 +60,7 @@ class EventsRepositoryImpl @Inject constructor(
         return when {
             status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden -> ApiError.Unauthorized
             status == HttpStatusCode.NotFound -> ApiError.NotFound
+            status == HttpStatusCode.TooManyRequests -> ApiError.RateLimited
             status.value >= 500 -> ApiError.Server(message)
             // Server has no dedicated status for sold-out; the message is the only signal.
             message?.contains("sold out", ignoreCase = true) == true -> ApiError.SoldOut(message)

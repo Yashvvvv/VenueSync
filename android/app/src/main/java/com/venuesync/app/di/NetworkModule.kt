@@ -28,7 +28,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideHttpClient(): HttpClient =
-        VenueSyncHttpClient.create(BuildConfig.API_BASE_URL)
+        VenueSyncHttpClient.create(BuildConfig.API_BASE_URL, enableLogging = BuildConfig.DEBUG)
 
     /**
      * Creates the singleton [EventsApi] wrapper backed by the shared [HttpClient].

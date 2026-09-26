@@ -49,7 +49,9 @@ class EventsViewModel @Inject constructor(
             repository.getPublishedEvents(_query.value.ifBlank { null }, page + 1).onSuccess { next ->
                 page += 1
                 isLast = next.isLast
-                _state.update { UiState.Success(current.data + next.events) }
+                // Offset paging shifts when events are published between loads, so a page can repeat
+                // items; duplicate LazyColumn keys crash, hence distinctBy.
+                _state.update { UiState.Success((current.data + next.events).distinctBy { it.id }) }
             }
             // ponytail: a failed load-more keeps the list as-is; surface a toast when UX asks for it
         }
@@ -64,7 +66,7 @@ class EventsViewModel @Inject constructor(
             repository.getPublishedEvents(_query.value.ifBlank { null }, page = 0).fold(
                 onSuccess = { first ->
                     isLast = first.isLast
-                    _state.value = if (first.events.isEmpty()) UiState.Empty else UiState.Success(first.events)
+                    _state.value = if (first.events.isEmpty()) UiState.Empty else UiState.Success(first.events.distinctBy { it.id })
                 },
                 onFailure = { _state.value = UiState.Error(it.toApiError()) },
             )

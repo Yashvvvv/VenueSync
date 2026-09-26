@@ -5,6 +5,9 @@ sealed interface ApiError {
     data object Network : ApiError
     data object Unauthorized : ApiError
     data object NotFound : ApiError
+    data object RateLimited : ApiError
+    /** The server broke the contract: unparseable JSON, missing required fields, wrong entity. */
+    data object InvalidResponse : ApiError
     data class SoldOut(val message: String) : ApiError
     data class Server(val message: String?) : ApiError
     data class Unknown(val message: String?) : ApiError

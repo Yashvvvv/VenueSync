@@ -112,11 +112,14 @@ private fun Centered(content: @Composable () -> Unit) {
 
 private val DateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 
+/** User-facing copy only. Raw server/exception text never reaches the screen. */
 private fun ApiError.message(): String = when (this) {
     ApiError.Network -> "No connection. Check your network and try again."
     ApiError.Unauthorized -> "Please sign in to continue."
     ApiError.NotFound -> "Not found."
+    ApiError.RateLimited -> "Too many requests. Wait a moment and try again."
+    ApiError.InvalidResponse -> "We couldn't load this. Try again later."
     is ApiError.SoldOut -> message
-    is ApiError.Server -> message ?: "Server error. Try again later."
-    is ApiError.Unknown -> message ?: "Something went wrong."
+    is ApiError.Server -> "Server error. Try again later."
+    is ApiError.Unknown -> "Something went wrong."
 }
