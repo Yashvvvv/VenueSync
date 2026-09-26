@@ -64,7 +64,8 @@ that turns "reconfigure Keycloak by hand after every redeploy" into "run one com
 
 ## Current status
 
-As of now, this self-hosted setup is still what the live deployment authenticates through —
-the migration to a hosted identity provider (replacing this folder as the *live* auth path)
-is planned but not yet done. Once that migration lands, update this section to point at the
-new setup and this folder becomes purely a reference/demo artifact.
+The migration to a hosted identity provider is done — the live deployment now
+authenticates through Auth0 (see the top-level [`README.md`](../README.md#-auth0-setup)
+and `backend/src/main/resources/application.properties`). This folder is now
+purely a reference/demo artifact, kept for the OIDC/IAM and container-tuning
+work it demonstrates.
