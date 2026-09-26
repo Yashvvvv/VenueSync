@@ -25,6 +25,8 @@ class EventsViewModelTest {
     private class FakeRepo(private val pages: Map<Int, Result<EventPage>>) : EventsRepository {
         override suspend fun getPublishedEvents(query: String?, page: Int) =
             pages[page] ?: error("unexpected page $page")
+
+        override suspend fun getPublishedEvent(id: String) = error("not used")
     }
 
     private fun event(id: String) = Event(id, "Event $id", null, null, null)

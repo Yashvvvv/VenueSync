@@ -1,5 +1,6 @@
 package com.venuesync.app.core.network
 
+import com.venuesync.app.core.model.GetPublishedEventDetailsResponseDto
 import com.venuesync.app.core.model.ListPublishedEventResponseDto
 import com.venuesync.app.core.model.PageResponse
 import io.ktor.client.HttpClient
@@ -23,4 +24,8 @@ class EventsApi(private val client: HttpClient) {
             parameter("page", page)
             parameter("size", size)
         }.body()
+
+    /** No leading slash: a relative path keeps the /api/v1 prefix from the base URL. */
+    suspend fun getPublishedEvent(id: String): GetPublishedEventDetailsResponseDto =
+        client.get("published-events/$id").body()
 }
