@@ -16,6 +16,9 @@ import kotlinx.serialization.json.Json
 object VenueSyncHttpClient {
 
     fun create(baseUrl: String): HttpClient = HttpClient(OkHttp) {
+        // Non-2xx must throw (ResponseException) — otherwise a 400 ErrorDto would silently
+        // deserialize into an empty PageResponse because every field has a default.
+        expectSuccess = true
         defaultRequest {
             url(if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/")
         }

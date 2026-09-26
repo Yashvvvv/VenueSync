@@ -1,11 +1,6 @@
 package com.venuesync.app.core.model
 
-/*
- * Sealed error model per architecture.md. SHELL ONLY — the mapping logic
- * (HTTP status + ErrorDto.error message -> ApiError) is Yash's to write in the
- * repository layer (M1). Backend quirk to handle there: almost everything is 400,
- * sold-out is 400 with message "Tickets are sold out for this ticket type".
- */
+/** The app's error vocabulary. UI code switches on this, never on HTTP codes or exceptions. */
 sealed interface ApiError {
     data object Network : ApiError
     data object Unauthorized : ApiError
@@ -14,3 +9,9 @@ sealed interface ApiError {
     data class Server(val message: String?) : ApiError
     data class Unknown(val message: String?) : ApiError
 }
+
+/** Carrier so repository results fit the stdlib [Result] without losing the typed error. */
+class ApiException(val error: ApiError) : Exception(error.toString())
+
+fun Throwable.toApiError(): ApiError =
+    (this as? ApiException)?.error ?: ApiError.Unknown(message)
