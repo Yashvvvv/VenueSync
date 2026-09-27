@@ -20,7 +20,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 sealed interface RefreshResult {
-    data class Success(val tokens: TokenResponseDto) : RefreshResult
+    /** [refreshToken] is null when Auth0 didn't rotate it; keep using the old one then. */
+    data class Success(val accessToken: String, val refreshToken: String?, val idToken: String?) : RefreshResult
 
     /** Auth0 refused the refresh token (revoked, expired, reused): the session is over. */
     data object Rejected : RefreshResult
@@ -65,7 +66,9 @@ class AuthApi(
                 ),
             )
         }.body<TokenResponseDto>()
-        if (dto.accessToken.isNullOrBlank()) RefreshResult.Unavailable else RefreshResult.Success(dto)
+        val accessToken = dto.accessToken?.takeIf { it.isNotBlank() }
+        if (accessToken == null) RefreshResult.Unavailable
+        else RefreshResult.Success(accessToken, dto.refreshToken?.takeIf { it.isNotBlank() }, dto.idToken)
     } catch (e: CancellationException) {
         throw e
     } catch (e: ResponseException) {

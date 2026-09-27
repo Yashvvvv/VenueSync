@@ -33,7 +33,7 @@ class AuthApiTest {
         val result = api { json(HttpStatusCode.OK, """{"access_token":"at2","refresh_token":"rt2","expires_in":86400}""") }
             .refresh("rt1")
 
-        assertEquals(RefreshResult.Success(TokenResponseDto("at2", "rt2", null)), result)
+        assertEquals(RefreshResult.Success("at2", "rt2", null), result)
         val request = requests.single()
         assertEquals("https://tenant.example/oauth/token", request.url.toString())
         val form = (request.body as FormDataContent).formData
