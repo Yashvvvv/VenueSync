@@ -22,8 +22,8 @@
             </intent-filter>
         </activity>
 
-        <!-- M0 note: AppAuth's RedirectUriReceiverActivity gets registered here in the
-             Jul 19 auth session, with venuesync://oauth2redirect -->
+        <!-- AppAuth's RedirectUriReceiverActivity (venuesync://oauth2redirect) comes from the
+             library's own manifest via the appAuthRedirectScheme placeholder in build.gradle.kts. -->
     </application>
 
 </manifest>

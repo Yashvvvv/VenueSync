@@ -28,6 +28,8 @@ android {
         // Must equal the backend's AUTH0_AUDIENCE. Without it Auth0 issues a token the API rejects.
         buildConfigField("String", "OIDC_AUDIENCE", "\"https://api.venuesync.app\"")
         buildConfigField("String", "OIDC_REDIRECT_URI", "\"venuesync://oauth2redirect\"")
+        // AppAuth's own manifest registers the redirect catcher activity with this scheme.
+        manifestPlaceholders["appAuthRedirectScheme"] = "venuesync"
     }
 
     buildTypes {
@@ -71,10 +73,12 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.coil.compose)
+    implementation(libs.appauth)
 
     testImplementation(libs.junit)
     testImplementation(libs.turbine)
