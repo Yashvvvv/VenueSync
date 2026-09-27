@@ -12,7 +12,9 @@ import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.ANDROID
 import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -93,6 +95,9 @@ object VenueSyncHttpClient {
         }
         if (enableLogging) {
             install(Logging) {
+                // Logger.DEFAULT goes to SLF4J, which has no provider on Android: every line was silently
+                // dropped. ANDROID writes to Logcat (tag "HttpClient"). INFO = method, URL, status; no bodies.
+                logger = Logger.ANDROID
                 level = LogLevel.INFO
                 sanitizeHeader { it == HttpHeaders.Authorization }
             }

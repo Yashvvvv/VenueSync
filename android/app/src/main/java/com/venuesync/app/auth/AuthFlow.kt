@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import com.venuesync.app.BuildConfig
 import com.venuesync.app.core.auth.AuthTokens
+import com.venuesync.app.core.auth.roles
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,17 +58,19 @@ class AuthFlow @Inject constructor(
             .setAdditionalParameters(mapOf("audience" to BuildConfig.OIDC_AUDIENCE))
             .apply { if (forceLogin) setPrompt(AuthorizationRequest.Prompt.LOGIN) }
             .build()
+        if (BuildConfig.DEBUG) Log.d(TAG, "Opening Auth0 login (forceLogin=$forceLogin)")
         return service.getAuthorizationRequestIntent(request)
     }
 
     /** Turns the browser tab's result into tokens. Every outcome is mapped; nothing throws. */
     suspend fun completeLogin(data: Intent?): LoginResult {
-        if (data == null) return LoginResult.Cancelled
+        if (data == null) return LoginResult.Cancelled.also { if (BuildConfig.DEBUG) Log.d(TAG, "Login cancelled") }
         val response = AuthorizationResponse.fromIntent(data)
         val error = AuthorizationException.fromIntent(data)
         if (response == null) {
             return when (error) {
                 null, AuthorizationException.GeneralErrors.USER_CANCELED_AUTH_FLOW -> LoginResult.Cancelled
+                    .also { if (BuildConfig.DEBUG) Log.d(TAG, "Login cancelled") }
                 else -> LoginResult.Failed(error.toFailure())
             }
         }
@@ -78,7 +81,13 @@ class AuthFlow @Inject constructor(
             if (tokens.refreshToken == null) {
                 Log.w(TAG, "No refresh token issued: is 'Allow Offline Access' on for the Auth0 API?")
             }
-            LoginResult.Success(AuthTokens(accessToken, tokens.refreshToken, tokens.idToken))
+            LoginResult.Success(AuthTokens(accessToken, tokens.refreshToken, tokens.idToken)).also {
+                // Flow facts only, never token values. Empty roles here = audience not applied.
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Login OK: jwt=${accessToken.count { c -> c == '.' } == 2}, " +
+                        "refreshToken=${tokens.refreshToken != null}, roles=${it.tokens.roles()}")
+                }
+            }
         } catch (e: AuthorizationException) {
             LoginResult.Failed(e.toFailure())
         }

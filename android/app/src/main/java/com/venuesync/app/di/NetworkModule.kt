@@ -1,5 +1,6 @@
 package com.venuesync.app.di
 
+import android.util.Log
 import com.venuesync.app.BuildConfig
 import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.network.EventsApi
@@ -45,7 +46,10 @@ object NetworkModule {
         // Ktor 3.0.3 caches the first loadTokens() result and has no cacheTokens switch. Drop that
         // cache on every sign-in/sign-out, or the previous user's token keeps being sent.
         scope.launch {
-            session.session.drop(1).collect { client.authProvider<BearerAuthProvider>()?.clearToken() }
+            session.session.drop(1).collect {
+                if (BuildConfig.DEBUG) Log.d("Session", "Session is now $it") // e.g. SignedIn(roles=[ROLE_ATTENDEE])
+                client.authProvider<BearerAuthProvider>()?.clearToken()
+            }
         }
         return client
     }
