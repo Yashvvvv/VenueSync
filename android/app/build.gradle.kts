@@ -22,11 +22,12 @@ android {
 
         // Base URLs live here (not hardcoded in code) so debug/release can diverge later.
         buildConfigField("String", "API_BASE_URL", "\"https://venuesync-backend.onrender.com/api/v1\"")
-        buildConfigField(
-            "String",
-            "OIDC_AUTHORITY",
-            "\"https://keycloak-server-3dsx.onrender.com/realms/event-ticket-platform\""
-        )
+        // Auth0 "VenueSync-App" (Native, public client — the id ships in every APK, it is not a secret).
+        buildConfigField("String", "OIDC_AUTHORITY", "\"https://dev-gtxw4nl5kf3t4pxd.us.auth0.com\"")
+        buildConfigField("String", "OIDC_CLIENT_ID", "\"0veL3NInWpoVPwGk4BqmZML1yAik8mvI\"")
+        // Must equal the backend's AUTH0_AUDIENCE. Without it Auth0 issues a token the API rejects.
+        buildConfigField("String", "OIDC_AUDIENCE", "\"https://api.venuesync.app\"")
+        buildConfigField("String", "OIDC_REDIRECT_URI", "\"venuesync://oauth2redirect\"")
     }
 
     buildTypes {
