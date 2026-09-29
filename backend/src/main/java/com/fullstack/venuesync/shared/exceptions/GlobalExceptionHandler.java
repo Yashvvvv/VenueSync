@@ -19,6 +19,7 @@ import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
+import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
 import com.fullstack.venuesync.tickets.exception.TicketNotFoundException;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
 import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
@@ -52,6 +53,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ErrorDto> handleSalesPeriodException(SalesPeriodException ex) {
     String code = ex.getSalesStatus() == SalesStatus.UPCOMING ? "SALES_NOT_STARTED" : "SALES_ENDED";
     return respond(HttpStatus.CONFLICT, code, ex.getMessage(), ex);
+  }
+
+  @ExceptionHandler(IdempotencyKeyReusedException.class)
+  public ResponseEntity<ErrorDto> handleIdempotencyKeyReusedException(IdempotencyKeyReusedException ex) {
+    return respond(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMPOTENCY_KEY_REUSED",
+        "This Idempotency-Key was already used for a different purchase", ex);
   }
 
   @ExceptionHandler(QrCodeNotFoundException.class)

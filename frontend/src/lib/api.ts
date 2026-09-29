@@ -321,6 +321,8 @@ export const purchaseTicket = async (
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        // One key per purchase click: the server turns a repeated request into the same ticket.
+        "Idempotency-Key": crypto.randomUUID(),
       },
     },
   );

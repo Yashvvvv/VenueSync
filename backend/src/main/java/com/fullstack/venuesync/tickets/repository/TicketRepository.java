@@ -20,6 +20,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
   int countByTicketTypeId(UUID ticketTypeId);
 
+  Optional<Ticket> findByPurchaserIdAndIdempotencyKey(UUID purchaserId, UUID idempotencyKey);
+
   /** Rows of [ticketTypeId, ticketsSold] for every ticket type of the event that has sold at least one. */
   @Query("SELECT t.ticketType.id, COUNT(t) FROM Ticket t " +
          "WHERE t.ticketType.event.id = :eventId GROUP BY t.ticketType.id")
