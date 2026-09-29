@@ -1,6 +1,8 @@
 package com.fullstack.venuesync.tickets.service;
 
+import java.util.Set;
 import java.util.UUID;
+import com.fullstack.venuesync.events.domain.Event;
 
 import com.fullstack.venuesync.tickets.domain.Ticket;
 
@@ -20,4 +22,7 @@ public interface TicketTypeService {
    * @throws com.fullstack.venuesync.tickets.exception.TicketsSoldOutException if no tickets are available
    */
   Ticket purchaseTicket(UUID userId, UUID ticketTypeId);
+
+  /** Ids of the event's ticket types that have no tickets left. */
+  Set<UUID> soldOutTicketTypeIds(Event event);
 }

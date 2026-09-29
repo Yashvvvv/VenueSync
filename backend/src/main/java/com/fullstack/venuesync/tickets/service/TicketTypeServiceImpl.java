@@ -2,8 +2,11 @@ package com.fullstack.venuesync.tickets.service;
 
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,5 +86,16 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     qrCodeService.generateQrCode(savedTicket);
 
     return ticketRepository.save(savedTicket);
+  }
+
+  @Override
+  @Transactional
+  public Set<UUID> soldOutTicketTypeIds(Event event) {
+    Map<UUID, Long> sold = ticketRepository.countSoldByTicketTypeForEvent(event.getId()).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+    return event.getTicketTypes().stream()
+        .filter(ticketType -> ticketType.isSoldOut(sold.getOrDefault(ticketType.getId(), 0L)))
+        .map(TicketType::getId)
+        .collect(Collectors.toSet());
   }
 }

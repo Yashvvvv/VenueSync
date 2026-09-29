@@ -6,7 +6,9 @@ import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -196,6 +198,29 @@ class TicketTypeServiceImplTest {
       Ticket result = ticketTypeService.purchaseTicket(userId, ticketTypeId);
 
       assertNotNull(result);
+    }
+  }
+
+  @Nested
+  @DisplayName("soldOutTicketTypeIds")
+  class SoldOutTests {
+
+    @Test
+    @DisplayName("should report only the ticket types with no tickets left")
+    void shouldReportSoldOutTypes() {
+      TicketType unlimited = new TicketType();
+      unlimited.setId(UUID.randomUUID());
+      unlimited.setTotalAvailable(null);
+      TicketType unsold = new TicketType();
+      unsold.setId(UUID.randomUUID());
+      unsold.setTotalAvailable(5);
+      ticketType.setTotalAvailable(2);
+      event.setTicketTypes(new ArrayList<>(List.of(ticketType, unlimited, unsold)));
+      when(ticketRepository.countSoldByTicketTypeForEvent(event.getId())).thenReturn(List.of(
+          new Object[]{ticketTypeId, 2L},
+          new Object[]{unlimited.getId(), 5000L}));
+
+      assertEquals(Set.of(ticketTypeId), ticketTypeService.soldOutTicketTypeIds(event));
     }
   }
 }

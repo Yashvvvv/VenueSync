@@ -95,6 +95,20 @@ public class Event {
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 
+  /**
+   * The single source of truth for "can tickets be bought at {@code now}", used by both the
+   * purchase check and the public event detail so the two can never disagree.
+   */
+  public SalesStatus salesStatusAt(LocalDateTime now) {
+    if (salesStart != null && now.isBefore(salesStart)) {
+      return SalesStatus.UPCOMING;
+    }
+    if ((salesEnd != null && now.isAfter(salesEnd)) || (end != null && now.isAfter(end))) {
+      return SalesStatus.ENDED;
+    }
+    return SalesStatus.ON_SALE;
+  }
+
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();

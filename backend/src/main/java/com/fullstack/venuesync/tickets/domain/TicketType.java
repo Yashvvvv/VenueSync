@@ -73,6 +73,11 @@ public class TicketType {
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 
+  /** Null {@code totalAvailable} means unlimited. Shared by the purchase check and the public detail. */
+  public boolean isSoldOut(long ticketsSold) {
+    return totalAvailable != null && ticketsSold >= totalAvailable;
+  }
+
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
