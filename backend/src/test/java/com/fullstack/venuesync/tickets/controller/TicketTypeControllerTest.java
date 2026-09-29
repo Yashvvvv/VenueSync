@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -35,6 +36,10 @@ import jakarta.servlet.ServletResponse;
 import com.fullstack.venuesync.tickets.domain.Ticket;
 import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.service.TicketTypeService;
+import com.fullstack.venuesync.events.domain.SalesStatus;
+import com.fullstack.venuesync.events.exception.SalesPeriodException;
+import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
 
 @WebMvcTest(TicketTypeController.class)
 @Import({SecurityConfig.class, JwtAuthenticationConverter.class, GlobalExceptionHandler.class})
@@ -116,5 +121,45 @@ class TicketTypeControllerTest {
     mockMvc.perform(post("/api/v1/events/{eventId}/ticket-types/{ticketTypeId}/tickets",
             eventId, ticketTypeId))
         .andExpect(status().isUnauthorized());
+  }
+
+  private org.springframework.test.web.servlet.ResultActions purchaseAsAttendee() throws Exception {
+    return mockMvc.perform(post("/api/v1/events/{eventId}/ticket-types/{ticketTypeId}/tickets", eventId, ticketTypeId)
+        .with(jwt().jwt(createAttendeeJwt()).authorities(new SimpleGrantedAuthority("ROLE_ATTENDEE"))));
+  }
+
+  @Test
+  @DisplayName("should answer sold out with 409 TICKETS_SOLD_OUT")
+  void shouldMapSoldOut() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any())).thenThrow(new TicketsSoldOutException());
+
+    purchaseAsAttendee()
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TICKETS_SOLD_OUT"));
+  }
+
+  @Test
+  @DisplayName("should answer a closed sales window with 409 and the matching code")
+  void shouldMapSalesPeriod() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any()))
+        .thenThrow(new SalesPeriodException(SalesStatus.UPCOMING))
+        .thenThrow(new SalesPeriodException(SalesStatus.ENDED));
+
+    purchaseAsAttendee()
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SALES_NOT_STARTED"));
+    purchaseAsAttendee()
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SALES_ENDED"));
+  }
+
+  @Test
+  @DisplayName("should answer a missing ticket type with 404 TICKET_TYPE_NOT_FOUND")
+  void shouldMapTicketTypeNotFound() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any())).thenThrow(new TicketTypeNotFoundException("missing"));
+
+    purchaseAsAttendee()
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TICKET_TYPE_NOT_FOUND"));
   }
 }

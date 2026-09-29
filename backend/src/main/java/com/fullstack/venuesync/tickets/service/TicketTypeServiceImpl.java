@@ -8,10 +8,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import com.fullstack.venuesync.events.domain.Event;
+import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
@@ -27,7 +27,6 @@ import com.fullstack.venuesync.validation.service.QrCodeService;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TicketTypeServiceImpl implements TicketTypeService {
 
   private final UserRepository userRepository;
@@ -47,33 +46,14 @@ public class TicketTypeServiceImpl implements TicketTypeService {
             String.format("Ticket type with ID %s was not found", ticketTypeId)
         ));
 
-    // Validate sales period - use system local time to match wall clock times
-    // Event times are stored as "wall clock" times without timezone info
-    Event event = ticketType.getEvent();
-    LocalDateTime now = LocalDateTime.now();
-
-    log.info("Sales validation - Now: {}, SalesStart: {}, SalesEnd: {}, EventEnd: {}", 
-             now, event.getSalesStart(), event.getSalesEnd(), event.getEnd());
-
-    if (event.getSalesStart() != null && now.isBefore(event.getSalesStart())) {
-      log.warn("Sales not started - Now {} is before SalesStart {}", now, event.getSalesStart());
-      throw new SalesPeriodException("Ticket sales have not started yet");
+    // ponytail: server wall clock vs zone-less event times — correct only while organizers and
+    // the server share a time zone; fixed by moving events to instants + an IANA zone.
+    SalesStatus salesStatus = ticketType.getEvent().salesStatusAt(LocalDateTime.now());
+    if (salesStatus != SalesStatus.ON_SALE) {
+      throw new SalesPeriodException(salesStatus);
     }
 
-    if (event.getSalesEnd() != null && now.isAfter(event.getSalesEnd())) {
-      throw new SalesPeriodException("Ticket sales have ended");
-    }
-
-    // Also check if event has already ended
-    if (event.getEnd() != null && now.isAfter(event.getEnd())) {
-      throw new SalesPeriodException("This event has already ended");
-    }
-
-    int purchasedTickets = ticketRepository.countByTicketTypeId(ticketType.getId());
-    Integer totalAvailable = ticketType.getTotalAvailable();
-
-    // If totalAvailable is null, it means unlimited tickets
-    if(totalAvailable != null && purchasedTickets + 1 > totalAvailable) {
+    if (ticketType.isSoldOut(ticketRepository.countByTicketTypeId(ticketType.getId()))) {
       throw new TicketsSoldOutException();
     }
 

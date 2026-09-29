@@ -147,6 +147,14 @@ class PublishedEventControllerTest {
   }
 
   @Test
+  @DisplayName("should answer a non-UUID event id with 400 INVALID_REQUEST, not 500")
+  void shouldRejectMalformedEventId() throws Exception {
+    mockMvc.perform(get("/api/v1/published-events/{eventId}", "not-a-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
   @DisplayName("should return 404 for non-existent published event")
   void shouldReturn404ForNonExistentEvent() throws Exception {
     when(eventService.getPublishedEvent(eventId)).thenReturn(Optional.empty());
