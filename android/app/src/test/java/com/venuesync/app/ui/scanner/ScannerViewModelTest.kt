@@ -7,7 +7,10 @@ import com.venuesync.app.core.model.EventDetail
 import com.venuesync.app.core.model.SalesStatus
 import com.venuesync.app.core.model.ScanResult
 import com.venuesync.app.core.model.ScanStatus
+import com.venuesync.app.core.model.Guest
+import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.core.repository.EventsRepository
+import com.venuesync.app.core.repository.StaffRepository
 import com.venuesync.app.core.repository.ValidationRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -43,9 +46,20 @@ class ScannerViewModelTest {
             Result.success(EventDetail(id, "Summer Vibes", null, null, null, emptyList(), SalesStatus.OnSale, null, null))
     }
 
+    private class FakeStaff : StaffRepository {
+        val queries = mutableListOf<String>()
+        override suspend fun staffingEvents() = error("not used")
+        override suspend fun acceptInvite(code: String) = error("not used")
+        override suspend fun searchGuests(eventId: String, query: String): Result<List<Guest>> {
+            queries += query
+            return Result.success(listOf(Guest("t-1", "F5A3-038B", "Yash", "ya***@gmail.com", "VIP", TicketStatus.Purchased)))
+        }
+    }
+
     private val validation = FakeValidation()
+    private val staff = FakeStaff()
     private val handle = SavedStateHandle(mapOf(ScannerViewModel.EVENT_ID_ARG to "e1"))
-    private fun vm(savedState: SavedStateHandle = handle) = ScannerViewModel(savedState, validation, FakeEvents())
+    private fun vm(savedState: SavedStateHandle = handle) = ScannerViewModel(savedState, validation, FakeEvents(), staff)
     private fun answer(status: ScanStatus) = validation.pending.complete(Result.success(ScanResult(status)))
     private fun fail(error: ApiError) = validation.pending.complete(Result.failure(ApiException(error)))
 

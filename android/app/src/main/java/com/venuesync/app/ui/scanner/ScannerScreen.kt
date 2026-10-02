@@ -47,6 +47,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import com.venuesync.app.core.model.Guest
+import com.venuesync.app.core.model.normalizeCheckInEntry
+import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.events.message
+import com.venuesync.app.ui.tickets.statusLabel
 import com.venuesync.app.core.model.ScanResult
 import com.venuesync.app.core.model.ScanStatus
 
@@ -59,6 +78,9 @@ fun ScannerScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val eventName by viewModel.eventName.collectAsStateWithLifecycle()
+    val guests by viewModel.guests.collectAsStateWithLifecycle()
+    var showCodeEntry by rememberSaveable { mutableStateOf(false) }
+    var showGuestList by rememberSaveable { mutableStateOf(false) }
 
     // Google's code scanner: Play services shows the camera, so the app holds no camera permission.
     val context = LocalContext.current
@@ -103,6 +125,11 @@ fun ScannerScreen(
                     text = "Scan the QR code on the attendee's ticket.",
                     problem = scannerProblem,
                     primary = "Scan ticket" to scan,
+                    // When the QR won't scan (cracked screen, glare, no data): type the code, or find them by name.
+                    extra = listOf(
+                        "Type ticket code" to { showCodeEntry = true },
+                        "Guest list" to { showGuestList = true },
+                    ),
                 )
                 ScanState.Checking -> Column(
                     modifier = Modifier.fillMaxSize(),
@@ -126,6 +153,127 @@ fun ScannerScreen(
             }
         }
     }
+
+    if (showCodeEntry) {
+        TicketCodeDialog(
+            onCheckIn = {
+                showCodeEntry = false
+                viewModel.onCodeEntered(it)
+            },
+            onDismiss = { showCodeEntry = false },
+        )
+    }
+    if (showGuestList) {
+        GuestListSheet(
+            search = guests,
+            onQueryChange = viewModel::searchGuests,
+            onCheckIn = {
+                showGuestList = false
+                viewModel.checkIn(it)
+            },
+            onDismiss = { showGuestList = false },
+        )
+    }
+}
+
+@Composable
+private fun TicketCodeDialog(onCheckIn: (String) -> Unit, onDismiss: () -> Unit) {
+    var entry by rememberSaveable { mutableStateOf("") }
+    var showFormatHint by rememberSaveable { mutableStateOf(false) }
+    val submit = {
+        if (normalizeCheckInEntry(entry) != null) onCheckIn(entry) else showFormatHint = true
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Type ticket code") },
+        text = {
+            OutlinedTextField(
+                value = entry,
+                onValueChange = {
+                    entry = it.take(40)
+                    showFormatHint = false
+                },
+                placeholder = { Text("F5A3-038B", fontFamily = FontFamily.Monospace) },
+                singleLine = true,
+                isError = showFormatHint,
+                supportingText = {
+                    Text(if (showFormatHint) "Ticket codes look like F5A3-038B." else "Under the QR code on their ticket.")
+                },
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = { TextButton(onClick = submit, enabled = entry.isNotBlank()) { Text("Check in") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** Find a guest by name, email or ticket code. Check-in is an explicit button, so a stray tap admits nobody. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GuestListSheet(
+    search: GuestSearch,
+    onQueryChange: (String) -> Unit,
+    onCheckIn: (Guest) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+            Text("Guest list", style = MaterialTheme.typography.titleLarge)
+            OutlinedTextField(
+                value = search.query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("Name, email or ticket code") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            )
+            when (val results = search.results) {
+                UiState.Loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                UiState.Empty -> Text(
+                    if (search.query.trim().length < 2) "Type at least 2 characters." else "No guest matches.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                is UiState.Error -> Text(results.error.message(), color = MaterialTheme.colorScheme.error)
+                is UiState.Success -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(results.data, key = Guest::ticketId) { guest -> GuestRow(guest, onCheckIn = { onCheckIn(guest) }) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(guest.name ?: "No name", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listOfNotNull(guest.ticketTypeName, guest.ticketCode).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
+                guest.email?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                statusLabel(guest.status)?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
+            }
+            // A used/expired/cancelled ticket can still be "checked in": the server answers, and the door sees why not.
+            Button(onClick = onCheckIn) { Text("Check in") }
+        }
+    }
 }
 
 @Composable
@@ -134,6 +282,7 @@ private fun Prompt(
     problem: String?,
     primary: Pair<String, () -> Unit>,
     secondary: Pair<String, () -> Unit>? = null,
+    extra: List<Pair<String, () -> Unit>> = emptyList(),
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -148,6 +297,9 @@ private fun Prompt(
             Text(primary.first, style = MaterialTheme.typography.titleMedium)
         }
         secondary?.let { (label, action) ->
+            OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
+        }
+        extra.forEach { (label, action) ->
             OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
     }
