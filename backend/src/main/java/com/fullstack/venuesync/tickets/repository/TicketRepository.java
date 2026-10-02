@@ -66,6 +66,21 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
   );
 
   /**
+   * Admits a ticket: PURCHASED -> USED as ONE statement, so of two simultaneous scans exactly one sees 1
+   * (and is VALID) and the other sees 0. A read-then-write would let both read PURCHASED and both admit.
+   *
+   * @return 1 if this call admitted the ticket, 0 if it was not PURCHASED (anymore)
+   */
+  @Modifying
+  @Query("UPDATE Ticket t SET t.status = :used, t.updatedAt = :now WHERE t.id = :id AND t.status = :purchased")
+  int markUsed(
+      @Param("id") UUID id,
+      @Param("purchased") TicketStatusEnum purchased,
+      @Param("used") TicketStatusEnum used,
+      @Param("now") LocalDateTime now
+  );
+
+  /**
    * Update tickets to EXPIRED status for events that have ended.
    * Only updates tickets that are currently PURCHASED.
    */

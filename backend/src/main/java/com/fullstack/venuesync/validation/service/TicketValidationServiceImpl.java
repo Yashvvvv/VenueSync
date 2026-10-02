@@ -66,26 +66,19 @@ public class TicketValidationServiceImpl implements TicketValidationService {
       return ticketValidationRepository.save(ticketValidation);
     }
 
-    // Check if ticket was already used (has a valid validation or status is USED)
-    if (TicketStatusEnum.USED.equals(ticket.getStatus())) {
-      ticketValidation.setStatus(TicketValidationStatusEnum.ALREADY_USED);
+    // A cancelled (refunded) ticket must never get in.
+    if (TicketStatusEnum.CANCELLED.equals(ticket.getStatus())) {
+      ticketValidation.setStatus(TicketValidationStatusEnum.INVALID);
       return ticketValidationRepository.save(ticketValidation);
     }
 
-    // Check if ticket was already used (has a valid validation)
-    TicketValidationStatusEnum ticketValidationStatus = ticket.getValidations().stream()
-        .filter(v -> TicketValidationStatusEnum.VALID.equals(v.getStatus()))
-        .findFirst()
-        .map(v -> TicketValidationStatusEnum.ALREADY_USED)
-        .orElse(TicketValidationStatusEnum.VALID);
-
-    ticketValidation.setStatus(ticketValidationStatus);
-
-    // If this is a valid scan (first successful validation), mark the ticket as USED
-    if (TicketValidationStatusEnum.VALID.equals(ticketValidationStatus)) {
-      ticket.setStatus(TicketStatusEnum.USED);
-      ticketRepository.save(ticket);
-    }
+    // The status column is the single source of truth, and check-and-set is one atomic UPDATE:
+    // of two simultaneous scans of one ticket, only one can be VALID.
+    boolean admitted = ticketRepository.markUsed(
+        ticket.getId(), TicketStatusEnum.PURCHASED, TicketStatusEnum.USED, LocalDateTime.now()) == 1;
+    ticketValidation.setStatus(admitted
+        ? TicketValidationStatusEnum.VALID
+        : TicketValidationStatusEnum.ALREADY_USED);
 
     return ticketValidationRepository.save(ticketValidation);
   }

@@ -89,7 +89,8 @@ class TicketValidationServiceImplTest {
     void shouldReturnValidForPurchasedTicket() {
       when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE))
           .thenReturn(Optional.of(qrCode));
-      when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> i.getArgument(0));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(1);
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
@@ -159,6 +160,37 @@ class TicketValidationServiceImplTest {
 
       assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
     }
+
+    @Test
+    @DisplayName("should return ALREADY_USED when a simultaneous scan admitted the ticket first")
+    void shouldReturnAlreadyUsedWhenRaceLost() {
+      // Both scans read PURCHASED; the other one's UPDATE matched first, so ours matches 0 rows.
+      when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE))
+          .thenReturn(Optional.of(qrCode));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(0);
+      when(ticketValidationRepository.save(any(TicketValidation.class)))
+          .thenAnswer(i -> i.getArgument(0));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+
+      assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("should return INVALID for a cancelled ticket and never admit it")
+    void shouldReturnInvalidWhenTicketCancelled() {
+      ticket.setStatus(TicketStatusEnum.CANCELLED);
+      when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE))
+          .thenReturn(Optional.of(qrCode));
+      when(ticketValidationRepository.save(any(TicketValidation.class)))
+          .thenAnswer(i -> i.getArgument(0));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+
+      assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
+      verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
+    }
   }
 
   @Nested
@@ -169,7 +201,8 @@ class TicketValidationServiceImplTest {
     @DisplayName("should return VALID for manual validation of purchased ticket")
     void shouldReturnValidForManualValidation() {
       when(ticketRepository.findById(ticketId)).thenReturn(Optional.of(ticket));
-      when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> i.getArgument(0));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(1);
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
