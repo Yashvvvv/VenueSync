@@ -24,6 +24,10 @@
 
         <!-- AppAuth's RedirectUriReceiverActivity (venuesync://oauth2redirect) comes from the
              library's own manifest via the appAuthRedirectScheme placeholder in build.gradle.kts. -->
+        <!-- Download the code scanner module at install time, not at the first scan at the door. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
     </application>
 
 </manifest>
