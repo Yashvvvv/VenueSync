@@ -13,6 +13,7 @@ import com.venuesync.app.ui.events.EventDetailViewModel
 import com.venuesync.app.ui.events.EventListScreen
 import com.venuesync.app.ui.login.LoginScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
+import com.venuesync.app.ui.scanner.ScanEventPickerScreen
 import com.venuesync.app.ui.tickets.MyTicketsScreen
 import com.venuesync.app.ui.tickets.TicketDetailScreen
 import com.venuesync.app.ui.tickets.TicketDetailViewModel
@@ -27,6 +28,7 @@ object Routes {
     const val EVENT_DETAIL = "events/{${EventDetailViewModel.EVENT_ID_ARG}}"
     const val PURCHASE_RESULT = "purchase-result/{${TicketDetailViewModel.TICKET_ID_ARG}}"
     const val MY_TICKETS = "my-tickets"
+    const val SCAN_EVENTS = "scan"
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
 
     fun eventDetail(eventId: String) = "events/$eventId"
@@ -43,6 +45,7 @@ fun VenueSyncNavHost() {
                 onEventClick = { eventId -> navController.navigateOnce(entry, Routes.eventDetail(eventId)) },
                 onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
                 onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
+                onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
             )
         }
         composable(Routes.EVENT_DETAIL) {
@@ -60,6 +63,12 @@ fun VenueSyncNavHost() {
                 onBack = { navController.navigateUp() },
                 onTicketClick = { navController.navigateOnce(entry, Routes.ticketDetail(it)) },
                 onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+            )
+        }
+        composable(Routes.SCAN_EVENTS) {
+            ScanEventPickerScreen(
+                onBack = { navController.navigateUp() },
+                onEventClick = {}, // the scanner lands with its own commit
             )
         }
         composable(Routes.TICKET_DETAIL) {
