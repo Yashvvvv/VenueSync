@@ -30,8 +30,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.venuesync.app.core.model.Availability
 import com.venuesync.app.core.model.EventDetail
 import com.venuesync.app.core.model.TicketType
+import com.venuesync.app.core.model.availabilityOf
 import com.venuesync.app.ui.common.UiState
 import java.text.NumberFormat
 import java.util.Currency
@@ -101,13 +103,13 @@ private fun EventDetailContent(event: EventDetail) {
         if (event.ticketTypes.isEmpty()) {
             item { Text("Tickets aren't on sale yet.", style = MaterialTheme.typography.bodyMedium) }
         } else {
-            items(event.ticketTypes, key = TicketType::id) { TicketTypeRow(it) }
+            items(event.ticketTypes, key = TicketType::id) { TicketTypeRow(it, event.availabilityOf(it)) }
         }
     }
 }
 
 @Composable
-private fun TicketTypeRow(ticketType: TicketType) {
+private fun TicketTypeRow(ticketType: TicketType, availability: Availability) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -123,8 +125,18 @@ private fun TicketTypeRow(ticketType: TicketType) {
             ticketType.description?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
             }
+            availabilityLabel(availability)?.let {
+                Text(it, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+            }
         }
     }
+}
+
+private fun availabilityLabel(availability: Availability): String? = when (availability) {
+    Availability.Buyable -> null
+    Availability.SoldOut -> "Sold out"
+    is Availability.OnSaleFrom -> availability.start?.let { "On sale ${it.format(DateFormat)}" } ?: "Not on sale yet"
+    Availability.SalesEnded -> "Sales ended"
 }
 
 // ponytail: the API contract has no currency field and the web app shows "$", so USD is assumed.

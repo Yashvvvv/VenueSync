@@ -30,6 +30,10 @@ data class GetPublishedEventDetailsResponseDto(
     val start: String? = null,
     val end: String? = null,
     val venue: String? = null,
+    val salesStart: String? = null,
+    val salesEnd: String? = null,
+    // String, not an enum: kotlinx throws on an unknown enum value, which would fail the whole detail.
+    val salesStatus: String? = null,
     val ticketTypes: List<PublishedTicketTypeDto>? = null,
 )
 
@@ -39,6 +43,7 @@ data class PublishedTicketTypeDto(
     val name: String? = null,
     val price: Double? = null,
     val description: String? = null,
+    val soldOut: Boolean? = null,
 )
 
 /** Spring Page<T> envelope (same shape the web client types as SpringBootPagination<T>). */

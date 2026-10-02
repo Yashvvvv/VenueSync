@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.EventDetail
+import com.venuesync.app.core.model.SalesStatus
 import com.venuesync.app.core.repository.EventsRepository
 import com.venuesync.app.ui.common.UiState
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +30,7 @@ class EventDetailViewModelTest {
         }
     }
 
-    private val detail = EventDetail("e1", "Show", null, null, null, emptyList())
+    private val detail = EventDetail("e1", "Show", null, null, null, emptyList(), SalesStatus.OnSale, null, null)
 
     private fun vm(repo: FakeRepo, args: Map<String, Any?> = mapOf(EventDetailViewModel.EVENT_ID_ARG to "e1")) =
         EventDetailViewModel(SavedStateHandle(args), repo)
