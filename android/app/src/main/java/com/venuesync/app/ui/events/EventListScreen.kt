@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.filter
 fun EventListScreen(
     onEventClick: (String) -> Unit,
     onSignInClick: () -> Unit,
+    onMyTicketsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EventsViewModel = hiltViewModel(),
 ) {
@@ -56,7 +57,7 @@ fun EventListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("VenueSync") },
-                actions = { AccountAction(onSignInClick = onSignInClick) },
+                actions = { AccountAction(onSignInClick = onSignInClick, onMyTicketsClick = onMyTicketsClick) },
             )
         },
     ) { innerPadding ->
@@ -109,7 +110,7 @@ private fun EventCard(event: Event, onClick: () -> Unit) {
 
 /** Fires [onEndReached] when the last item scrolls into view. */
 @Composable
-private fun LoadMoreOnEnd(listState: LazyListState, count: Int, onEndReached: () -> Unit) {
+internal fun LoadMoreOnEnd(listState: LazyListState, count: Int, onEndReached: () -> Unit) {
     LaunchedEffect(listState, count) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()

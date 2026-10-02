@@ -10,6 +10,7 @@ import com.venuesync.app.ui.events.EventDetailViewModel
 import com.venuesync.app.ui.events.EventListScreen
 import com.venuesync.app.ui.login.LoginScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
+import com.venuesync.app.ui.tickets.MyTicketsScreen
 
 /*
  * Route names for the 6 frozen screens (architecture.md). Destinations get added
@@ -40,6 +41,7 @@ fun VenueSyncNavHost() {
             EventListScreen(
                 onEventClick = { eventId -> navigateOnce(Routes.eventDetail(eventId)) },
                 onSignInClick = { navigateOnce(Routes.LOGIN) },
+                onMyTicketsClick = { navigateOnce(Routes.MY_TICKETS) },
             )
         }
         composable(Routes.EVENT_DETAIL) {
@@ -50,6 +52,15 @@ fun VenueSyncNavHost() {
                 // and a guard that drops one would mean the result screen never shows.
                 onSignInRequired = { navController.navigate(Routes.LOGIN) },
                 onPurchased = { ticketId -> navController.navigate(Routes.purchaseResult(ticketId)) },
+            )
+        }
+        composable(Routes.MY_TICKETS) { entry ->
+            MyTicketsScreen(
+                onBack = { navController.navigateUp() },
+                onTicketClick = {}, // ticket detail lands with the next commit
+                onSignInClick = {
+                    if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) navController.navigate(Routes.LOGIN)
+                },
             )
         }
         composable(Routes.PURCHASE_RESULT) {

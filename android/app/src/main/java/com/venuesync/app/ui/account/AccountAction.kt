@@ -22,6 +22,7 @@ import com.venuesync.app.core.auth.Session
 @Composable
 fun AccountAction(
     onSignInClick: () -> Unit,
+    onMyTicketsClick: () -> Unit,
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -36,6 +37,13 @@ fun AccountAction(
                 }
                 // A menu, not a bare button: one stray tap must not sign someone out.
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("My tickets") },
+                        onClick = {
+                            menuOpen = false
+                            onMyTicketsClick()
+                        },
+                    )
                     DropdownMenuItem(
                         text = { Text("Sign out") },
                         onClick = {
