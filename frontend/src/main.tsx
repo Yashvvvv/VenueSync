@@ -9,6 +9,8 @@ import { AuthProvider } from "react-oidc-context"
 import { createBrowserRouter, RouterProvider } from "react-router"
 import OrganizersLandingPage from "./pages/organizers-landing-page.tsx"
 import DashboardManageEventPage from "./pages/dashboard-manage-event-page.tsx"
+import DashboardEventStaffPage from "./pages/dashboard-event-staff-page.tsx"
+import StaffJoinPage from "./pages/staff-join-page.tsx"
 import LoginPage from "./pages/login-page.tsx"
 import ProtectedRoute from "./components/protected-route.tsx"
 import RoleProtectedRoute from "./components/role-protected-route.tsx"
@@ -130,8 +132,25 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/validate-qr",
         element: (
-          <RoleProtectedRoute allowedRoles={["STAFF"]}>
+          // Any signed-in user: the page offers only events they can scan, and the server checks every scan.
+          <ProtectedRoute>
             <DashboardValidateQrPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/staff/join",
+        element: (
+          <ProtectedRoute>
+            <StaffJoinPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/dashboard/events/:id/staff",
+        element: (
+          <RoleProtectedRoute allowedRoles={["ORGANIZER"]}>
+            <DashboardEventStaffPage />
           </RoleProtectedRoute>
         ),
       },

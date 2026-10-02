@@ -4,12 +4,16 @@ import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { Link, useSearchParams } from "react-router"
 import { Scanner } from "@yudiel/react-qr-scanner"
 import {
   TicketValidationMethod,
+  TicketValidationResponse,
   TicketValidationStatus,
 } from "@/domain/domain"
+import { useStaffingEvents } from "@/hooks/use-staffing-events"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircle, Check, X, QrCode, Keyboard, RotateCcw, ScanLine, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { validateTicket } from "@/lib/api"
@@ -28,12 +32,24 @@ const DashboardValidateQrPage: React.FC = () => {
   const [validationStatus, setValidationStatus] = useState<
     TicketValidationStatus | undefined
   >()
+  const [result, setResult] = useState<TicketValidationResponse>()
+  const { events, isLoading: isEventsLoading, error: eventsError } = useStaffingEvents()
+  const [params] = useSearchParams()
+  const [eventId, setEventId] = useState<string>()
+
+  // Start on the event from the invite link (?event=), else the first one; never on an event they can't scan.
+  useEffect(() => {
+    if (eventId && events.some((e) => e.id === eventId)) return
+    const fromLink = params.get("event")
+    setEventId(events.find((e) => e.id === fromLink)?.id ?? events[0]?.id)
+  }, [events, params, eventId])
 
   const handleReset = () => {
     setIsManual(false)
     setData(undefined)
     setError(undefined)
     setValidationStatus(undefined)
+    setResult(undefined)
   }
 
   const handleError = (err: unknown) => {
@@ -47,15 +63,18 @@ const DashboardValidateQrPage: React.FC = () => {
   }
 
   const handleValidate = async (id: string, method: TicketValidationMethod) => {
-    if (!user?.access_token) {
+    if (!user?.access_token || !eventId) {
       return
     }
     try {
+      setError(undefined)
       const response = await validateTicket(user.access_token, {
-        id,
+        id: id.trim(),
         method,
+        eventId,
       })
       setValidationStatus(response.status)
+      setResult(response)
       
       if (response.status === TicketValidationStatus.VALID) {
         toast.success("Ticket validated successfully!")
@@ -65,14 +84,33 @@ const DashboardValidateQrPage: React.FC = () => {
         toast.error("Ticket has expired!")
       } else if (response.status === TicketValidationStatus.ALREADY_USED) {
         toast.error("Ticket has already been used!")
+      } else if (response.status === TicketValidationStatus.WRONG_EVENT) {
+        toast.error(response.eventName ? `This ticket is for ${response.eventName}` : "Ticket is for another event")
       }
     } catch (err) {
       handleError(err)
     }
   }
 
-  if (isLoading || !user?.access_token) {
+  if (isLoading || !user?.access_token || isEventsLoading) {
     return <PageLoader />
+  }
+
+  if (events.length === 0) {
+    return (
+      <PageContainer>
+        <Navbar />
+        <div className="container mx-auto max-w-md px-4 pb-12 pt-24 text-center">
+          <h1 className="mb-2 text-3xl font-bold text-foreground">Ticket Validation</h1>
+          <p className="mb-6 text-muted-foreground">
+            {eventsError ?? "You're not on the door team for any event yet. Ask the organizer for an invite code."}
+          </p>
+          <Link to="/staff/join">
+            <Button>Enter an invite code</Button>
+          </Link>
+        </div>
+      </PageContainer>
+    )
   }
 
   return (
@@ -94,6 +132,21 @@ const DashboardValidateQrPage: React.FC = () => {
         </motion.div>
 
         <div className="max-w-md mx-auto">
+          {/* Which door: every scan is checked against this event */}
+          <div className="mb-6">
+            <label className="mb-2 block text-sm text-muted-foreground" htmlFor="scan-event">Scanning for</label>
+            <Select value={eventId} onValueChange={(value) => { setEventId(value); handleReset() }}>
+              <SelectTrigger id="scan-event" className="h-12 w-full">
+                <SelectValue placeholder="Pick an event" />
+              </SelectTrigger>
+              <SelectContent>
+                {events.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>{event.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Error Alert */}
           <AnimatePresence>
             {error && (
@@ -170,6 +223,15 @@ const DashboardValidateQrPage: React.FC = () => {
                       >
                         <RefreshCw className="w-12 h-12 text-blue-500" />
                       </motion.div>
+                    ) : validationStatus === TicketValidationStatus.WRONG_EVENT ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                        className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center"
+                      >
+                        <AlertCircle className="w-12 h-12 text-yellow-500" />
+                      </motion.div>
                     ) : validationStatus === TicketValidationStatus.EXPIRED ? (
                       <motion.div
                         initial={{ scale: 0 }}
@@ -199,7 +261,16 @@ const DashboardValidateQrPage: React.FC = () => {
                       {validationStatus === TicketValidationStatus.ALREADY_USED && "Already Used"}
                       {validationStatus === TicketValidationStatus.EXPIRED && "Ticket Expired"}
                       {validationStatus === TicketValidationStatus.INVALID && "Invalid Ticket"}
+                      {validationStatus === TicketValidationStatus.WRONG_EVENT && "Wrong Event"}
                     </motion.p>
+                    {validationStatus === TicketValidationStatus.VALID && result?.ticketTypeName && (
+                      <p className="mt-1 font-mono text-sm text-muted-foreground">1 × {result.ticketTypeName}</p>
+                    )}
+                    {validationStatus === TicketValidationStatus.WRONG_EVENT && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {result?.eventName ? `This ticket is for ${result.eventName}` : "This ticket is for another event"}
+                      </p>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -226,7 +297,7 @@ const DashboardValidateQrPage: React.FC = () => {
                 >
                   <Input
                     className="w-full bg-secondary border-border text-foreground h-12 font-mono"
-                    placeholder="Enter ticket ID..."
+                    placeholder="Ticket code, e.g. F5A3-038B"
                     onChange={(e) => setData(e.target.value)}
                     value={data || ""}
                   />

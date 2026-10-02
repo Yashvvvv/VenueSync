@@ -45,6 +45,16 @@ const statusConfig: Record<TicketStatus, { label: string; className: string; ico
   },
 }
 
+/**
+ * The server sends ticketCode; derive the same value (first 8 hex characters of the id) from older servers so the
+ * page never shows a blank code.
+ */
+const ticketCode = (ticket: TicketDetails) => {
+  if (ticket.ticketCode) return ticket.ticketCode
+  const hex = ticket.id.replace(/-/g, "").slice(0, 8).toUpperCase()
+  return `${hex.slice(0, 4)}-${hex.slice(4)}`
+}
+
 const DashboardViewTicketPage: React.FC = () => {
   const [ticket, setTicket] = useState<TicketDetails | undefined>()
   const [qrCodeUrl, setQrCodeUrl] = useState<string | undefined>()
@@ -276,10 +286,12 @@ const DashboardViewTicketPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Ticket ID */}
+                  {/* Ticket code: what door staff type if the QR code won't scan */}
                   <div className="mt-6 pt-4 border-t border-border text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Ticket ID</p>
-                    <p className="font-mono text-sm text-foreground">{ticket.id}</p>
+                    <p className="text-xs text-muted-foreground mb-1">Ticket code</p>
+                    <p className="font-mono text-2xl tracking-widest text-foreground">{ticketCode(ticket)}</p>
+                    <p className="mt-3 text-xs text-muted-foreground mb-1">Ticket ID</p>
+                    <p className="font-mono text-xs text-muted-foreground break-all">{ticket.id}</p>
                   </div>
                 </div>
               </div>
