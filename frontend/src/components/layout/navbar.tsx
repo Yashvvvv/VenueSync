@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
 import { useRoles } from "@/hooks/use-roles"
+import { useStaffingEvents } from "@/hooks/use-staffing-events"
 import { Link, useLocation } from "react-router"
 import { Button } from "../ui/button"
 import {
@@ -48,6 +49,7 @@ import { useAudience } from "@/hooks/use-audience"
 const Navbar: React.FC = () => {
   const { user, signoutRedirect, signinRedirect, isAuthenticated, signinSilent } = useAuth()
   const { isOrganizer, isAttendee, isStaff } = useRoles()
+  const { events: staffingEvents } = useStaffingEvents()
 
   // Keycloak sent `preferred_username`; Auth0 does not - it sends name / nickname
   // / email from the `profile` and `email` scopes. Reading the old claim left the
@@ -110,8 +112,9 @@ const Navbar: React.FC = () => {
     ...(isAttendee
       ? [{ to: "/dashboard/tickets", label: "My tickets", Icon: Ticket, public: false }]
       : []),
-    ...(isStaff
-      ? [{ to: "/dashboard/validate-qr", label: "Validate", Icon: QrCode, public: false }]
+    // Anyone who can work a door: organizers, and whoever an organizer invited (no Auth0 role needed).
+    ...(isStaff || isOrganizer || staffingEvents.length > 0
+      ? [{ to: "/dashboard/validate-qr", label: "Scan", Icon: QrCode, public: false }]
       : []),
   ]
 

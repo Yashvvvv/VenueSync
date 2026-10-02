@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AcceptStaffInviteResponse } from "@/domain/domain"
 import { acceptStaffInvite } from "@/lib/api"
+import { useStaffingEvents } from "@/hooks/use-staffing-events"
 
 /**
  * Where an organizer's invite link lands: /staff/join?code=K7Q2M-9XH4P. The code is redeemed as soon as the
@@ -27,6 +28,7 @@ const StaffJoinPage: React.FC = () => {
   const [error, setError] = useState<string>()
   const [isJoining, setIsJoining] = useState(false)
   const triedLinkCode = useRef(false)
+  const { refresh: refreshStaffingEvents } = useStaffingEvents()
 
   const join = async (value: string) => {
     if (!user?.access_token || !value.trim() || isJoining) return
@@ -34,6 +36,7 @@ const StaffJoinPage: React.FC = () => {
     setError(undefined)
     try {
       setJoined(await acceptStaffInvite(user.access_token, value))
+      refreshStaffingEvents() // the navbar's Scan link and the scanner's event list include this event now
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not use that code")
     } finally {

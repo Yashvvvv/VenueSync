@@ -197,16 +197,23 @@ export enum TicketValidationStatus {
   INVALID = "INVALID",
   EXPIRED = "EXPIRED",
   ALREADY_USED = "ALREADY_USED",
+  /** The ticket belongs to another event than the one being scanned for; it was left untouched. */
+  WRONG_EVENT = "WRONG_EVENT",
 }
 
 export interface TicketValidationRequest {
+  /** The scanned QR value, a full ticket id, or (MANUAL, with eventId) a ticket code like F5A3-038B. */
   id: string;
   method: TicketValidationMethod;
+  /** The event whose door this is: a ticket for another event comes back WRONG_EVENT. */
+  eventId?: string;
 }
 
 export interface TicketValidationResponse {
-  ticketId: string;
+  ticketId?: string;
   status: TicketValidationStatus;
+  eventName?: string;
+  ticketTypeName?: string;
 }
 
 /** A one-time code an organizer hands to one person to join their event's door staff. */

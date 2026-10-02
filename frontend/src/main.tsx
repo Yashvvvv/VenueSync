@@ -132,9 +132,10 @@ const router = createBrowserRouter([
       {
         path: "/dashboard/validate-qr",
         element: (
-          <RoleProtectedRoute allowedRoles={["STAFF"]}>
+          // Any signed-in user: the page offers only events they can scan, and the server checks every scan.
+          <ProtectedRoute>
             <DashboardValidateQrPage />
-          </RoleProtectedRoute>
+          </ProtectedRoute>
         ),
       },
       {
