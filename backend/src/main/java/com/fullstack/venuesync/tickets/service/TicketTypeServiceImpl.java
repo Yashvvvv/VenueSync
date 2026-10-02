@@ -59,8 +59,7 @@ public class TicketTypeServiceImpl implements TicketTypeService {
         String.format("User with ID %s was not found", userId)
     ));
 
-    // ponytail: server wall clock vs zone-less event times — correct only while organizers and
-    // the server share a time zone; fixed by moving events to instants + an IANA zone.
+    // Wall-clock "now" in app.timezone, the zone every event time is stored in (ADR-003, India-only).
     SalesStatus salesStatus = ticketType.getEvent().salesStatusAt(LocalDateTime.now());
     if (salesStatus != SalesStatus.ON_SALE) {
       throw new SalesPeriodException(salesStatus);
