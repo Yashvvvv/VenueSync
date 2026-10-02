@@ -10,6 +10,7 @@ import { createBrowserRouter, RouterProvider } from "react-router"
 import OrganizersLandingPage from "./pages/organizers-landing-page.tsx"
 import DashboardManageEventPage from "./pages/dashboard-manage-event-page.tsx"
 import DashboardEventStaffPage from "./pages/dashboard-event-staff-page.tsx"
+import StaffJoinPage from "./pages/staff-join-page.tsx"
 import LoginPage from "./pages/login-page.tsx"
 import ProtectedRoute from "./components/protected-route.tsx"
 import RoleProtectedRoute from "./components/role-protected-route.tsx"
@@ -134,6 +135,14 @@ const router = createBrowserRouter([
           <RoleProtectedRoute allowedRoles={["STAFF"]}>
             <DashboardValidateQrPage />
           </RoleProtectedRoute>
+        ),
+      },
+      {
+        path: "/staff/join",
+        element: (
+          <ProtectedRoute>
+            <StaffJoinPage />
+          </ProtectedRoute>
         ),
       },
       {
