@@ -221,7 +221,7 @@ private fun PurchaseDialog(
 }
 
 /** "$25.00", or "free" for zero: reads as "Get 1 × GA for free?". */
-private fun priceLabel(price: BigDecimal): String =
+internal fun priceLabel(price: BigDecimal): String =
     if (price.signum() == 0) "free" else priceFormat().format(price)
 
 // ponytail: the API contract has no currency field and the web app shows "$", so USD is assumed.
