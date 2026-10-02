@@ -59,8 +59,8 @@ public class QrCodeServiceImpl implements QrCodeService {
     try {
       return Base64.getDecoder().decode(qrCode.getValue());
     } catch(IllegalArgumentException ex) {
-      log.error("Invalid base64 QR Code for ticket ID: {}", ticketId, ex);
-      throw new QrCodeNotFoundException();
+      // Corrupt stored data is our bug, not a missing resource: 500 (logged with stack trace), never 404.
+      throw new QrCodeGenerationException("Stored QR code for ticket " + ticketId + " is not valid Base64", ex);
     }
   }
 
