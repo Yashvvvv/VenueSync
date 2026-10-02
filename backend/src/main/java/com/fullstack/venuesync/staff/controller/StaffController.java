@@ -2,6 +2,10 @@ package com.fullstack.venuesync.staff.controller;
 
 import static com.fullstack.venuesync.shared.security.JwtUtil.parseUserId;
 
+import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.dto.ListPublishedEventResponseDto;
+import com.fullstack.venuesync.events.mapper.EventMapper;
+import com.fullstack.venuesync.events.repository.EventRepository;
 import com.fullstack.venuesync.staff.dto.AcceptStaffInviteResponseDto;
 import com.fullstack.venuesync.staff.dto.EventStaffMemberDto;
 import com.fullstack.venuesync.staff.dto.StaffInviteResponseDto;
@@ -26,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class StaffController {
 
   private final StaffInviteService staffInviteService;
+  private final EventRepository eventRepository;
+  private final EventMapper eventMapper;
 
   @PostMapping("/events/{eventId}/staff-invites")
   public ResponseEntity<StaffInviteResponseDto> createInvite(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
@@ -42,6 +48,14 @@ public class StaffController {
       @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId, @PathVariable UUID userId) {
     staffInviteService.removeStaff(parseUserId(jwt), eventId, userId);
     return ResponseEntity.noContent().build();
+  }
+
+  /** The events this user can scan (organized + staffed, published): the scanner's event picker. */
+  @GetMapping("/users/me/staffing-events")
+  public List<ListPublishedEventResponseDto> myStaffingEvents(@AuthenticationPrincipal Jwt jwt) {
+    return eventRepository.findScannableBy(parseUserId(jwt), EventStatusEnum.PUBLISHED).stream()
+        .map(eventMapper::toListPublishedEventResponseDto)
+        .toList();
   }
 
   /** Any signed-in user: the code itself is the authorization. */

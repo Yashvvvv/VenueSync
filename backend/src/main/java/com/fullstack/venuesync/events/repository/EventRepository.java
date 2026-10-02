@@ -1,6 +1,7 @@
 package com.fullstack.venuesync.events.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
   Optional<Event> findByIdAndOrganizerId(UUID id, UUID organizerId);
 
   boolean existsByIdAndOrganizerId(UUID id, UUID organizerId);
+
+  /** Events whose door this user may work: the ones they organize plus the ones they staff. */
+  @Query("SELECT DISTINCT e FROM Event e LEFT JOIN e.staff s "
+      + "WHERE e.status = :status AND (e.organizer.id = :userId OR s.id = :userId) ORDER BY e.start ASC")
+  List<Event> findScannableBy(@Param("userId") UUID userId, @Param("status") EventStatusEnum status);
 
   Page<Event> findByStatus(EventStatusEnum status, Pageable pageable);
 

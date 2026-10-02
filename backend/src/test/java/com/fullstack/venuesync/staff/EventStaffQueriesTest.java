@@ -1,5 +1,6 @@
 package com.fullstack.venuesync.staff;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,5 +54,23 @@ class EventStaffQueriesTest {
     assertFalse(userRepository.isStaffOf(organizer.getId(), worked.getId())); // organizing isn't staffing...
     assertTrue(eventRepository.existsByIdAndOrganizerId(worked.getId(), organizer.getId())); // ...it's checked here
     assertFalse(eventRepository.existsByIdAndOrganizerId(worked.getId(), staff.getId()));
+  }
+
+  @Test
+  void scannableEventsAreOrganizedPlusStaffedAndPublished() {
+    User organizer = user("org");
+    User staff = user("staff");
+    Event staffed = event(organizer);
+    Event ownedByStaff = event(staff);
+    Event draft = event(staff);
+    draft.setStatus(EventStatusEnum.DRAFT);
+    event(organizer); // neither organized nor staffed by `staff`
+    staff.getStaffingEvents().add(staffed);
+    entityManager.flush();
+
+    var ids = eventRepository.findScannableBy(staff.getId(), EventStatusEnum.PUBLISHED).stream().map(Event::getId).toList();
+
+    assertEquals(java.util.Set.of(staffed.getId(), ownedByStaff.getId()), java.util.Set.copyOf(ids));
+    assertEquals(2, ids.size()); // DISTINCT: no duplicate rows from the staff join
   }
 }
