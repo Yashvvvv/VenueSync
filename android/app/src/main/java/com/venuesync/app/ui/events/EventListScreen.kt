@@ -68,7 +68,7 @@ fun EventListScreen(
     }
 }
 
-/** Search + paged event list. Shared by the public event list and the staff event picker. */
+/** Search + paged list of published events. */
 @Composable
 internal fun EventBrowser(
     onEventClick: (String) -> Unit,
@@ -112,7 +112,7 @@ private fun EventList(events: List<Event>, onEventClick: (String) -> Unit, onEnd
 }
 
 @Composable
-private fun EventCard(event: Event, onClick: () -> Unit) {
+internal fun EventCard(event: Event, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(event.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
