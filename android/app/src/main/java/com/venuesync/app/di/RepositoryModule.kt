@@ -2,6 +2,8 @@ package com.venuesync.app.di
 
 import com.venuesync.app.core.repository.EventsRepository
 import com.venuesync.app.core.repository.EventsRepositoryImpl
+import com.venuesync.app.core.repository.StaffRepository
+import com.venuesync.app.core.repository.StaffRepositoryImpl
 import com.venuesync.app.core.repository.TicketsRepository
 import com.venuesync.app.core.repository.TicketsRepositoryImpl
 import com.venuesync.app.core.repository.ValidationRepository
@@ -26,4 +28,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindValidationRepository(impl: ValidationRepositoryImpl): ValidationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStaffRepository(impl: StaffRepositoryImpl): StaffRepository
 }

@@ -46,7 +46,7 @@ class TicketsViewModelsTest {
 
     private val repo = FakeTickets()
     private fun summary(id: String) = TicketSummary(id, TicketStatus.Purchased, "GA", "Show", null)
-    private fun ticket(status: TicketStatus) = Ticket("t1", status, "GA", null, "e1", "Show", null, null, null, null)
+    private fun ticket(status: TicketStatus) = Ticket("t1", "T100-0000", status, "GA", null, "e1", "Show", null, null, null, null)
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()

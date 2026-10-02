@@ -34,6 +34,7 @@ class ScannerViewModelTest {
             calls += qrValue to idempotencyKey
             return pending.await().also { pending = CompletableDeferred() }
         }
+        override suspend fun checkIn(entry: String, eventId: String, idempotencyKey: String) = validate(entry, eventId, idempotencyKey)
     }
 
     private class FakeEvents : EventsRepository {

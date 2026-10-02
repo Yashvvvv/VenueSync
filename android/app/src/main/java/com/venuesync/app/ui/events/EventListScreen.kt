@@ -151,6 +151,7 @@ internal fun ApiError.message(): String = when (this) {
     ApiError.Forbidden -> "Your account can't do this."
     ApiError.NotFound -> "Not found."
     ApiError.Conflict -> "This changed while you were looking. Refresh and try again."
+    ApiError.Gone -> "This has expired."
     ApiError.SoldOut -> "Sold out."
     ApiError.NotOnSale -> "Tickets aren't on sale right now."
     ApiError.RateLimited -> "Too many requests. Wait a moment and try again."
