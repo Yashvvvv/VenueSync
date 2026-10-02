@@ -30,6 +30,10 @@ data class GetPublishedEventDetailsResponseDto(
     val start: String? = null,
     val end: String? = null,
     val venue: String? = null,
+    val salesStart: String? = null,
+    val salesEnd: String? = null,
+    // String, not an enum: kotlinx throws on an unknown enum value, which would fail the whole detail.
+    val salesStatus: String? = null,
     val ticketTypes: List<PublishedTicketTypeDto>? = null,
 )
 
@@ -39,6 +43,7 @@ data class PublishedTicketTypeDto(
     val name: String? = null,
     val price: Double? = null,
     val description: String? = null,
+    val soldOut: Boolean? = null,
 )
 
 /** Spring Page<T> envelope (same shape the web client types as SpringBootPagination<T>). */
@@ -53,8 +58,12 @@ data class PageResponse<T>(
     val last: Boolean = true,
 )
 
-/** Backend error envelope: ErrorDto { error } — see client-api.md open items (17 Jul). */
+/**
+ * Backend error envelope. `code` is the stable contract clients branch on; `error` is display text that
+ * may change. Both optional: Spring Security's 401/403 and gateway errors arrive without this body.
+ */
 @Serializable
 data class ErrorDto(
-    val error: String,
+    val code: String? = null,
+    val error: String? = null,
 )

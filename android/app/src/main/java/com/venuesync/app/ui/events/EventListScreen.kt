@@ -131,10 +131,13 @@ internal val DateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDateTi
 internal fun ApiError.message(): String = when (this) {
     ApiError.Network -> "No connection. Check your network and try again."
     ApiError.Unauthorized -> "Please sign in to continue."
+    ApiError.Forbidden -> "Your account can't do this."
     ApiError.NotFound -> "Not found."
+    ApiError.Conflict -> "This changed while you were looking. Refresh and try again."
+    ApiError.SoldOut -> "Sold out."
+    ApiError.NotOnSale -> "Tickets aren't on sale right now."
     ApiError.RateLimited -> "Too many requests. Wait a moment and try again."
     ApiError.InvalidResponse -> "We couldn't load this. Try again later."
-    is ApiError.SoldOut -> message
     is ApiError.Server -> "Server error. Try again later."
     is ApiError.Unknown -> "Something went wrong."
 }

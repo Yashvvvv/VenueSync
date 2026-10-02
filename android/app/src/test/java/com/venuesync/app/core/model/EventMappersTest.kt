@@ -77,4 +77,36 @@ class EventMappersTest {
             .toDomainOrNull()!!
         assertNull(event.start)
     }
+
+    @Test
+    fun `sales fields and soldOut are mapped, unknown values are safe`() {
+        val event = GetPublishedEventDetailsResponseDto(
+            id = "e1",
+            name = "Show",
+            salesStatus = "UPCOMING",
+            salesStart = "2026-10-05T10:00:00+05:30",
+            ticketTypes = listOf(ticket(id = "a").copy(soldOut = true), ticket(id = "b")),
+        ).toDomainOrNull()!!
+        assertEquals(SalesStatus.Upcoming, event.salesStatus)
+        assertEquals(LocalDateTime.of(2026, 10, 5, 10, 0), event.salesStart)
+        assertEquals(listOf(true, false), event.ticketTypes.map { it.soldOut }) // missing → not sold out
+        assertEquals(SalesStatus.OnSale, "ON_SALE".toSalesStatus())
+        assertEquals(SalesStatus.Ended, "ENDED".toSalesStatus())
+        assertEquals(SalesStatus.Unknown, "SOMETHING_NEW".toSalesStatus())
+        assertEquals(SalesStatus.Unknown, null.toSalesStatus())
+    }
+
+    @Test
+    fun `availability covers every branch`() {
+        val open = TicketType("a", "GA", BigDecimal.TEN, null, soldOut = false)
+        val gone = open.copy(soldOut = true)
+        val start = LocalDateTime.of(2026, 10, 5, 10, 0)
+        fun event(status: SalesStatus) = EventDetail("e1", "Show", null, null, null, listOf(open, gone), status, start, null)
+
+        assertEquals(Availability.Buyable, event(SalesStatus.OnSale).availabilityOf(open))
+        assertEquals(Availability.Buyable, event(SalesStatus.Unknown).availabilityOf(open)) // server decides
+        assertEquals(Availability.SoldOut, event(SalesStatus.OnSale).availabilityOf(gone))
+        assertEquals(Availability.OnSaleFrom(start), event(SalesStatus.Upcoming).availabilityOf(open))
+        assertEquals(Availability.SalesEnded, event(SalesStatus.Ended).availabilityOf(gone))
+    }
 }

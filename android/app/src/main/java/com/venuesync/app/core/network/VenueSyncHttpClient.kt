@@ -23,6 +23,9 @@ import io.ktor.serialization.kotlinx.json.json
 import java.io.IOException
 import kotlinx.serialization.json.Json
 
+/** Server-side dedupe: a request carrying this header can be repeated without doing the work twice. */
+const val IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
+
 /*
  * Ktor client factory (core/ = pure Kotlin, no android.* imports — KMP-ready boundary).
  */
@@ -52,14 +55,20 @@ object VenueSyncHttpClient {
                 }
             )
         }
-        // Must be installed before HttpTimeout. GET only: repeating a POST (purchase) could double-charge.
+        // Must be installed before HttpTimeout. Only safe-to-repeat requests:
+        // GET by definition, and a request carrying an Idempotency-Key, because the server answers a repeat
+        // with the original result (same ticket) instead of doing the work twice. A plain POST never retries.
         install(HttpRequestRetry) {
             maxRetries = 2
             retryIf { request, response ->
-                request.method == HttpMethod.Get && response.status.value in TransientStatuses
+                response.status.value in TransientStatuses &&
+                    (request.method == HttpMethod.Get || request.headers.contains(IDEMPOTENCY_KEY_HEADER))
             }
+            // A request timeout is not retried: Ktor reports it as cancellation, not IOException (RetryPolicyTest
+            // pins this). That matters for purchase: the user gets Try again after 60s, not after 3 x 60s.
             retryOnExceptionIf { request, cause ->
-                request.method == HttpMethod.Get && cause is IOException
+                cause is IOException &&
+                    (request.method == HttpMethod.Get || request.headers.contains(IDEMPOTENCY_KEY_HEADER))
             }
             // 1s, then 2s. Retry-After is ignored so a hostile/buggy header can't freeze the screen for an hour.
             delayMillis(respectRetryAfterHeader = false) { retry -> retryBaseDelayMs * retry }

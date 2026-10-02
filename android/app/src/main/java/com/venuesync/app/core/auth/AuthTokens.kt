@@ -10,6 +10,9 @@ import kotlinx.serialization.json.jsonObject
 /** Namespaced claim written by the Auth0 Post-Login Action; must match the backend's Auth0Claims.ROLES. */
 const val ROLES_CLAIM = "https://venuesync.app/roles"
 
+/** Required by the backend to buy tickets and see your own. */
+const val ROLE_ATTENDEE = "ROLE_ATTENDEE"
+
 @Serializable
 data class AuthTokens(
     val accessToken: String,

@@ -31,6 +31,9 @@ data class EventDetail(
     val end: LocalDateTime?,
     val venue: String?,
     val ticketTypes: List<TicketType>,
+    val salesStatus: SalesStatus,
+    val salesStart: LocalDateTime?,
+    val salesEnd: LocalDateTime?,
 )
 
 data class TicketType(
@@ -38,7 +41,34 @@ data class TicketType(
     val name: String,
     val price: BigDecimal,
     val description: String?,
+    val soldOut: Boolean,
 )
+
+/** Server-computed, never judged on the device clock. Unknown (missing or new value) lets the server decide. */
+enum class SalesStatus { Upcoming, OnSale, Ended, Unknown }
+
+internal fun String?.toSalesStatus(): SalesStatus = when (this) {
+    "UPCOMING" -> SalesStatus.Upcoming
+    "ON_SALE" -> SalesStatus.OnSale
+    "ENDED" -> SalesStatus.Ended
+    else -> SalesStatus.Unknown
+}
+
+/** What a ticket row offers. */
+sealed interface Availability {
+    data object Buyable : Availability
+    data object SoldOut : Availability
+    data class OnSaleFrom(val start: LocalDateTime?) : Availability
+    data object SalesEnded : Availability
+}
+
+/** Unknown sales status stays Buyable: a wrong "can't buy" is worse than a purchase the server refuses. */
+fun EventDetail.availabilityOf(type: TicketType): Availability = when {
+    salesStatus == SalesStatus.Ended -> Availability.SalesEnded
+    salesStatus == SalesStatus.Upcoming -> Availability.OnSaleFrom(salesStart)
+    type.soldOut -> Availability.SoldOut
+    else -> Availability.Buyable
+}
 
 /**
  * Returns null when the server broke the contract (no id or name); the repository turns
@@ -55,6 +85,9 @@ internal fun GetPublishedEventDetailsResponseDto.toDomainOrNull(): EventDetail? 
         venue = venue?.takeIf { it.isNotBlank() },
         // distinctBy: LazyColumn crashes on duplicate keys, and ids are the keys.
         ticketTypes = ticketTypes.orEmpty().mapNotNull { it.toDomainOrNull() }.distinctBy { it.id },
+        salesStatus = salesStatus.toSalesStatus(),
+        salesStart = salesStart?.toLocalDateTimeOrNull(),
+        salesEnd = salesEnd?.toLocalDateTimeOrNull(),
     )
 }
 
@@ -68,6 +101,7 @@ internal fun PublishedTicketTypeDto.toDomainOrNull(): TicketType? {
         name = name,
         price = BigDecimal.valueOf(price), // valueOf(19.99) == 19.99; BigDecimal(19.99) == 19.98999…
         description = description?.takeIf { it.isNotBlank() },
+        soldOut = soldOut == true, // missing → not sold out: the server is the authority at purchase time
     )
 }
 

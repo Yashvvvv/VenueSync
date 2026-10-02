@@ -1,10 +1,18 @@
 package com.venuesync.app.ui.events
 
 import androidx.lifecycle.SavedStateHandle
+import com.venuesync.app.core.auth.AuthApi
+import com.venuesync.app.core.auth.FakeTokenStore
+import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.EventDetail
+import com.venuesync.app.core.model.SalesStatus
+import com.venuesync.app.core.model.Ticket
 import com.venuesync.app.core.repository.EventsRepository
+import com.venuesync.app.core.repository.TicketsRepository
+import io.ktor.client.engine.mock.MockEngine
+import kotlinx.coroutines.CoroutineScope
 import com.venuesync.app.ui.common.UiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,10 +37,21 @@ class EventDetailViewModelTest {
         }
     }
 
-    private val detail = EventDetail("e1", "Show", null, null, null, emptyList())
+    private val detail = EventDetail("e1", "Show", null, null, null, emptyList(), SalesStatus.OnSale, null, null)
+
+    private class FakeTickets : TicketsRepository {
+        override suspend fun purchase(eventId: String, ticketTypeId: String, idempotencyKey: String): Result<Ticket> =
+            error("not used")
+    }
+
+    private val session = SessionManager(
+        FakeTokenStore(),
+        AuthApi(AuthApi.createHttpClient(MockEngine { error("not used") }), "https://tenant.example", "c"),
+        CoroutineScope(Dispatchers.Unconfined),
+    )
 
     private fun vm(repo: FakeRepo, args: Map<String, Any?> = mapOf(EventDetailViewModel.EVENT_ID_ARG to "e1")) =
-        EventDetailViewModel(SavedStateHandle(args), repo)
+        EventDetailViewModel(SavedStateHandle(args), repo, FakeTickets(), session)
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()

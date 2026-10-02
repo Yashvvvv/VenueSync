@@ -12,7 +12,6 @@ import java.util.Base64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -21,14 +20,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SessionManagerTest {
-
-    private class FakeTokenStore(initial: AuthTokens? = null) : TokenStore {
-        override val tokens = MutableStateFlow(initial)
-        override val forceLoginNext = MutableStateFlow(false)
-        override suspend fun save(tokens: AuthTokens) { this.tokens.value = tokens }
-        override suspend fun clear() { tokens.value = null }
-        override suspend fun setForceLoginNext(value: Boolean) { forceLoginNext.value = value }
-    }
 
     private val requests = mutableListOf<HttpRequestData>()
 
