@@ -10,7 +10,8 @@ import { MagnifyingGlass, X } from "@/components/icons"
 interface SearchBarProps {
   value: string
   onChange: (value: string) => void
-  onSearch: () => void
+  /** [term] is passed when the caller must not read its own (not yet updated) state, e.g. after clearing. */
+  onSearch: (term?: string) => void
   placeholder?: string
   className?: string
   size?: "default" | "large"
@@ -48,9 +49,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     [onSearch],
   )
 
+  // Pass "" explicitly: the parent's state still holds the old term until it re-renders, so a bare onSearch()
+  // re-ran the search the user had just cleared.
   const handleClear = () => {
     onChange("")
-    onSearch()
+    onSearch("")
   }
 
   const isLarge = size === "large"
@@ -113,7 +116,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         </div>
 
         <Button
-          onClick={onSearch}
+          onClick={() => onSearch()}
           size={isLarge ? "lg" : "default"}
           className={isLarge ? "shrink-0 px-7" : "shrink-0 px-5"}
         >

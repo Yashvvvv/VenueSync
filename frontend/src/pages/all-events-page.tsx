@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { PublishedEventSummary, SpringBootPagination } from "@/domain/domain"
 import { listAllPublishedEvents, searchAllPublishedEvents } from "@/lib/api"
 import { motion, useReducedMotion } from "framer-motion"
@@ -26,19 +26,24 @@ const AllEventsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
 
+  // Only the newest search may update the page: a slow older response arriving last must not overwrite it.
+  const latestSearch = useRef(0)
   const runSearch = useCallback(async (term: string, pageNum: number) => {
+    const searchId = ++latestSearch.current
     setIsLoading(true)
     setError(null)
     try {
       const result = term.trim()
         ? await searchAllPublishedEvents(term.trim(), pageNum)
         : await listAllPublishedEvents(pageNum)
+      if (searchId !== latestSearch.current) return
       setPublishedEvents(result)
     } catch (err) {
+      if (searchId !== latestSearch.current) return
       console.error("Failed to load events:", err)
       setError("We could not reach the events service.")
     } finally {
-      setIsLoading(false)
+      if (searchId === latestSearch.current) setIsLoading(false)
     }
   }, [])
 
@@ -47,9 +52,9 @@ const AllEventsPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
-  const handleSearch = () => {
+  const handleSearch = (term: string = query) => {
     setPage(0)
-    runSearch(query, 0)
+    runSearch(term, 0)
   }
 
   const total = publishedEvents?.totalElements
