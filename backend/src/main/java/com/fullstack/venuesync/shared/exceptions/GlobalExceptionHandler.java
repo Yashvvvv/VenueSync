@@ -21,6 +21,10 @@ import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
 import com.fullstack.venuesync.tickets.exception.TicketNotFoundException;
+import com.fullstack.venuesync.staff.exception.NotEventStaffException;
+import com.fullstack.venuesync.staff.exception.StaffInviteExpiredException;
+import com.fullstack.venuesync.staff.exception.StaffInviteNotFoundException;
+import com.fullstack.venuesync.staff.exception.StaffInviteUsedException;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
 import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
 import com.fullstack.venuesync.validation.exception.QrCodeGenerationException;
@@ -74,6 +78,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(EventUpdateException.class)
   public ResponseEntity<ErrorDto> handleEventUpdateException(EventUpdateException ex) {
     return respond(HttpStatus.BAD_REQUEST, "EVENT_UPDATE_INVALID", "Unable to update event", ex);
+  }
+
+  @ExceptionHandler(NotEventStaffException.class)
+  public ResponseEntity<ErrorDto> handleNotEventStaffException(NotEventStaffException ex) {
+    return respond(HttpStatus.FORBIDDEN, "NOT_EVENT_STAFF", "You are not door staff for this event", ex);
+  }
+
+  @ExceptionHandler(StaffInviteNotFoundException.class)
+  public ResponseEntity<ErrorDto> handleStaffInviteNotFoundException(StaffInviteNotFoundException ex) {
+    return respond(HttpStatus.NOT_FOUND, "INVITE_NOT_FOUND", "Invite code not found", ex);
+  }
+
+  @ExceptionHandler(StaffInviteUsedException.class)
+  public ResponseEntity<ErrorDto> handleStaffInviteUsedException(StaffInviteUsedException ex) {
+    return respond(HttpStatus.CONFLICT, "INVITE_USED", "This invite code has already been used", ex);
+  }
+
+  @ExceptionHandler(StaffInviteExpiredException.class)
+  public ResponseEntity<ErrorDto> handleStaffInviteExpiredException(StaffInviteExpiredException ex) {
+    return respond(HttpStatus.GONE, "INVITE_EXPIRED", "This invite code has expired", ex);
   }
 
   @ExceptionHandler(TicketTypeNotFoundException.class)

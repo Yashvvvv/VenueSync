@@ -18,6 +18,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GetTicketResponseDto {
   private UUID id;
+  /** Short code for manual check-in, e.g. F5A3-038B (see TicketCodes). */
+  private String ticketCode;
   private TicketStatusEnum status;
   private String ticketTypeName;
   private Double price;

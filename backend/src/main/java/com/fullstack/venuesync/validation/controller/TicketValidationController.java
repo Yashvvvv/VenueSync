@@ -2,7 +2,11 @@ package com.fullstack.venuesync.validation.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import static com.fullstack.venuesync.shared.security.JwtUtil.parseUserId;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -17,6 +21,8 @@ import com.fullstack.venuesync.validation.domain.TicketValidationStatusEnum;
 import com.fullstack.venuesync.validation.mapper.TicketValidationMapper;
 import com.fullstack.venuesync.validation.service.TicketValidationService;
 
+import com.fullstack.venuesync.tickets.domain.TicketCodes;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +35,7 @@ public class TicketValidationController {
 
   @PostMapping
   public ResponseEntity<TicketValidationResponseDto> validateTicket(
+      @AuthenticationPrincipal Jwt jwt,
       @Valid @RequestBody TicketValidationRequestDto ticketValidationRequestDto,
       // Optional so the web dashboard keeps working; the app sends one per scan, the same one on retries.
       @RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey
@@ -41,6 +48,13 @@ public class TicketValidationController {
     try {
       id = UUID.fromString(ticketValidationRequestDto.getId());
     } catch (IllegalArgumentException | NullPointerException e) {
+      // Not a UUID: at the door, a MANUAL entry may be the short ticket code, looked up within the scanner's event.
+      UUID eventId = ticketValidationRequestDto.getEventId();
+      Optional<String> code = TicketCodes.normalize(ticketValidationRequestDto.getId());
+      if (TicketValidationMethod.MANUAL.equals(method) && eventId != null && code.isPresent()) {
+        return ResponseEntity.ok(ticketValidationMapper.toTicketValidationResponseDto(
+            ticketValidationService.validateTicketByCode(code.get(), parseUserId(jwt), idempotencyKey, eventId)));
+      }
       // Invalid UUID format - return INVALID response
       TicketValidationResponseDto invalidResponse = new TicketValidationResponseDto();
       invalidResponse.setStatus(TicketValidationStatusEnum.INVALID);
@@ -48,9 +62,9 @@ public class TicketValidationController {
     }
     
     if(TicketValidationMethod.MANUAL.equals(method)) {
-      ticketValidation = ticketValidationService.validateTicketManually(id, idempotencyKey, ticketValidationRequestDto.getEventId());
+      ticketValidation = ticketValidationService.validateTicketManually(id, parseUserId(jwt), idempotencyKey, ticketValidationRequestDto.getEventId());
     } else {
-      ticketValidation = ticketValidationService.validateTicketByQrCode(id, idempotencyKey, ticketValidationRequestDto.getEventId());
+      ticketValidation = ticketValidationService.validateTicketByQrCode(id, parseUserId(jwt), idempotencyKey, ticketValidationRequestDto.getEventId());
     }
     return ResponseEntity.ok(
         ticketValidationMapper.toTicketValidationResponseDto(ticketValidation)

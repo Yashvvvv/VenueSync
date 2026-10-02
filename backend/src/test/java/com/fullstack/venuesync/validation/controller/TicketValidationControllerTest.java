@@ -36,6 +36,7 @@ import com.fullstack.venuesync.shared.config.JwtAuthenticationConverter;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.shared.exceptions.GlobalExceptionHandler;
 import com.fullstack.venuesync.shared.filters.UserProvisioningFilter;
+import com.fullstack.venuesync.staff.exception.NotEventStaffException;
 import com.fullstack.venuesync.validation.domain.TicketValidation;
 import com.fullstack.venuesync.validation.domain.TicketValidationMethod;
 import com.fullstack.venuesync.validation.domain.TicketValidationStatusEnum;
@@ -110,7 +111,7 @@ class TicketValidationControllerTest {
     responseDto.setTicketId(ticketId);
     responseDto.setStatus(TicketValidationStatusEnum.VALID);
 
-    when(ticketValidationService.validateTicketByQrCode(any(UUID.class), any(), any()))
+    when(ticketValidationService.validateTicketByQrCode(any(UUID.class), any(), any(), any()))
         .thenReturn(validation);
     when(ticketValidationMapper.toTicketValidationResponseDto(any(TicketValidation.class)))
         .thenReturn(responseDto);
@@ -125,18 +126,43 @@ class TicketValidationControllerTest {
   }
 
   @Test
-  @DisplayName("should reject validation without STAFF role")
-  void shouldRejectValidationWithoutStaffRole() throws Exception {
+  @DisplayName("a MANUAL ticket code with an event is looked up by code")
+  void manualTicketCodeIsLookedUpByCode() throws Exception {
+    UUID eventId = UUID.randomUUID();
+    TicketValidationRequestDto request = new TicketValidationRequestDto();
+    request.setId("f5a3-038B");
+    request.setMethod(TicketValidationMethod.MANUAL);
+    request.setEventId(eventId);
+    TicketValidationResponseDto responseDto = new TicketValidationResponseDto();
+    responseDto.setStatus(TicketValidationStatusEnum.VALID);
+    when(ticketValidationService.validateTicketByCode(eq("f5a3038b"), any(), any(), eq(eventId)))
+        .thenReturn(new TicketValidation());
+    when(ticketValidationMapper.toTicketValidationResponseDto(any(TicketValidation.class))).thenReturn(responseDto);
+
+    mockMvc.perform(post("/api/v1/ticket-validations")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+            .with(jwt().jwt(createStaffJwt())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("VALID"));
+  }
+
+  @Test
+  @DisplayName("should reject a user who is not staff of the ticket's event, whatever their roles")
+  void shouldRejectValidationByNonStaff() throws Exception {
     TicketValidationRequestDto request = new TicketValidationRequestDto();
     request.setId(ticketId.toString());
     request.setMethod(TicketValidationMethod.QR_SCAN);
+    when(ticketValidationService.validateTicketByQrCode(any(UUID.class), any(), any(), any()))
+        .thenThrow(new NotEventStaffException("not staff"));
 
     mockMvc.perform(post("/api/v1/ticket-validations")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request))
             .with(jwt().jwt(createStaffJwt()).authorities(
                 new SimpleGrantedAuthority("ROLE_ATTENDEE"))))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("NOT_EVENT_STAFF"));
   }
 
   @Test
