@@ -217,6 +217,7 @@ const PublishedEventsPage: React.FC = () => {
               <div className="rounded-md border border-border bg-card p-5 lg:sticky lg:top-24">
                 {publishedEvent && publishedEvent.ticketTypes.length > 0 ? (
                   <TicketSelector
+                    event={publishedEvent}
                     ticketTypes={publishedEvent.ticketTypes}
                     selectedTicketType={selectedTicketType}
                     onSelect={setSelectedTicketType}

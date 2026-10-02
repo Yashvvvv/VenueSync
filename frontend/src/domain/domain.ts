@@ -143,6 +143,8 @@ export interface PublishedEventTicketTypeDetails {
   name: string;
   price: number;
   description: string;
+  /** Server-computed; missing on old servers (treated as not sold out). */
+  soldOut?: boolean;
 }
 
 export interface PublishedEventDetails {
@@ -151,6 +153,10 @@ export interface PublishedEventDetails {
   start?: string;
   end?: string;
   venue: string;
+  salesStart?: string;
+  salesEnd?: string;
+  /** "UPCOMING" | "ON_SALE" | "ENDED". A plain string: an unknown future value must not break the page. */
+  salesStatus?: string;
   ticketTypes: PublishedEventTicketTypeDetails[];
 }
 
