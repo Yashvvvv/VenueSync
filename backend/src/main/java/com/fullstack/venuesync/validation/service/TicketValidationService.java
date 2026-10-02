@@ -13,9 +13,10 @@ public interface TicketValidationService {
    *
    * @param qrCodeId the UUID from the scanned QR code
    * @param idempotencyKey optional; a retry with the same key returns the first answer instead of re-validating
+   * @param eventId optional; a ticket for another event is WRONG_EVENT, not stored, ticket untouched
    * @return a TicketValidation entity with the validation result (VALID, INVALID, EXPIRED, or ALREADY_USED)
    */
-  TicketValidation validateTicketByQrCode(UUID qrCodeId, @Nullable UUID idempotencyKey);
+  TicketValidation validateTicketByQrCode(UUID qrCodeId, @Nullable UUID idempotencyKey, @Nullable UUID eventId);
 
   /**
    * Validates a ticket manually by ticket ID.
@@ -23,7 +24,8 @@ public interface TicketValidationService {
    *
    * @param ticketId the UUID of the ticket to validate
    * @param idempotencyKey optional; a retry with the same key returns the first answer instead of re-validating
+   * @param eventId optional; a ticket for another event is WRONG_EVENT, not stored, ticket untouched
    * @return a TicketValidation entity with the validation result (VALID, INVALID, EXPIRED, or ALREADY_USED)
    */
-  TicketValidation validateTicketManually(UUID ticketId, @Nullable UUID idempotencyKey);
+  TicketValidation validateTicketManually(UUID ticketId, @Nullable UUID idempotencyKey, @Nullable UUID eventId);
 }

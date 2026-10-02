@@ -94,7 +94,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
       assertEquals(TicketValidationMethod.QR_SCAN, result.getValidationMethod());
@@ -109,7 +109,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       assertEquals(TicketValidationMethod.QR_SCAN, result.getValidationMethod());
@@ -125,7 +125,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.EXPIRED, result.getStatus());
     }
@@ -141,7 +141,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.EXPIRED, result.getStatus());
     }
@@ -156,7 +156,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
     }
@@ -172,7 +172,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
     }
@@ -186,7 +186,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
@@ -205,7 +205,7 @@ class TicketValidationServiceImplTest {
       first.setStatus(TicketValidationStatusEnum.VALID);
       when(ticketValidationRepository.findByIdempotencyKey(key)).thenReturn(Optional.of(first));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key, null);
 
       assertSame(first, result); // VALID again, not ALREADY_USED about the ticket this scan admitted
       verifyNoInteractions(qrCodeRepository, ticketRepository);
@@ -222,10 +222,41 @@ class TicketValidationServiceImplTest {
           .thenReturn(1);
       when(ticketValidationRepository.save(any(TicketValidation.class))).thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key, null);
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
       assertEquals(key, result.getIdempotencyKey());
+    }
+  }
+
+  @Nested
+  @DisplayName("event scoping")
+  class EventScopeTests {
+
+    @Test
+    @DisplayName("a ticket for another event is WRONG_EVENT, never admitted and never stored")
+    void wrongEventLeavesTicketUntouched() {
+      when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE)).thenReturn(Optional.of(qrCode));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, UUID.randomUUID());
+
+      assertEquals(TicketValidationStatusEnum.WRONG_EVENT, result.getStatus());
+      assertEquals(ticket, result.getTicket()); // the response can still say which event it's for
+      verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
+      verify(ticketValidationRepository, never()).save(any()); // DB CHECK constraint doesn't allow WRONG_EVENT
+    }
+
+    @Test
+    @DisplayName("a ticket for the scanner's event is admitted as usual")
+    void rightEventAdmits() {
+      when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE)).thenReturn(Optional.of(qrCode));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(1);
+      when(ticketValidationRepository.save(any(TicketValidation.class))).thenAnswer(i -> i.getArgument(0));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null, event.getId());
+
+      assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
     }
   }
 
@@ -242,7 +273,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null);
+      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null, null);
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
       assertEquals(TicketValidationMethod.MANUAL, result.getValidationMethod());
@@ -255,7 +286,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null);
+      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       assertEquals(TicketValidationMethod.MANUAL, result.getValidationMethod());

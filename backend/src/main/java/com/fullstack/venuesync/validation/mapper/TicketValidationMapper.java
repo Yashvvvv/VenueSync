@@ -11,6 +11,8 @@ import com.fullstack.venuesync.validation.domain.TicketValidation;
 public interface TicketValidationMapper {
 
   @Mapping(target = "ticketId", source = "ticket.id")
+  @Mapping(target = "eventName", source = "ticket.ticketType.event.name")
+  @Mapping(target = "ticketTypeName", source = "ticket.ticketType.name")
   TicketValidationResponseDto toTicketValidationResponseDto(TicketValidation ticketValidation);
 
 }

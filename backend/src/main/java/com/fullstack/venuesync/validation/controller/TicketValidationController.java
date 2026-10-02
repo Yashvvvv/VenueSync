@@ -48,9 +48,9 @@ public class TicketValidationController {
     }
     
     if(TicketValidationMethod.MANUAL.equals(method)) {
-      ticketValidation = ticketValidationService.validateTicketManually(id, idempotencyKey);
+      ticketValidation = ticketValidationService.validateTicketManually(id, idempotencyKey, ticketValidationRequestDto.getEventId());
     } else {
-      ticketValidation = ticketValidationService.validateTicketByQrCode(id, idempotencyKey);
+      ticketValidation = ticketValidationService.validateTicketByQrCode(id, idempotencyKey, ticketValidationRequestDto.getEventId());
     }
     return ResponseEntity.ok(
         ticketValidationMapper.toTicketValidationResponseDto(ticketValidation)

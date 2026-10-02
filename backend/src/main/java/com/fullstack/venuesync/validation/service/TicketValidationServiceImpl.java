@@ -31,7 +31,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   private final TicketRepository ticketRepository;
 
   @Override
-  public TicketValidation validateTicketByQrCode(UUID qrCodeId, @Nullable UUID idempotencyKey) {
+  public TicketValidation validateTicketByQrCode(UUID qrCodeId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
     return replayOrRecord(idempotencyKey, () -> {
       Optional<QrCode> qrCodeOpt = qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE);
 
@@ -39,12 +39,12 @@ public class TicketValidationServiceImpl implements TicketValidationService {
       if (qrCodeOpt.isEmpty()) {
         return invalid(TicketValidationMethod.QR_SCAN);
       }
-      return validateTicket(qrCodeOpt.get().getTicket(), TicketValidationMethod.QR_SCAN);
+      return validateTicket(qrCodeOpt.get().getTicket(), TicketValidationMethod.QR_SCAN, eventId);
     });
   }
 
   @Override
-  public TicketValidation validateTicketManually(UUID ticketId, @Nullable UUID idempotencyKey) {
+  public TicketValidation validateTicketManually(UUID ticketId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
     return replayOrRecord(idempotencyKey, () -> {
       Optional<Ticket> ticketOpt = ticketRepository.findById(Objects.requireNonNull(ticketId));
 
@@ -52,7 +52,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
       if (ticketOpt.isEmpty()) {
         return invalid(TicketValidationMethod.MANUAL);
       }
-      return validateTicket(ticketOpt.get(), TicketValidationMethod.MANUAL);
+      return validateTicket(ticketOpt.get(), TicketValidationMethod.MANUAL, eventId);
     });
   }
 
@@ -69,6 +69,9 @@ public class TicketValidationServiceImpl implements TicketValidationService {
       }
     }
     TicketValidation result = validation.get();
+    if (TicketValidationStatusEnum.WRONG_EVENT.equals(result.getStatus())) {
+      return result; // response-only status, never stored (see TicketValidationStatusEnum)
+    }
     result.setIdempotencyKey(idempotencyKey);
     return ticketValidationRepository.save(result);
   }
@@ -81,10 +84,17 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   }
 
   /** Decides the outcome (admitting the ticket if VALID); the caller stores the validation. */
-  private TicketValidation validateTicket(Ticket ticket, TicketValidationMethod ticketValidationMethod) {
+  private TicketValidation validateTicket(
+      Ticket ticket, TicketValidationMethod ticketValidationMethod, @Nullable UUID eventId) {
     TicketValidation ticketValidation = new TicketValidation();
     ticketValidation.setTicket(ticket);
     ticketValidation.setValidationMethod(ticketValidationMethod);
+
+    // First, before anything can change the ticket: a scan at another event's door must not use it up.
+    if (eventId != null && !eventId.equals(ticket.getTicketType().getEvent().getId())) {
+      ticketValidation.setStatus(TicketValidationStatusEnum.WRONG_EVENT);
+      return ticketValidation;
+    }
 
     // Check if ticket is already expired
     if (TicketStatusEnum.EXPIRED.equals(ticket.getStatus())) {
