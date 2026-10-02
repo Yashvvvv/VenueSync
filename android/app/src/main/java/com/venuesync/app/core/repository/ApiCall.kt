@@ -48,6 +48,7 @@ private suspend fun ResponseException.toApiError(): ApiError {
         403 -> ApiError.Forbidden
         404 -> ApiError.NotFound
         409 -> ApiError.Conflict
+        410 -> ApiError.Gone
         429 -> ApiError.RateLimited
         in 500..599 -> ApiError.Server(body?.error)
         else -> ApiError.Unknown(body?.error)

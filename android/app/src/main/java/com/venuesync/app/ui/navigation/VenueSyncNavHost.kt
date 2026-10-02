@@ -73,6 +73,7 @@ fun VenueSyncNavHost() {
             ScanEventPickerScreen(
                 onBack = { navController.navigateUp() },
                 onEventClick = { navController.navigateOnce(entry, Routes.scanner(it)) },
+                onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
             )
         }
         composable(Routes.SCANNER) {

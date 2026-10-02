@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.venuesync.app.core.auth.ROLE_STAFF
 import com.venuesync.app.core.auth.Session
 
 /** Top-bar account entry: nothing while unknown, "Sign in" when signed out, a menu when signed in. */
@@ -28,7 +27,7 @@ fun AccountAction(
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
-    when (val s = session) {
+    when (session) {
         Session.Unknown -> Unit // don't flash "Sign in" before storage has been read
         Session.SignedOut -> TextButton(onClick = onSignInClick) { Text("Sign in") }
         is Session.SignedIn -> {
@@ -46,16 +45,15 @@ fun AccountAction(
                             onMyTicketsClick()
                         },
                     )
-                    // A UI hint only: the token's roles aren't verified here, the server enforces ROLE_STAFF.
-                    if (ROLE_STAFF in s.roles) {
-                        DropdownMenuItem(
-                            text = { Text("Scan tickets") },
-                            onClick = {
-                                menuOpen = false
-                                onScanClick()
-                            },
-                        )
-                    }
+                    // Anyone signed in: the next screen lists only events they can scan (organized or staffed via an
+                    // invite), and the server checks every scan. No Auth0 role decides this.
+                    DropdownMenuItem(
+                        text = { Text("Scan tickets") },
+                        onClick = {
+                            menuOpen = false
+                            onScanClick()
+                        },
+                    )
                     DropdownMenuItem(
                         text = { Text("Sign out") },
                         onClick = {

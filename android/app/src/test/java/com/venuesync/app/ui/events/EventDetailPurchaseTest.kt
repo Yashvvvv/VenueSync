@@ -40,7 +40,7 @@ class EventDetailPurchaseTest {
 
     private val type = TicketType("t1", "GA", BigDecimal("25.00"), null, soldOut = false)
     private val detail = EventDetail("e1", "Show", null, null, null, listOf(type), SalesStatus.OnSale, null, null)
-    private val ticket = Ticket("tk1", TicketStatus.Purchased, "GA", BigDecimal("25.00"), "e1", "Show", null, null, null, null)
+    private val ticket = Ticket("tk1", "TK1-0000", TicketStatus.Purchased, "GA", BigDecimal("25.00"), "e1", "Show", null, null, null, null)
 
     private class Events(private val detail: EventDetail) : EventsRepository {
         var loads = 0

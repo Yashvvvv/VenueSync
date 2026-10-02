@@ -9,6 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TicketDto(
     val id: String? = null,
+    /** Short code for manual check-in, e.g. F5A3-038B. Older servers don't send it; see Ticket.code. */
+    val ticketCode: String? = null,
     // String, not an enum: a new status value must not fail the whole response.
     val status: String? = null,
     val ticketTypeName: String? = null,

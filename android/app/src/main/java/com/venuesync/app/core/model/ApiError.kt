@@ -9,6 +9,8 @@ sealed interface ApiError {
     data object NotFound : ApiError
     /** 409 with a code this app version doesn't know: the resource changed under us. */
     data object Conflict : ApiError
+    /** 410: the thing existed but is no longer usable (an expired invite code). */
+    data object Gone : ApiError
     /** The app owns the wording; the server's text is never shown. */
     data object SoldOut : ApiError
     /** SALES_NOT_STARTED or SALES_ENDED. */
