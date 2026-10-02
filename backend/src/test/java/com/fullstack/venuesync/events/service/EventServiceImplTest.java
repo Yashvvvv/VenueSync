@@ -48,6 +48,9 @@ class EventServiceImplTest {
   @Mock
   private EventRepository eventRepository;
 
+  @Mock
+  private com.fullstack.venuesync.staff.repository.StaffInviteRepository staffInviteRepository;
+
   @InjectMocks
   private EventServiceImpl eventService;
 
