@@ -92,6 +92,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.appauth)
+    implementation(libs.play.services.code.scanner)
 
     testImplementation(libs.junit)
     testImplementation(libs.turbine)

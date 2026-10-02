@@ -45,38 +45,55 @@ import kotlinx.coroutines.flow.filter
 fun EventListScreen(
     onEventClick: (String) -> Unit,
     onSignInClick: () -> Unit,
+    onMyTicketsClick: () -> Unit,
+    onScanClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { Text("VenueSync") },
+                actions = {
+                    AccountAction(
+                        onSignInClick = onSignInClick,
+                        onMyTicketsClick = onMyTicketsClick,
+                        onScanClick = onScanClick,
+                    )
+                },
+            )
+        },
+    ) { innerPadding ->
+        EventBrowser(onEventClick, modifier = Modifier.padding(innerPadding))
+    }
+}
+
+/** Search + paged event list. Shared by the public event list and the staff event picker. */
+@Composable
+internal fun EventBrowser(
+    onEventClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EventsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text("VenueSync") },
-                actions = { AccountAction(onSignInClick = onSignInClick) },
-            )
-        },
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = viewModel::onQueryChanged,
-                placeholder = { Text("Search events") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-            when (val s = state) {
-                UiState.Loading -> Centered { CircularProgressIndicator() }
-                UiState.Empty -> Centered { Text("No events found") }
-                is UiState.Error -> Centered {
-                    Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
-                }
-                is UiState.Success -> EventList(s.data, onEventClick, onEndReached = viewModel::loadMore)
+    Column(modifier = modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = viewModel::onQueryChanged,
+            placeholder = { Text("Search events") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        when (val s = state) {
+            UiState.Loading -> Centered { CircularProgressIndicator() }
+            UiState.Empty -> Centered { Text("No events found") }
+            is UiState.Error -> Centered {
+                Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
+                Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
             }
+            is UiState.Success -> EventList(s.data, onEventClick, onEndReached = viewModel::loadMore)
         }
     }
 }
@@ -109,7 +126,7 @@ private fun EventCard(event: Event, onClick: () -> Unit) {
 
 /** Fires [onEndReached] when the last item scrolls into view. */
 @Composable
-private fun LoadMoreOnEnd(listState: LazyListState, count: Int, onEndReached: () -> Unit) {
+internal fun LoadMoreOnEnd(listState: LazyListState, count: Int, onEndReached: () -> Unit) {
     LaunchedEffect(listState, count) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()

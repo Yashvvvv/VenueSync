@@ -15,6 +15,8 @@ ktor = "3.0.3"
 kotlinxSerialization = "1.7.3"
 coil = "2.7.0"
 appauth = "0.11.1"
+# Google code scanner: Play services draws the camera UI, so the app needs no camera permission
+codeScanner = "16.1.0"
 junit = "4.13.2"
 turbine = "1.2.0"
 coroutinesTest = "1.9.0"
@@ -22,6 +24,7 @@ androidxJunit = "1.2.1"
 espresso = "3.6.1"
 
 [libraries]
+play-services-code-scanner = { group = "com.google.android.gms", name = "play-services-code-scanner", version.ref = "codeScanner" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }

@@ -31,13 +31,7 @@ internal fun TicketDto.toDomainOrNull(): Ticket? {
     val eventName = eventName?.takeIf { it.isNotBlank() } ?: return null
     return Ticket(
         id = id,
-        status = when (status) {
-            "PURCHASED" -> TicketStatus.Purchased
-            "USED" -> TicketStatus.Used
-            "EXPIRED" -> TicketStatus.Expired
-            "CANCELLED" -> TicketStatus.Cancelled
-            else -> TicketStatus.Unknown
-        },
+        status = status.toTicketStatus(),
         ticketTypeName = ticketTypeName,
         price = price?.takeIf { it.isFinite() && it >= 0 }?.let { BigDecimal.valueOf(it) },
         eventId = eventId,
@@ -46,5 +40,39 @@ internal fun TicketDto.toDomainOrNull(): Ticket? {
         eventStart = eventStart?.toLocalDateTimeOrNull(),
         eventEnd = eventEnd?.toLocalDateTimeOrNull(),
         purchasedAt = purchasedAt?.toLocalDateTimeOrNull(),
+    )
+}
+
+internal fun String?.toTicketStatus(): TicketStatus = when (this) {
+    "PURCHASED" -> TicketStatus.Purchased
+    "USED" -> TicketStatus.Used
+    "EXPIRED" -> TicketStatus.Expired
+    "CANCELLED" -> TicketStatus.Cancelled
+    else -> TicketStatus.Unknown
+}
+
+/** A row in My Tickets. Not [Ticket]: the list endpoint sends no eventId or venue. */
+data class TicketSummary(
+    val id: String,
+    val status: TicketStatus,
+    val ticketTypeName: String,
+    val eventName: String,
+    val eventStart: LocalDateTime?,
+)
+
+/** Server-side split: Active = purchased and the event hasn't ended; Past = everything else. */
+enum class TicketFilter(val wire: String) { Active("active"), Past("past") }
+
+/** Null when the row breaks the contract; the repository drops it and keeps the rest. */
+internal fun ListTicketDto.toDomainOrNull(): TicketSummary? {
+    val id = id?.takeIf { it.isNotBlank() } ?: return null
+    val ticketTypeName = ticketType?.name?.takeIf { it.isNotBlank() } ?: return null
+    val eventName = eventName?.takeIf { it.isNotBlank() } ?: return null
+    return TicketSummary(
+        id = id,
+        status = status.toTicketStatus(),
+        ticketTypeName = ticketTypeName,
+        eventName = eventName,
+        eventStart = eventStart?.toLocalDateTimeOrNull(),
     )
 }

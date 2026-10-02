@@ -1,11 +1,21 @@
 package com.venuesync.app.core.network
 
+import com.venuesync.app.core.model.ListTicketDto
+import com.venuesync.app.core.model.PageResponse
 import com.venuesync.app.core.model.TicketDto
+import com.venuesync.app.core.model.ValidationRequestDto
+import com.venuesync.app.core.model.ValidationResponseDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.timeout
+import io.ktor.client.request.accept
+import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 
 /* Thin endpoint wrapper — mechanical HTTP only, no error mapping (that's repository work). */
 class TicketsApi(private val client: HttpClient) {
@@ -16,5 +26,31 @@ class TicketsApi(private val client: HttpClient) {
             header(IDEMPOTENCY_KEY_HEADER, idempotencyKey)
             // Render cold start (~30s) plus QR generation; the default 30s would cut a working purchase off.
             timeout { requestTimeoutMillis = 60_000 }
+        }.body()
+
+    suspend fun listTickets(filter: String, page: Int, size: Int = 20): PageResponse<ListTicketDto> =
+        client.get("tickets") {
+            parameter("filter", filter)
+            parameter("page", page)
+            parameter("size", size)
+        }.body()
+
+    suspend fun getTicket(id: String): TicketDto = client.get("tickets/$id").body()
+
+    /**
+     * PNG bytes. The endpoint sets Content-Type image/png explicitly, and Spring answers 406 when the Accept
+     * header doesn't allow it. ContentNegotiation only adds application/json, so image/png is named here.
+     */
+    suspend fun getQrCode(ticketId: String): ByteArray =
+        client.get("tickets/$ticketId/qr-codes") { accept(ContentType.Image.PNG) }.body()
+
+    /** Staff only. Keyed, so the client retries it safely and the server replays the first answer. */
+    suspend fun validate(request: ValidationRequestDto, idempotencyKey: String): ValidationResponseDto =
+        client.post("ticket-validations") {
+            header(IDEMPOTENCY_KEY_HEADER, idempotencyKey)
+            contentType(ContentType.Application.Json)
+            setBody(request)
+            // Someone is waiting at the door: fail fast into Try again (same key) rather than spin for 30s.
+            timeout { requestTimeoutMillis = 15_000 }
         }.body()
 }

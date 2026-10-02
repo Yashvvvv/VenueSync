@@ -21,3 +21,21 @@ data class TicketDto(
     val eventEnd: String? = null,
     val purchasedAt: String? = null,
 )
+
+/** GET /tickets — one row of Page<ListTicketResponseDto>. */
+@Serializable
+data class ListTicketDto(
+    val id: String? = null,
+    val status: String? = null,
+    val ticketType: ListTicketTypeDto? = null,
+    val eventName: String? = null,
+    val eventStart: String? = null,
+    val eventEnd: String? = null,
+)
+
+@Serializable
+data class ListTicketTypeDto(
+    val id: String? = null,
+    val name: String? = null,
+    val price: Double? = null,
+)
