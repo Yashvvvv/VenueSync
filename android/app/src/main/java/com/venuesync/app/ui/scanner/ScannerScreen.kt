@@ -139,7 +139,7 @@ fun ScannerScreen(
                     CircularProgressIndicator()
                     Text("Checking…", modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleMedium)
                 }
-                is ScanState.Done -> ResultPanel(s.result, onNext = {
+                is ScanState.Done -> ResultPanel(s.result, manual = s.manual, onNext = {
                     viewModel.next()
                     scan()
                 })
@@ -307,12 +307,19 @@ private fun Prompt(
 
 /** The whole screen is the answer, readable at arm's length. Colour is backed by words for colour-blind staff. */
 @Composable
-private fun ResultPanel(result: ScanResult, onNext: () -> Unit) {
+private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit) {
     val (color, title, detail) = when (result.status) {
         ScanStatus.Valid -> Triple(Go, "Let in", result.ticketTypeName?.let { "1 × $it" } ?: "Valid ticket")
         ScanStatus.AlreadyUsed -> Triple(Stop, "Already used", "This ticket was scanned before. Don't let in.")
         ScanStatus.Expired -> Triple(Stop, "Expired", "This ticket's event is over.")
-        ScanStatus.Invalid -> Triple(Stop, "Not a valid ticket", "Not a VenueSync ticket, or it was cancelled.")
+        // A typed code is only looked up within this event (short codes are guessable, so the server won't search
+        // other organizers' events). So "invalid" here usually means a typo or the wrong event, not a fake ticket.
+        ScanStatus.Invalid -> Triple(
+            Stop,
+            "Not a valid ticket",
+            if (manual) "No ticket with this code for this event, or it was cancelled. Check the code and the event."
+            else "Not a VenueSync ticket, or it was cancelled.",
+        )
         ScanStatus.WrongEvent -> Triple(Caution, "Wrong event", result.eventName?.let { "This ticket is for $it." } ?: "This ticket is for another event.")
         ScanStatus.Unknown -> Triple(Neutral, "Couldn't verify", "Check the ticket by hand.")
     }

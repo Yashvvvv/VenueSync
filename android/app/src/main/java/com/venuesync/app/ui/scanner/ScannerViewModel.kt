@@ -25,7 +25,8 @@ import kotlinx.coroutines.launch
 sealed interface ScanState {
     data object Ready : ScanState
     data object Checking : ScanState
-    data class Done(val result: ScanResult) : ScanState
+    /** [manual]: from a typed code or the guest list, so "invalid" can say why (see ScannerScreen). */
+    data class Done(val result: ScanResult, val manual: Boolean = false) : ScanState
     /** The answer is unknown (network, 5xx). Try again re-sends the SAME key, so the server replays its answer. */
     data class Retryable(val message: String) : ScanState
     /** A definitive refusal that scanning again won't fix (signed out, not staff, unknown event). */
@@ -133,7 +134,7 @@ class ScannerViewModel @Inject constructor(
             result.fold(
                 onSuccess = {
                     clearPending()
-                    _state.value = ScanState.Done(it)
+                    _state.value = ScanState.Done(it, manual)
                 },
                 onFailure = { onFailed(it.toApiError()) },
             )
