@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -64,9 +65,20 @@ fun VenueSyncNavHost() {
         composable(Routes.TICKET_DETAIL) {
             TicketDetailScreen(onBack = { navController.navigateUp() })
         }
-        composable(Routes.PURCHASE_RESULT) {
-            // Same idempotent pop as login: a double-tapped Done can't pop the detail screen too.
-            PurchaseResultScreen(onDone = { navController.popBackStack(Routes.PURCHASE_RESULT, inclusive = true) })
+        composable(Routes.PURCHASE_RESULT) { entry ->
+            val ticketId = entry.arguments?.getString(TicketDetailViewModel.TICKET_ID_ARG)
+            PurchaseResultScreen(
+                // Same idempotent pop as login: a double-tapped Done can't pop the detail screen too.
+                onDone = { navController.popBackStack(Routes.PURCHASE_RESULT, inclusive = true) },
+                // Replaces the result screen, so back from the ticket returns to the event.
+                onViewTicket = ticketId?.let { id ->
+                    {
+                        navController.navigateOnce(entry, Routes.ticketDetail(id)) {
+                            popUpTo(Routes.PURCHASE_RESULT) { inclusive = true }
+                        }
+                    }
+                },
+            )
         }
         composable(Routes.LOGIN) {
             // Pops exactly the login entry and is a no-op if it's already gone, so a double
@@ -78,6 +90,6 @@ fun VenueSyncNavHost() {
 }
 
 /** For taps: once a navigation starts, [from] leaves RESUMED, so a double tap can't push the screen twice. */
-private fun NavController.navigateOnce(from: NavBackStackEntry, route: String) {
-    if (from.lifecycle.currentState == Lifecycle.State.RESUMED) navigate(route)
+private fun NavController.navigateOnce(from: NavBackStackEntry, route: String, options: NavOptionsBuilder.() -> Unit = {}) {
+    if (from.lifecycle.currentState == Lifecycle.State.RESUMED) navigate(route, options)
 }
