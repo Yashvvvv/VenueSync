@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,7 +29,9 @@ public class TicketValidationController {
 
   @PostMapping
   public ResponseEntity<TicketValidationResponseDto> validateTicket(
-      @Valid @RequestBody TicketValidationRequestDto ticketValidationRequestDto
+      @Valid @RequestBody TicketValidationRequestDto ticketValidationRequestDto,
+      // Optional so the web dashboard keeps working; the app sends one per scan, the same one on retries.
+      @RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey
   ){
     TicketValidationMethod method = ticketValidationRequestDto.getMethod();
     TicketValidation ticketValidation;
@@ -45,9 +48,9 @@ public class TicketValidationController {
     }
     
     if(TicketValidationMethod.MANUAL.equals(method)) {
-      ticketValidation = ticketValidationService.validateTicketManually(id);
+      ticketValidation = ticketValidationService.validateTicketManually(id, idempotencyKey);
     } else {
-      ticketValidation = ticketValidationService.validateTicketByQrCode(id);
+      ticketValidation = ticketValidationService.validateTicketByQrCode(id, idempotencyKey);
     }
     return ResponseEntity.ok(
         ticketValidationMapper.toTicketValidationResponseDto(ticketValidation)

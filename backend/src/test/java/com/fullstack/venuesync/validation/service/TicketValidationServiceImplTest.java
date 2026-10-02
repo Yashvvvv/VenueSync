@@ -94,7 +94,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
       assertEquals(TicketValidationMethod.QR_SCAN, result.getValidationMethod());
@@ -109,7 +109,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       assertEquals(TicketValidationMethod.QR_SCAN, result.getValidationMethod());
@@ -125,7 +125,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.EXPIRED, result.getStatus());
     }
@@ -141,7 +141,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.EXPIRED, result.getStatus());
     }
@@ -156,7 +156,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
     }
@@ -172,7 +172,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.ALREADY_USED, result.getStatus());
     }
@@ -186,10 +186,46 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId);
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
+    }
+  }
+
+  @Nested
+  @DisplayName("Idempotency-Key")
+  class IdempotencyTests {
+
+    @Test
+    @DisplayName("a retry with a known key returns the first answer and validates nothing again")
+    void replaysFirstAnswer() {
+      UUID key = UUID.randomUUID();
+      TicketValidation first = new TicketValidation();
+      first.setStatus(TicketValidationStatusEnum.VALID);
+      when(ticketValidationRepository.findByIdempotencyKey(key)).thenReturn(Optional.of(first));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key);
+
+      assertSame(first, result); // VALID again, not ALREADY_USED about the ticket this scan admitted
+      verifyNoInteractions(qrCodeRepository, ticketRepository);
+      verify(ticketValidationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a new key is stored with the validation")
+    void storesKey() {
+      UUID key = UUID.randomUUID();
+      when(ticketValidationRepository.findByIdempotencyKey(key)).thenReturn(Optional.empty());
+      when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE)).thenReturn(Optional.of(qrCode));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(1);
+      when(ticketValidationRepository.save(any(TicketValidation.class))).thenAnswer(i -> i.getArgument(0));
+
+      TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, key);
+
+      assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
+      assertEquals(key, result.getIdempotencyKey());
     }
   }
 
@@ -206,7 +242,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketManually(ticketId);
+      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null);
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
       assertEquals(TicketValidationMethod.MANUAL, result.getValidationMethod());
@@ -219,7 +255,7 @@ class TicketValidationServiceImplTest {
       when(ticketValidationRepository.save(any(TicketValidation.class)))
           .thenAnswer(i -> i.getArgument(0));
 
-      TicketValidation result = ticketValidationService.validateTicketManually(ticketId);
+      TicketValidation result = ticketValidationService.validateTicketManually(ticketId, null);
 
       assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
       assertEquals(TicketValidationMethod.MANUAL, result.getValidationMethod());

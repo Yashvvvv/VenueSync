@@ -110,7 +110,7 @@ class TicketValidationControllerTest {
     responseDto.setTicketId(ticketId);
     responseDto.setStatus(TicketValidationStatusEnum.VALID);
 
-    when(ticketValidationService.validateTicketByQrCode(any(UUID.class)))
+    when(ticketValidationService.validateTicketByQrCode(any(UUID.class), any()))
         .thenReturn(validation);
     when(ticketValidationMapper.toTicketValidationResponseDto(any(TicketValidation.class)))
         .thenReturn(responseDto);
