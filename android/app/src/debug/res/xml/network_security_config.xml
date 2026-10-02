@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DEBUG BUILDS ONLY (src/debug). Lets the app reach the backend on this PC over plain http.
+  Release builds don't merge this file and keep Android's default: HTTPS only.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- emulator or USB phone with `adb reverse tcp:8080 tcp:8080` -->
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- emulator's alias for the host PC -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

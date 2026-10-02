@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
 android {
@@ -20,17 +26,27 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Base URLs live here (not hardcoded in code) so debug/release can diverge later.
-        buildConfigField("String", "API_BASE_URL", "\"https://venuesync-backend.onrender.com/api/v1\"")
-        buildConfigField(
-            "String",
-            "OIDC_AUTHORITY",
-            "\"https://keycloak-server-3dsx.onrender.com/realms/event-ticket-platform\""
-        )
+        // Auth0 "VenueSync-App" (Native, public client — the id ships in every APK, it is not a secret).
+        buildConfigField("String", "OIDC_AUTHORITY", "\"https://dev-gtxw4nl5kf3t4pxd.us.auth0.com\"")
+        buildConfigField("String", "OIDC_CLIENT_ID", "\"0veL3NInWpoVPwGk4BqmZML1yAik8mvI\"")
+        // Must equal the backend's AUTH0_AUDIENCE. Without it Auth0 issues a token the API rejects.
+        buildConfigField("String", "OIDC_AUDIENCE", "\"https://api.venuesync.app\"")
+        buildConfigField("String", "OIDC_REDIRECT_URI", "\"venuesync://oauth2redirect\"")
+        // AppAuth's own manifest registers the redirect catcher activity with this scheme.
+        manifestPlaceholders["appAuthRedirectScheme"] = "venuesync"
     }
 
     buildTypes {
+        // Debug talks to the backend running on this PC. localhost works on an emulator or a USB phone
+        // after `adb reverse tcp:8080 tcp:8080`. Override per machine with venuesync.apiBaseUrl in
+        // local.properties (e.g. the deployed API) — a LAN IP would also need adding to the debug
+        // network_security_config, which only allows plain http to localhost and 10.0.2.2.
+        debug {
+            val apiBaseUrl = localProperties.getProperty("venuesync.apiBaseUrl", "http://localhost:8080/api/v1")
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        }
         release {
+            buildConfigField("String", "API_BASE_URL", "\"https://venuesync-backend.onrender.com/api/v1\"")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -70,14 +86,17 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.client.logging)
+    implementation(libs.ktor.client.auth)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.coil.compose)
+    implementation(libs.appauth)
 
     testImplementation(libs.junit)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.compose.ui.tooling)

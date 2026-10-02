@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Keycloak](https://img.shields.io/badge/Keycloak-OAuth2-orange.svg)](https://www.keycloak.org/)
+[![Auth0](https://img.shields.io/badge/Auth0-OAuth2-eb5424.svg)](https://auth0.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791.svg)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](https://www.docker.com/)
 
@@ -20,7 +20,7 @@
 
 - **Architected a modular monolith** with 5 domain modules (`shared`, `users`, `events`, `tickets`, `validation`), clean inter-module dependency rules, and 94 Java source files — `mvn clean compile` passes with 0 errors.
 
-- **Implemented OAuth2/OIDC-secured platform** with Keycloak multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
+- **Implemented OAuth2/OIDC-secured platform** with Auth0 multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
 
 - **Built comprehensive test suite** with unit tests for all service implementations and `@WebMvcTest` controller integration tests across all five controllers.
 
@@ -33,7 +33,7 @@ VenueSync/
 ├── backend/                 # Spring Boot REST API (Maven)
 │   ├── src/main/java/       # Java source code
 │   ├── src/main/resources/  # Application configuration
-│   └── docker-compose.yml   # PostgreSQL + Keycloak setup
+│   └── docker-compose.yml   # PostgreSQL + Adminer (+ legacy Keycloak, unused by default)
 ├── frontend/                # React + TypeScript SPA (Vite)
 │   ├── src/components/      # Reusable UI components
 │   ├── src/pages/           # Route-based pages
@@ -47,24 +47,36 @@ VenueSync/
 - **Java 21+** (or compatible JDK)
 - **Maven** (or use the included Maven wrapper `mvnw` / `mvnw.cmd`)
 - **Node.js 18+** and npm
-- **Docker** (for PostgreSQL & Keycloak)
+- **Docker** (for PostgreSQL; a legacy Keycloak container also starts by default, see note below)
+- **An Auth0 tenant** (free tier is fine) — see [Auth0 Setup](#-auth0-setup)
 
-### 1. Start Infrastructure (PostgreSQL + Keycloak)
+### 1. Start Infrastructure (PostgreSQL)
 
 ```powershell
 cd backend
 docker-compose up -d
 ```
 
-This starts Postgres, Adminer, and Keycloak only — no `.env` file needed, the
+This starts Postgres and Adminer — no `.env` file needed for this step, the
 backend reads matching localhost defaults from `application.properties`.
+(The same command also starts a `keycloak` container; it's a leftover from
+before the Auth0 migration, has no profile gate so it always comes up, but
+nothing in the app talks to it by default — see
+[`keycloak/README.md`](keycloak/README.md).)
 
 ### 2. Run the Backend
+
+Authentication is validated against Auth0, so `AUTH0_DOMAIN` and
+`AUTH0_AUDIENCE` must be real values even for local dev. Put them in
+`backend/.env` (copy `backend/.env.example`) — the app imports that file when
+run locally, and real environment variables still take precedence:
 
 ```powershell
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
+
+In IntelliJ, use the shared **VenueSync Backend** run configuration (`backend/.run/`).
 
 (To instead run the backend itself in a container — e.g. to sanity-check the
 `prod` profile locally — copy `.env.example` to `.env` and run
@@ -78,6 +90,20 @@ npm install
 npm run dev
 ```
 
+### Run the Android App Against the Local Backend
+
+Debug builds call `http://localhost:8080/api/v1`; release builds call the deployed API.
+With the backend running (step 2), connect a phone over USB (or start an emulator) and:
+
+```powershell
+adb reverse tcp:8080 tcp:8080   # the device's localhost:8080 now reaches this PC
+cd android
+.\gradlew.bat installDebug
+```
+
+`adb reverse` lasts until the device disconnects. To point a debug build somewhere else,
+set `venuesync.apiBaseUrl=...` in `android/local.properties`.
+
 ### 4. Run Tests
 
 ```powershell
@@ -87,57 +113,84 @@ cd backend
 
 🌐 **Frontend:** http://localhost:5173  
 🔧 **Backend API:** http://localhost:8080  
-🔐 **Keycloak Admin:** http://localhost:9090/admin
+🔐 **Auth0 Dashboard:** https://manage.auth0.com
 
 ---
 
-## 🔐 Keycloak Setup
+## 🔐 Auth0 Setup
 
-This application uses Keycloak for OAuth2/OIDC authentication and role-based authorization.
+This application uses Auth0 for OAuth2/OIDC authentication and role-based authorization.
+(It previously used a self-hosted Keycloak — that setup is kept as a reference/demo
+in [`keycloak/README.md`](keycloak/README.md) but is no longer the live auth path.)
 
-### 1. Start Keycloak
+### 1. Create the Auth0 Application and API
 
-Keycloak runs at `http://localhost:9090` via Docker Compose.
+1. In the [Auth0 Dashboard](https://manage.auth0.com), create a **Single Page Application**
+   (used by the frontend) and note its **Client ID**.
+2. Create an **API** (Applications → APIs) with an **Identifier** — this becomes
+   `AUTH0_AUDIENCE` on the backend and `VITE_OIDC_AUDIENCE` on the frontend, and
+   must match exactly on both sides.
+3. Your tenant domain (e.g. `your-tenant.us.auth0.com`) becomes `AUTH0_DOMAIN`
+   (backend) and `VITE_OIDC_AUTHORITY` (frontend, as `https://your-tenant.us.auth0.com`).
 
-### 2. Configure Realm and Roles
+### 2. Inject Roles via a Post-Login Action
 
-1. **Access Keycloak Admin Console:** http://localhost:9090/admin
-2. **Select Realm:** Choose `event-ticket-platform` from the dropdown
-3. **Create Realm Roles:**
-   - Navigate to **Realm roles** → **Create role**
-   - Create the following roles:
+Auth0 does not put custom roles on the token by default. Add a **Post-Login Action**
+(Actions → Flows → Login) that writes a namespaced roles claim:
+
+```js
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://venuesync.app';
+  const roles = event.authorization?.roles || [];
+  api.accessToken.setCustomClaim(`${namespace}/roles`, roles);
+};
+```
+
+The namespace and claim name (`https://venuesync.app/roles`) must match
+`Auth0Claims.ROLES` in the backend and `ROLES_CLAIM` in the frontend's
+`use-roles.tsx` exactly — Auth0 silently drops non-namespaced custom claims,
+so a mismatch fails closed (valid token, no roles, 403 everywhere, nothing logged).
+
+### 3. Create Roles and Assign Users
+
+Create three roles under **User Management → Roles**, each **prefixed with `ROLE_`**
+(the prefix is load-bearing: Spring Security resolves `hasRole("ATTENDEE")` to the
+authority `ROLE_ATTENDEE`):
 
 | Role | Description |
 |------|-------------|
-| `ORGANIZER` | Can create, manage, and publish events |
-| `ATTENDEE` | Can browse events and purchase tickets |
-| `STAFF` | Can scan and validate tickets at venue |
+| `ROLE_ORGANIZER` | Can create, manage, and publish events |
+| `ROLE_ATTENDEE` | Can browse events and purchase tickets |
+| `ROLE_STAFF` | Can scan and validate tickets at venue |
 
-### 3. Create and Configure Users
+New signups get `ROLE_ATTENDEE` by default; the app's own
+"Upgrade to Organizer" endpoint promotes a user via the Auth0 Management API
+(see below) rather than requiring manual role assignment in the dashboard.
 
-1. Navigate to **Users** → **Add user**
-2. Fill in user details (username, email, etc.)
-3. **Set Password:** Go to **Credentials** tab → **Set password** → Set "Temporary" to OFF
-4. **Assign Roles:** Go to **Role mapping** → **Assign role** → Select appropriate role
+### 4. Machine-to-Machine App (Role Bridge)
 
-### 4. Client Configuration
+The ATTENDEE → ORGANIZER self-upgrade flow calls the Auth0 Management API, so
+create an **M2M Application** authorized for the Management API with the
+`update:users` scope, and set its credentials as `AUTH0_M2M_CLIENT_ID` /
+`AUTH0_M2M_CLIENT_SECRET`.
 
-| Setting | Value |
-|---------|-------|
-| Authority | `http://localhost:9090/realms/event-ticket-platform` |
-| Client ID | `event-ticket-platform-app` |
-| Redirect URI | `http://localhost:5173/callback` |
+### 5. Environment Variables
 
-### 5. Dev Mode (Optional)
+| Variable | Where | Value |
+|----------|-------|-------|
+| `AUTH0_DOMAIN` | backend | `your-tenant.us.auth0.com` |
+| `AUTH0_AUDIENCE` | backend | Your API Identifier |
+| `AUTH0_M2M_CLIENT_ID` / `AUTH0_M2M_CLIENT_SECRET` | backend | M2M app credentials |
+| `VITE_OIDC_AUTHORITY` | frontend | `https://your-tenant.us.auth0.com` |
+| `VITE_OIDC_CLIENT_ID` | frontend | SPA application's Client ID |
+| `VITE_OIDC_AUDIENCE` | frontend | Same as `AUTH0_AUDIENCE` |
 
-To bypass authentication during development:
+See `backend/.env.example` and `frontend/.env.example` for the full list with
+inline explanations.
 
-```powershell
-cd backend
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-⚠️ **Warning:** Dev mode disables all security checks. Never use in production!
+⚠️ Unlike the old Keycloak setup, there's no local fallback IdP: these Auth0
+values must be real even in dev, and the backend fails fast on startup if
+they're missing.
 
 ---
 
@@ -191,7 +244,7 @@ cd backend
 | Technology | Purpose |
 |------------|---------|
 | Docker Compose | Container orchestration |
-| Keycloak | Identity & access management |
+| Auth0 | Identity & access management |
 | PostgreSQL | Relational database |
 
 ---
@@ -202,7 +255,7 @@ VenueSync currently targets a Render-based deployment with environment-driven co
 
 - **Backend** reads production settings from environment variables in `backend/src/main/resources/application-prod.properties`
 - **Frontend** reads `VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, `VITE_OIDC_CLIENT_ID` and `VITE_OIDC_AUDIENCE` from `frontend/.env` locally, and from the Cloudflare Pages dashboard for deployed builds
-- **Keycloak authority** must match the backend `KEYCLOAK_ISSUER_URI`
+- **`VITE_OIDC_AUTHORITY`/`VITE_OIDC_AUDIENCE`** on the frontend must match `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` on the backend exactly
 - **CORS** is controlled through `CORS_ALLOWED_ORIGINS`
 - **Render** uses `jdbcConnectionString` for the PostgreSQL service binding
 
@@ -246,7 +299,7 @@ If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React SPA     │────▶│   Keycloak      │────▶│  Spring Boot    │
+│   React SPA     │────▶│     Auth0       │────▶│  Spring Boot    │
 │   (Frontend)    │     │   (Auth Server) │     │  (Resource API) │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         │                       │                       │
@@ -255,9 +308,9 @@ If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-
         └───────────────────────┴───────────────────────┘
 ```
 
-- **JWT-based authentication** with Keycloak as identity provider
-- **Role-based access control** (ORGANIZER, ATTENDEE, STAFF)
-- **Keycloak Admin Bridge** for secure, automated self-service role upgrades using service account credentials
+- **JWT-based authentication** with Auth0 as identity provider
+- **Role-based access control** (ORGANIZER, ATTENDEE, STAFF) via a namespaced roles claim injected by an Auth0 Post-Login Action
+- **Auth0 Management API bridge** for secure, automated self-service role upgrades using M2M client-credential authentication
 - **Pessimistic locking** prevents race conditions during ticket purchases
 - **Stateless API** with token-based sessions
 
@@ -266,8 +319,8 @@ If you deploy the frontend elsewhere, keep the SPA fallback rewrite in the host-
 ## 📄 Notes
 
 - Backend configuration is in `backend/src/main/resources/application.properties`
-- Docker setup includes PostgreSQL and Keycloak in `backend/docker-compose.yml`
-- Keycloak roles must be assigned to users for proper authorization
+- Docker setup includes PostgreSQL and Adminer in `backend/docker-compose.yml` (a legacy, unused-by-default Keycloak container also starts — see [`keycloak/README.md`](keycloak/README.md))
+- Auth0 roles must be assigned to users (or granted via the Organizer self-upgrade flow) for proper authorization
 - The application uses "wall clock" time approach for event scheduling (no timezone conversions)
 
 ---
