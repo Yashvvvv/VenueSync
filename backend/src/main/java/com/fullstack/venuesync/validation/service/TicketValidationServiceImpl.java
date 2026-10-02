@@ -3,10 +3,12 @@ package com.fullstack.venuesync.validation.service;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
@@ -59,6 +61,19 @@ public class TicketValidationServiceImpl implements TicketValidationService {
         return invalid(TicketValidationMethod.MANUAL);
       }
       return validateTicket(ticketOpt.get(), TicketValidationMethod.MANUAL, userId, eventId);
+    });
+  }
+
+  @Override
+  public TicketValidation validateTicketByCode(
+      String codePrefix, UUID userId, @Nullable UUID idempotencyKey, UUID eventId) {
+    return replayOrRecord(idempotencyKey, () -> {
+      requireCanScanDeclaredEvent(userId, eventId);
+      List<Ticket> matches = ticketRepository.findByEventAndCodePrefix(eventId, codePrefix, PageRequest.of(0, 2));
+      if (matches.size() != 1) {
+        return invalid(TicketValidationMethod.MANUAL);
+      }
+      return validateTicket(matches.get(0), TicketValidationMethod.MANUAL, userId, eventId);
     });
   }
 

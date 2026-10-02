@@ -65,6 +65,21 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
       Pageable pageable
   );
 
+  /** Tickets of one event whose id starts with a ticket code's hex prefix (callers pass a limit of 2 to spot clashes). */
+  @Query("SELECT t FROM Ticket t WHERE t.ticketType.event.id = :eventId AND CAST(t.id AS String) LIKE CONCAT(:prefix, '%')")
+  List<Ticket> findByEventAndCodePrefix(
+      @Param("eventId") UUID eventId, @Param("prefix") String prefix, Pageable pageable);
+
+  /** The door guest list: an event's tickets whose attendee name or email contains [pattern], or whose code starts with [codePrefix]. */
+  @Query("SELECT t FROM Ticket t JOIN FETCH t.purchaser u JOIN FETCH t.ticketType tt "
+      + "WHERE tt.event.id = :eventId AND (LOWER(u.name) LIKE :pattern OR LOWER(u.email) LIKE :pattern "
+      + "OR CAST(t.id AS String) LIKE :codePrefix) ORDER BY u.name")
+  List<Ticket> searchGuests(
+      @Param("eventId") UUID eventId,
+      @Param("pattern") String pattern,
+      @Param("codePrefix") String codePrefix,
+      Pageable pageable);
+
   /**
    * Admits a ticket: PURCHASED -> USED as ONE statement, so of two simultaneous scans exactly one sees 1
    * (and is VALID) and the other sees 0. A read-then-write would let both read PURCHASED and both admit.

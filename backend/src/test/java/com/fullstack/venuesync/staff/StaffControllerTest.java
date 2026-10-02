@@ -42,6 +42,7 @@ class StaffControllerTest {
   @MockitoBean private StaffInviteService staffInviteService;
   @MockitoBean private com.fullstack.venuesync.events.repository.EventRepository eventRepository;
   @MockitoBean private com.fullstack.venuesync.events.mapper.EventMapper eventMapper;
+  @MockitoBean private com.fullstack.venuesync.staff.service.GuestListService guestListService;
   @MockitoBean private JwtDecoder jwtDecoder;
   @MockitoBean private UserProvisioningFilter userProvisioningFilter;
   @MockitoBean private UserRepository userRepository;

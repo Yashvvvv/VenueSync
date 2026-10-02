@@ -8,7 +8,9 @@ import com.fullstack.venuesync.events.mapper.EventMapper;
 import com.fullstack.venuesync.events.repository.EventRepository;
 import com.fullstack.venuesync.staff.dto.AcceptStaffInviteResponseDto;
 import com.fullstack.venuesync.staff.dto.EventStaffMemberDto;
+import com.fullstack.venuesync.staff.dto.GuestDto;
 import com.fullstack.venuesync.staff.dto.StaffInviteResponseDto;
+import com.fullstack.venuesync.staff.service.GuestListService;
 import com.fullstack.venuesync.staff.service.StaffInviteService;
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +35,7 @@ public class StaffController {
   private final StaffInviteService staffInviteService;
   private final EventRepository eventRepository;
   private final EventMapper eventMapper;
+  private final GuestListService guestListService;
 
   @PostMapping("/events/{eventId}/staff-invites")
   public ResponseEntity<StaffInviteResponseDto> createInvite(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
@@ -56,6 +60,13 @@ public class StaffController {
     return eventRepository.findScannableBy(parseUserId(jwt), EventStatusEnum.PUBLISHED).stream()
         .map(eventMapper::toListPublishedEventResponseDto)
         .toList();
+  }
+
+  /** Staff or organizer of the event: search its guests (min. 2 characters, max. 20 results). */
+  @GetMapping("/staff/events/{eventId}/guests")
+  public List<GuestDto> searchGuests(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId, @RequestParam(defaultValue = "") String q) {
+    return guestListService.search(parseUserId(jwt), eventId, q);
   }
 
   /** Any signed-in user: the code itself is the authorization. */

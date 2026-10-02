@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -263,6 +264,40 @@ class TicketValidationServiceImplTest {
       TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, userId, null, event.getId());
 
       assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
+    }
+  }
+
+  @Nested
+  @DisplayName("ticket code")
+  class TicketCodeTests {
+
+    @Test
+    @DisplayName("exactly one ticket with the code in the scanner's event is validated")
+    void oneMatchIsValidated() {
+      when(ticketRepository.findByEventAndCodePrefix(eq(event.getId()), eq("f5a3038b"), any())).thenReturn(List.of(ticket));
+      when(ticketRepository.markUsed(eq(ticketId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.USED), any()))
+          .thenReturn(1);
+      when(ticketValidationRepository.save(any(TicketValidation.class))).thenAnswer(i -> i.getArgument(0));
+
+      TicketValidation result = ticketValidationService.validateTicketByCode("f5a3038b", userId, null, event.getId());
+
+      assertEquals(TicketValidationStatusEnum.VALID, result.getStatus());
+      assertEquals(TicketValidationMethod.MANUAL, result.getValidationMethod());
+    }
+
+    @Test
+    @DisplayName("no match or a clash is INVALID: the door never guesses")
+    void zeroOrManyMatchesAreInvalid() {
+      when(ticketValidationRepository.save(any(TicketValidation.class))).thenAnswer(i -> i.getArgument(0));
+      when(ticketRepository.findByEventAndCodePrefix(any(), any(), any()))
+          .thenReturn(List.of())
+          .thenReturn(List.of(ticket, new Ticket()));
+
+      assertEquals(TicketValidationStatusEnum.INVALID,
+          ticketValidationService.validateTicketByCode("f5a3038b", userId, null, event.getId()).getStatus());
+      assertEquals(TicketValidationStatusEnum.INVALID,
+          ticketValidationService.validateTicketByCode("f5a3038b", userId, null, event.getId()).getStatus());
+      verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
     }
   }
 

@@ -126,6 +126,28 @@ class TicketValidationControllerTest {
   }
 
   @Test
+  @DisplayName("a MANUAL ticket code with an event is looked up by code")
+  void manualTicketCodeIsLookedUpByCode() throws Exception {
+    UUID eventId = UUID.randomUUID();
+    TicketValidationRequestDto request = new TicketValidationRequestDto();
+    request.setId("f5a3-038B");
+    request.setMethod(TicketValidationMethod.MANUAL);
+    request.setEventId(eventId);
+    TicketValidationResponseDto responseDto = new TicketValidationResponseDto();
+    responseDto.setStatus(TicketValidationStatusEnum.VALID);
+    when(ticketValidationService.validateTicketByCode(eq("f5a3038b"), any(), any(), eq(eventId)))
+        .thenReturn(new TicketValidation());
+    when(ticketValidationMapper.toTicketValidationResponseDto(any(TicketValidation.class))).thenReturn(responseDto);
+
+    mockMvc.perform(post("/api/v1/ticket-validations")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))
+            .with(jwt().jwt(createStaffJwt())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("VALID"));
+  }
+
+  @Test
   @DisplayName("should reject a user who is not staff of the ticket's event, whatever their roles")
   void shouldRejectValidationByNonStaff() throws Exception {
     TicketValidationRequestDto request = new TicketValidationRequestDto();

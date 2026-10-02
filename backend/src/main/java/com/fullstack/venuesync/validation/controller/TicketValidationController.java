@@ -21,6 +21,8 @@ import com.fullstack.venuesync.validation.domain.TicketValidationStatusEnum;
 import com.fullstack.venuesync.validation.mapper.TicketValidationMapper;
 import com.fullstack.venuesync.validation.service.TicketValidationService;
 
+import com.fullstack.venuesync.tickets.domain.TicketCodes;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -46,6 +48,13 @@ public class TicketValidationController {
     try {
       id = UUID.fromString(ticketValidationRequestDto.getId());
     } catch (IllegalArgumentException | NullPointerException e) {
+      // Not a UUID: at the door, a MANUAL entry may be the short ticket code, looked up within the scanner's event.
+      UUID eventId = ticketValidationRequestDto.getEventId();
+      Optional<String> code = TicketCodes.normalize(ticketValidationRequestDto.getId());
+      if (TicketValidationMethod.MANUAL.equals(method) && eventId != null && code.isPresent()) {
+        return ResponseEntity.ok(ticketValidationMapper.toTicketValidationResponseDto(
+            ticketValidationService.validateTicketByCode(code.get(), parseUserId(jwt), idempotencyKey, eventId)));
+      }
       // Invalid UUID format - return INVALID response
       TicketValidationResponseDto invalidResponse = new TicketValidationResponseDto();
       invalidResponse.setStatus(TicketValidationStatusEnum.INVALID);

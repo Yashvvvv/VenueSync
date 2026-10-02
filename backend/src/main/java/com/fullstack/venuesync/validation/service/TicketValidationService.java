@@ -30,4 +30,12 @@ public interface TicketValidationService {
    * @return a TicketValidation entity with the validation result (VALID, INVALID, EXPIRED, or ALREADY_USED)
    */
   TicketValidation validateTicketManually(UUID ticketId, UUID userId, @Nullable UUID idempotencyKey, @Nullable UUID eventId);
+
+  /**
+   * Validates a ticket by its short code (see TicketCodes) within the scanner's event. No match, or more than one,
+   * is INVALID: the door never guesses.
+   *
+   * @param codePrefix the normalized code (8 lower-case hex characters)
+   */
+  TicketValidation validateTicketByCode(String codePrefix, UUID userId, @Nullable UUID idempotencyKey, UUID eventId);
 }
