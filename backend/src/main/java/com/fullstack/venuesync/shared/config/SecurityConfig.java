@@ -50,8 +50,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/events/**").hasRole("ORGANIZER")
                 .requestMatchers("/api/v1/events/*/ticket-types/**").hasRole("ORGANIZER")
 
-                // ── STAFF: validate QR codes ────────────────────────────────
-                .requestMatchers("/api/v1/ticket-validations/**").hasRole("STAFF")
+                // Validating needs no role: being staff (or organizer) of the ticket's event IS the
+                // permission, checked per scan in TicketValidationServiceImpl. There's no global staff role.
 
                 // ── Everything else requires a valid token ──────────────────
                 .anyRequest().authenticated())

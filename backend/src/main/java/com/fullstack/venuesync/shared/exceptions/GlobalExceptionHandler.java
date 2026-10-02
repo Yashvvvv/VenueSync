@@ -21,6 +21,7 @@ import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
 import com.fullstack.venuesync.tickets.exception.TicketNotFoundException;
+import com.fullstack.venuesync.staff.exception.NotEventStaffException;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
 import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
 import com.fullstack.venuesync.validation.exception.QrCodeGenerationException;
@@ -74,6 +75,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(EventUpdateException.class)
   public ResponseEntity<ErrorDto> handleEventUpdateException(EventUpdateException ex) {
     return respond(HttpStatus.BAD_REQUEST, "EVENT_UPDATE_INVALID", "Unable to update event", ex);
+  }
+
+  @ExceptionHandler(NotEventStaffException.class)
+  public ResponseEntity<ErrorDto> handleNotEventStaffException(NotEventStaffException ex) {
+    return respond(HttpStatus.FORBIDDEN, "NOT_EVENT_STAFF", "You are not door staff for this event", ex);
   }
 
   @ExceptionHandler(TicketTypeNotFoundException.class)
