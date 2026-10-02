@@ -1,26 +1,17 @@
 package com.fullstack.venuesync.events.exception;
 
+import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.exceptions.VenueSyncException;
+import lombok.Getter;
 
+/** Thrown when a purchase is attempted while the event's {@link SalesStatus} is not ON_SALE. */
+@Getter
 public class SalesPeriodException extends VenueSyncException {
 
-  public SalesPeriodException() {
-  }
+  private final SalesStatus salesStatus;
 
-  public SalesPeriodException(String message) {
-    super(message);
-  }
-
-  public SalesPeriodException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public SalesPeriodException(Throwable cause) {
-    super(cause);
-  }
-
-  public SalesPeriodException(String message, Throwable cause, boolean enableSuppression,
-      boolean writableStackTrace) {
-    super(message, cause, enableSuppression, writableStackTrace);
+  public SalesPeriodException(SalesStatus salesStatus) {
+    super(salesStatus == SalesStatus.UPCOMING ? "Ticket sales have not started yet" : "Ticket sales have ended");
+    this.salesStatus = salesStatus;
   }
 }

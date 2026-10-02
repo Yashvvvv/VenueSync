@@ -1,5 +1,7 @@
 package com.fullstack.venuesync.events.controller;
 
+import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import com.fullstack.venuesync.events.dto.ListPublishedEventResponseDto;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.mapper.EventMapper;
 import com.fullstack.venuesync.events.service.EventService;
+import com.fullstack.venuesync.tickets.service.TicketTypeService;
 
 @RestController
 @RequestMapping(path = "/api/v1/published-events")
@@ -24,6 +27,7 @@ public class PublishedEventController {
 
   private final EventService eventService;
   private final EventMapper eventMapper;
+  private final TicketTypeService ticketTypeService;
 
   @GetMapping
   public ResponseEntity<Page<ListPublishedEventResponseDto>> listPublishedEvents(
@@ -47,8 +51,13 @@ public class PublishedEventController {
       @PathVariable UUID eventId
   ) {
     return eventService.getPublishedEvent(eventId)
-        .map(eventMapper::toGetPublishedEventDetailsResponseDto)
-        .map(ResponseEntity::ok)
+        .map(event -> {
+          GetPublishedEventDetailsResponseDto dto = eventMapper.toGetPublishedEventDetailsResponseDto(event);
+          dto.setSalesStatus(event.salesStatusAt(LocalDateTime.now()));
+          Set<UUID> soldOut = ticketTypeService.soldOutTicketTypeIds(event);
+          dto.getTicketTypes().forEach(ticketType -> ticketType.setSoldOut(soldOut.contains(ticketType.getId())));
+          return ResponseEntity.ok(dto);
+        })
         .orElse(ResponseEntity.notFound().build());
   }
 }

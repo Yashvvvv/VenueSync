@@ -1,6 +1,7 @@
 package com.fullstack.venuesync.tickets.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,13 @@ import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 public interface TicketRepository extends JpaRepository<Ticket, UUID> {
 
   int countByTicketTypeId(UUID ticketTypeId);
+
+  Optional<Ticket> findByPurchaserIdAndIdempotencyKey(UUID purchaserId, UUID idempotencyKey);
+
+  /** Rows of [ticketTypeId, ticketsSold] for every ticket type of the event that has sold at least one. */
+  @Query("SELECT t.ticketType.id, COUNT(t) FROM Ticket t " +
+         "WHERE t.ticketType.event.id = :eventId GROUP BY t.ticketType.id")
+  List<Object[]> countSoldByTicketTypeForEvent(@Param("eventId") UUID eventId);
 
   Page<Ticket> findByPurchaserId(UUID purchaserId, Pageable pageable);
 

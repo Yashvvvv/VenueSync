@@ -14,7 +14,8 @@ import com.fullstack.venuesync.tickets.domain.TicketType;
 @Repository
 public interface TicketTypeRepository extends JpaRepository<TicketType, UUID> {
 
-  @Query("SELECT tt FROM TicketType tt WHERE tt.id = :id")
+  /** Scoped to the event so a ticket type can never be bought through another event's URL. */
+  @Query("SELECT tt FROM TicketType tt WHERE tt.id = :id AND tt.event.id = :eventId")
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  Optional<TicketType> findByIdWithLock(@Param("id") UUID id);
+  Optional<TicketType> findByIdAndEventIdWithLock(@Param("id") UUID id, @Param("eventId") UUID eventId);
 }

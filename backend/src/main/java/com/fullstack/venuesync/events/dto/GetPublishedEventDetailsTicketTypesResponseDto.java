@@ -14,4 +14,5 @@ public class GetPublishedEventDetailsTicketTypesResponseDto {
   private String name;
   private Double price;
   private String description;
+  private boolean soldOut;
 }

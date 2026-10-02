@@ -19,10 +19,13 @@ import lombok.NoArgsConstructor;
 public class GetTicketResponseDto {
   private UUID id;
   private TicketStatusEnum status;
+  private String ticketTypeName;
   private Double price;
   private String description;
+  private UUID eventId;
   private String eventName;
   private String eventVenue;
   private LocalDateTime eventStart;
   private LocalDateTime eventEnd;
+  private LocalDateTime purchasedAt;
 }

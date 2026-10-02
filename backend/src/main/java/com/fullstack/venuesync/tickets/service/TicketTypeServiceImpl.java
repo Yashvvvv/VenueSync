@@ -2,13 +2,16 @@ package com.fullstack.venuesync.tickets.service;
 
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import com.fullstack.venuesync.events.domain.Event;
+import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
@@ -16,6 +19,7 @@ import com.fullstack.venuesync.shared.exceptions.UserNotFoundException;
 import com.fullstack.venuesync.tickets.domain.Ticket;
 import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.domain.TicketType;
+import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
 import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
 import com.fullstack.venuesync.tickets.repository.TicketRepository;
@@ -24,7 +28,6 @@ import com.fullstack.venuesync.validation.service.QrCodeService;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TicketTypeServiceImpl implements TicketTypeService {
 
   private final UserRepository userRepository;
@@ -34,43 +37,35 @@ public class TicketTypeServiceImpl implements TicketTypeService {
 
   @Override
   @Transactional
-  public Ticket purchaseTicket(UUID userId, UUID ticketTypeId) {
+  public Ticket purchaseTicket(UUID userId, UUID eventId, UUID ticketTypeId, UUID idempotencyKey) {
+    // Row lock first: a concurrent retry with the same key blocks here until the first
+    // purchase commits, then finds its ticket below instead of creating a second one.
+    TicketType ticketType = ticketTypeRepository.findByIdAndEventIdWithLock(ticketTypeId, eventId)
+        .orElseThrow(() -> new TicketTypeNotFoundException(
+            String.format("Ticket type %s was not found in event %s", ticketTypeId, eventId)
+        ));
+
+    // Replay check BEFORE the sales and sold-out checks: retrying the purchase that took the
+    // last ticket must return that ticket, not "sold out".
+    Optional<Ticket> previous = ticketRepository.findByPurchaserIdAndIdempotencyKey(userId, idempotencyKey);
+    if (previous.isPresent()) {
+      if (!previous.get().getTicketType().getId().equals(ticketTypeId)) {
+        throw new IdempotencyKeyReusedException();
+      }
+      return previous.get();
+    }
+
     User user = userRepository.findById(Objects.requireNonNull(userId)).orElseThrow(() -> new UserNotFoundException(
         String.format("User with ID %s was not found", userId)
     ));
 
-    TicketType ticketType = ticketTypeRepository.findByIdWithLock(ticketTypeId)
-        .orElseThrow(() -> new TicketTypeNotFoundException(
-            String.format("Ticket type with ID %s was not found", ticketTypeId)
-        ));
-
-    // Validate sales period - use system local time to match wall clock times
-    // Event times are stored as "wall clock" times without timezone info
-    Event event = ticketType.getEvent();
-    LocalDateTime now = LocalDateTime.now();
-
-    log.info("Sales validation - Now: {}, SalesStart: {}, SalesEnd: {}, EventEnd: {}", 
-             now, event.getSalesStart(), event.getSalesEnd(), event.getEnd());
-
-    if (event.getSalesStart() != null && now.isBefore(event.getSalesStart())) {
-      log.warn("Sales not started - Now {} is before SalesStart {}", now, event.getSalesStart());
-      throw new SalesPeriodException("Ticket sales have not started yet");
+    // Wall-clock "now" in app.timezone, the zone every event time is stored in (ADR-003, India-only).
+    SalesStatus salesStatus = ticketType.getEvent().salesStatusAt(LocalDateTime.now());
+    if (salesStatus != SalesStatus.ON_SALE) {
+      throw new SalesPeriodException(salesStatus);
     }
 
-    if (event.getSalesEnd() != null && now.isAfter(event.getSalesEnd())) {
-      throw new SalesPeriodException("Ticket sales have ended");
-    }
-
-    // Also check if event has already ended
-    if (event.getEnd() != null && now.isAfter(event.getEnd())) {
-      throw new SalesPeriodException("This event has already ended");
-    }
-
-    int purchasedTickets = ticketRepository.countByTicketTypeId(ticketType.getId());
-    Integer totalAvailable = ticketType.getTotalAvailable();
-
-    // If totalAvailable is null, it means unlimited tickets
-    if(totalAvailable != null && purchasedTickets + 1 > totalAvailable) {
+    if (ticketType.isSoldOut(ticketRepository.countByTicketTypeId(ticketType.getId()))) {
       throw new TicketsSoldOutException();
     }
 
@@ -78,10 +73,22 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     ticket.setStatus(TicketStatusEnum.PURCHASED);
     ticket.setTicketType(ticketType);
     ticket.setPurchaser(user);
+    ticket.setIdempotencyKey(idempotencyKey);
 
     Ticket savedTicket = ticketRepository.save(ticket);
     qrCodeService.generateQrCode(savedTicket);
 
     return ticketRepository.save(savedTicket);
+  }
+
+  @Override
+  @Transactional
+  public Set<UUID> soldOutTicketTypeIds(Event event) {
+    Map<UUID, Long> sold = ticketRepository.countSoldByTicketTypeForEvent(event.getId()).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+    return event.getTicketTypes().stream()
+        .filter(ticketType -> ticketType.isSoldOut(sold.getOrDefault(ticketType.getId(), 0L)))
+        .map(TicketType::getId)
+        .collect(Collectors.toSet());
   }
 }

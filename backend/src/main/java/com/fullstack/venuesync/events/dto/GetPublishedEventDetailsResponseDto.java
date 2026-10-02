@@ -1,5 +1,6 @@
 package com.fullstack.venuesync.events.dto;
 
+import com.fullstack.venuesync.events.domain.SalesStatus;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,5 +19,9 @@ public class GetPublishedEventDetailsResponseDto {
   private LocalDateTime start;
   private LocalDateTime end;
   private String venue;
+  private LocalDateTime salesStart;
+  private LocalDateTime salesEnd;
+  /** Server-computed so clients never judge the sales window with their own clock. */
+  private SalesStatus salesStatus;
   private List<GetPublishedEventDetailsTicketTypesResponseDto> ticketTypes = new ArrayList<>();
 }

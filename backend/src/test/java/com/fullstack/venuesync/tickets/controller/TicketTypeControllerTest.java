@@ -6,6 +6,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -35,6 +37,13 @@ import jakarta.servlet.ServletResponse;
 import com.fullstack.venuesync.tickets.domain.Ticket;
 import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.service.TicketTypeService;
+import com.fullstack.venuesync.events.domain.SalesStatus;
+import com.fullstack.venuesync.events.exception.SalesPeriodException;
+import com.fullstack.venuesync.tickets.dto.GetTicketResponseDto;
+import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.tickets.exception.TicketsSoldOutException;
+import com.fullstack.venuesync.tickets.mapper.TicketMapper;
+import org.springframework.test.web.servlet.ResultActions;
 
 @WebMvcTest(TicketTypeController.class)
 @Import({SecurityConfig.class, JwtAuthenticationConverter.class, GlobalExceptionHandler.class})
@@ -45,6 +54,9 @@ class TicketTypeControllerTest {
 
   @MockitoBean
   private TicketTypeService ticketTypeService;
+
+  @MockitoBean
+  private TicketMapper ticketMapper;
 
   @MockitoBean
   private JwtDecoder jwtDecoder;
@@ -83,21 +95,87 @@ class TicketTypeControllerTest {
         .build();
   }
 
+  private ResultActions purchaseAsAttendee(String idempotencyKey) throws Exception {
+    var request = post("/api/v1/events/{eventId}/ticket-types/{ticketTypeId}/tickets", eventId, ticketTypeId)
+        .with(jwt().jwt(createAttendeeJwt()).authorities(new SimpleGrantedAuthority("ROLE_ATTENDEE")));
+    if (idempotencyKey != null) {
+      request.header("Idempotency-Key", idempotencyKey);
+    }
+    return mockMvc.perform(request);
+  }
+
   @Test
-  @DisplayName("should purchase ticket with ATTENDEE role")
+  @DisplayName("should create the ticket and return 201 with Location and body")
   void shouldPurchaseTicketWithAttendeeRole() throws Exception {
+    UUID key = UUID.randomUUID();
     Ticket ticket = new Ticket();
     ticket.setId(UUID.randomUUID());
     ticket.setStatus(TicketStatusEnum.PURCHASED);
+    GetTicketResponseDto dto = new GetTicketResponseDto();
+    dto.setId(ticket.getId());
+    dto.setTicketTypeName("General");
 
-    when(ticketTypeService.purchaseTicket(any(UUID.class), eq(ticketTypeId)))
+    when(ticketTypeService.purchaseTicket(any(UUID.class), eq(eventId), eq(ticketTypeId), eq(key)))
         .thenReturn(ticket);
+    when(ticketMapper.toGetTicketResponseDto(ticket)).thenReturn(dto);
 
-    mockMvc.perform(post("/api/v1/events/{eventId}/ticket-types/{ticketTypeId}/tickets",
-            eventId, ticketTypeId)
-            .with(jwt().jwt(createAttendeeJwt()).authorities(
-                new SimpleGrantedAuthority("ROLE_ATTENDEE"))))
-        .andExpect(status().isNoContent());
+    purchaseAsAttendee(key.toString())
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", "/api/v1/tickets/" + ticket.getId()))
+        .andExpect(jsonPath("$.id").value(ticket.getId().toString()))
+        .andExpect(jsonPath("$.ticketTypeName").value("General"));
+  }
+
+  @Test
+  @DisplayName("should reject a purchase without an Idempotency-Key with 400, not 500")
+  void shouldRejectMissingIdempotencyKey() throws Exception {
+    purchaseAsAttendee(null)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
+  @DisplayName("should reject a malformed Idempotency-Key with 400, not 500")
+  void shouldRejectMalformedIdempotencyKey() throws Exception {
+    purchaseAsAttendee("not-a-uuid")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
+  @DisplayName("should answer sold out with 409 TICKETS_SOLD_OUT")
+  void shouldMapSoldOut() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any(), any(), any())).thenThrow(new TicketsSoldOutException());
+
+    purchaseAsAttendee(UUID.randomUUID().toString())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TICKETS_SOLD_OUT"));
+  }
+
+  @Test
+  @DisplayName("should answer a closed sales window with 409 and the matching code")
+  void shouldMapSalesPeriod() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any(), any(), any()))
+        .thenThrow(new SalesPeriodException(SalesStatus.UPCOMING))
+        .thenThrow(new SalesPeriodException(SalesStatus.ENDED));
+
+    purchaseAsAttendee(UUID.randomUUID().toString())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SALES_NOT_STARTED"));
+    purchaseAsAttendee(UUID.randomUUID().toString())
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SALES_ENDED"));
+  }
+
+  @Test
+  @DisplayName("should answer a ticket type outside this event with 404")
+  void shouldMapTicketTypeNotFound() throws Exception {
+    when(ticketTypeService.purchaseTicket(any(), any(), any(), any()))
+        .thenThrow(new TicketTypeNotFoundException("not in event"));
+
+    purchaseAsAttendee(UUID.randomUUID().toString())
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("TICKET_TYPE_NOT_FOUND"));
   }
 
   @Test

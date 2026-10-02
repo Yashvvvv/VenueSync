@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <!-- Shared run config. Auth0 settings come from backend/.env (imported by application.properties),
+       so no environment variables are configured here. Start the database first: docker-compose up -d db -->
+  <configuration default="false" name="VenueSync Backend" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.fullstack.venuesync.VenueSyncApplication" />
+    <module name="venuesync" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

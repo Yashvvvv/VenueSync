@@ -11,6 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import java.time.LocalDateTime;
+import java.util.Set;
+import com.fullstack.venuesync.events.dto.GetPublishedEventDetailsTicketTypesResponseDto;
+import com.fullstack.venuesync.tickets.service.TicketTypeService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +57,9 @@ class PublishedEventControllerTest {
 
   @MockitoBean
   private EventMapper eventMapper;
+
+  @MockitoBean
+  private TicketTypeService ticketTypeService;
 
   @MockitoBean
   private JwtDecoder jwtDecoder;
@@ -115,15 +123,35 @@ class PublishedEventControllerTest {
   }
 
   @Test
-  @DisplayName("should get published event details")
+  @DisplayName("should get published event details with sales status and sold-out flags")
   void shouldGetPublishedEventDetails() throws Exception {
+    event.setSalesStart(LocalDateTime.now().minusDays(1));
+    UUID soldOutId = UUID.randomUUID();
+    UUID availableId = UUID.randomUUID();
+    GetPublishedEventDetailsTicketTypesResponseDto soldOut = new GetPublishedEventDetailsTicketTypesResponseDto();
+    soldOut.setId(soldOutId);
+    GetPublishedEventDetailsTicketTypesResponseDto available = new GetPublishedEventDetailsTicketTypesResponseDto();
+    available.setId(availableId);
     GetPublishedEventDetailsResponseDto dto = new GetPublishedEventDetailsResponseDto();
+    dto.setTicketTypes(new ArrayList<>(List.of(soldOut, available)));
 
     when(eventService.getPublishedEvent(eventId)).thenReturn(Optional.of(event));
     when(eventMapper.toGetPublishedEventDetailsResponseDto(any(Event.class))).thenReturn(dto);
+    when(ticketTypeService.soldOutTicketTypeIds(event)).thenReturn(Set.of(soldOutId));
 
     mockMvc.perform(get("/api/v1/published-events/{eventId}", eventId))
-        .andExpect(status().isOk());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.salesStatus").value("ON_SALE"))
+        .andExpect(jsonPath("$.ticketTypes[0].soldOut").value(true))
+        .andExpect(jsonPath("$.ticketTypes[1].soldOut").value(false));
+  }
+
+  @Test
+  @DisplayName("should answer a non-UUID event id with 400 INVALID_REQUEST, not 500")
+  void shouldRejectMalformedEventId() throws Exception {
+    mockMvc.perform(get("/api/v1/published-events/{eventId}", "not-a-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
   }
 
   @Test

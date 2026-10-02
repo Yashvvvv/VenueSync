@@ -1,23 +1,25 @@
 package com.fullstack.venuesync.tickets.service;
 
+import java.util.Set;
 import java.util.UUID;
-
+import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.tickets.domain.Ticket;
 
 public interface TicketTypeService {
 
   /**
-   * Purchases a ticket for a user with pessimistic locking to prevent overselling.
-   * Validates the sales period, checks ticket availability, creates the ticket,
-   * and generates an associated QR code.
+   * Purchases one ticket, idempotently: the same user, key and ticket type always yield the same
+   * ticket, so a client may safely retry after a timeout or dropped connection.
    *
-   * @param userId the UUID of the purchasing user
-   * @param ticketTypeId the UUID of the ticket type to purchase
-   * @return the newly created Ticket entity
-   * @throws com.fullstack.venuesync.shared.exceptions.UserNotFoundException if the user is not found
-   * @throws com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException if the ticket type is not found
-   * @throws com.fullstack.venuesync.events.exception.SalesPeriodException if sales haven't started, have ended, or the event has ended
-   * @throws com.fullstack.venuesync.tickets.exception.TicketsSoldOutException if no tickets are available
+   * @param idempotencyKey client-generated, one per purchase attempt
+   * @return the new ticket, or the one previously created with this key
+   * @throws com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException if the ticket type doesn't exist in this event
+   * @throws com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException if the key was used for another ticket type
+   * @throws com.fullstack.venuesync.events.exception.SalesPeriodException if the event isn't on sale
+   * @throws com.fullstack.venuesync.tickets.exception.TicketsSoldOutException if no tickets are left
    */
-  Ticket purchaseTicket(UUID userId, UUID ticketTypeId);
+  Ticket purchaseTicket(UUID userId, UUID eventId, UUID ticketTypeId, UUID idempotencyKey);
+
+  /** Ids of the event's ticket types that have no tickets left. */
+  Set<UUID> soldOutTicketTypeIds(Event event);
 }

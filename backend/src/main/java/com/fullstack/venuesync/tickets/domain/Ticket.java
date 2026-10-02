@@ -16,6 +16,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,9 @@ import com.fullstack.venuesync.validation.domain.TicketValidation;
 import com.fullstack.venuesync.validation.domain.QrCode;
 
 @Entity
-@Table(name = "tickets")
+// Postgres treats NULLs as distinct, so tickets created before idempotency keys existed don't collide.
+@Table(name = "tickets", uniqueConstraints = @UniqueConstraint(
+    name = "uk_tickets_purchaser_idempotency_key", columnNames = {"purchaser_id", "idempotency_key"}))
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
@@ -60,6 +63,10 @@ public class Ticket {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "purchaser_id")
   private User purchaser;
+
+  /** Client-generated per purchase attempt; a retry with the same key returns this ticket instead of a new one. */
+  @Column(name = "idempotency_key")
+  private UUID idempotencyKey;
 
   @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL)
   @Builder.Default
