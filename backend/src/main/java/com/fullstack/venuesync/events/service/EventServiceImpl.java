@@ -24,6 +24,7 @@ import com.fullstack.venuesync.events.repository.EventRepository;
 import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.shared.exceptions.UserNotFoundException;
+import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
@@ -34,6 +35,7 @@ public class EventServiceImpl implements EventService {
 
   private final UserRepository userRepository;
   private final EventRepository eventRepository;
+  private final StaffInviteRepository staffInviteRepository;
 
   @Override
   @Transactional
@@ -158,7 +160,13 @@ public class EventServiceImpl implements EventService {
   @Override
   @Transactional
   public void deleteEventForOrganizer(UUID organizerId, UUID id) {
-    getEventForOrganizer(organizerId, id).ifPresent(eventRepository::delete);
+    getEventForOrganizer(organizerId, id).ifPresent(event -> {
+      // Door staff links (user_staffing_events, owned by User) and staff invites point at the event but are not in
+      // its cascade, so the database refused the delete (500) once an event had staff. Clear them first.
+      staffInviteRepository.deleteByEventId(event.getId());
+      event.getStaff().forEach(user -> user.getStaffingEvents().removeIf(e -> e.getId().equals(event.getId())));
+      eventRepository.delete(event);
+    });
   }
 
   @Override
