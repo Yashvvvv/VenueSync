@@ -14,4 +14,7 @@ import lombok.NoArgsConstructor;
 public class TicketValidationResponseDto {
   private UUID ticketId;
   private TicketValidationStatusEnum status;
+  /** What staff just let in (or which event the ticket is for). Null when INVALID. */
+  private String eventName;
+  private String ticketTypeName;
 }

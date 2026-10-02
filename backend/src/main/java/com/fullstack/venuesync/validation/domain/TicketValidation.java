@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -29,7 +30,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.fullstack.venuesync.tickets.domain.Ticket;
 
 @Entity
-@Table(name = "ticket_validations")
+// The key makes a retried scan return the first answer. Postgres allows many NULLs under a unique
+// constraint, so scanners that send no key (the web dashboard) are unaffected.
+@Table(name = "ticket_validations", uniqueConstraints = @UniqueConstraint(
+    name = "uk_ticket_validations_idempotency_key", columnNames = "idempotency_key"))
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
@@ -54,6 +58,9 @@ public class TicketValidation {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "ticket_id")
   private Ticket ticket;
+
+  @Column(name = "idempotency_key")
+  private UUID idempotencyKey;
 
   @CreatedDate
   @Column(name = "created_at", updatable = false, nullable = false)

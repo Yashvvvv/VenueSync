@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 import com.fullstack.venuesync.validation.domain.QrCode;
@@ -29,31 +31,75 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   private final TicketRepository ticketRepository;
 
   @Override
-  public TicketValidation validateTicketByQrCode(UUID qrCodeId) {
-    Optional<QrCode> qrCodeOpt = qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE);
-    
-    // If QR code not found or inactive, return INVALID status
-    if (qrCodeOpt.isEmpty()) {
-      TicketValidation invalidValidation = new TicketValidation();
-      invalidValidation.setValidationMethod(TicketValidationMethod.QR_SCAN);
-      invalidValidation.setStatus(TicketValidationStatusEnum.INVALID);
-      return ticketValidationRepository.save(invalidValidation);
-    }
+  public TicketValidation validateTicketByQrCode(UUID qrCodeId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
+    return replayOrRecord(idempotencyKey, () -> {
+      Optional<QrCode> qrCodeOpt = qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE);
 
-    Ticket ticket = qrCodeOpt.get().getTicket();
-    return validateTicket(ticket, TicketValidationMethod.QR_SCAN);
+      // If QR code not found or inactive, return INVALID status
+      if (qrCodeOpt.isEmpty()) {
+        return invalid(TicketValidationMethod.QR_SCAN);
+      }
+      return validateTicket(qrCodeOpt.get().getTicket(), TicketValidationMethod.QR_SCAN, eventId);
+    });
   }
 
-  private TicketValidation validateTicket(Ticket ticket,
-                                          TicketValidationMethod ticketValidationMethod) {
+  @Override
+  public TicketValidation validateTicketManually(UUID ticketId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
+    return replayOrRecord(idempotencyKey, () -> {
+      Optional<Ticket> ticketOpt = ticketRepository.findById(Objects.requireNonNull(ticketId));
+
+      // If ticket not found, return INVALID status
+      if (ticketOpt.isEmpty()) {
+        return invalid(TicketValidationMethod.MANUAL);
+      }
+      return validateTicket(ticketOpt.get(), TicketValidationMethod.MANUAL, eventId);
+    });
+  }
+
+  /**
+   * A scan whose response was lost (venue Wi-Fi) is retried with the same key and must get the FIRST answer:
+   * re-running it would say ALREADY_USED about the ticket this very scan just admitted. A key identifies one
+   * scan; reusing it for a different scan is a client bug and gets the first scan's answer.
+   */
+  private TicketValidation replayOrRecord(@Nullable UUID idempotencyKey, Supplier<TicketValidation> validation) {
+    if (idempotencyKey != null) {
+      Optional<TicketValidation> previous = ticketValidationRepository.findByIdempotencyKey(idempotencyKey);
+      if (previous.isPresent()) {
+        return previous.get();
+      }
+    }
+    TicketValidation result = validation.get();
+    if (TicketValidationStatusEnum.WRONG_EVENT.equals(result.getStatus())) {
+      return result; // response-only status, never stored (see TicketValidationStatusEnum)
+    }
+    result.setIdempotencyKey(idempotencyKey);
+    return ticketValidationRepository.save(result);
+  }
+
+  private TicketValidation invalid(TicketValidationMethod method) {
+    TicketValidation invalidValidation = new TicketValidation();
+    invalidValidation.setValidationMethod(method);
+    invalidValidation.setStatus(TicketValidationStatusEnum.INVALID);
+    return invalidValidation;
+  }
+
+  /** Decides the outcome (admitting the ticket if VALID); the caller stores the validation. */
+  private TicketValidation validateTicket(
+      Ticket ticket, TicketValidationMethod ticketValidationMethod, @Nullable UUID eventId) {
     TicketValidation ticketValidation = new TicketValidation();
     ticketValidation.setTicket(ticket);
     ticketValidation.setValidationMethod(ticketValidationMethod);
 
+    // First, before anything can change the ticket: a scan at another event's door must not use it up.
+    if (eventId != null && !eventId.equals(ticket.getTicketType().getEvent().getId())) {
+      ticketValidation.setStatus(TicketValidationStatusEnum.WRONG_EVENT);
+      return ticketValidation;
+    }
+
     // Check if ticket is already expired
     if (TicketStatusEnum.EXPIRED.equals(ticket.getStatus())) {
       ticketValidation.setStatus(TicketValidationStatusEnum.EXPIRED);
-      return ticketValidationRepository.save(ticketValidation);
+      return ticketValidation;
     }
 
     // Check if the event has already ended
@@ -63,45 +109,22 @@ public class TicketValidationServiceImpl implements TicketValidationService {
       // Also mark the ticket as expired
       ticket.setStatus(TicketStatusEnum.EXPIRED);
       ticketRepository.save(ticket);
-      return ticketValidationRepository.save(ticketValidation);
+      return ticketValidation;
     }
 
-    // Check if ticket was already used (has a valid validation or status is USED)
-    if (TicketStatusEnum.USED.equals(ticket.getStatus())) {
-      ticketValidation.setStatus(TicketValidationStatusEnum.ALREADY_USED);
-      return ticketValidationRepository.save(ticketValidation);
+    // A cancelled (refunded) ticket must never get in.
+    if (TicketStatusEnum.CANCELLED.equals(ticket.getStatus())) {
+      ticketValidation.setStatus(TicketValidationStatusEnum.INVALID);
+      return ticketValidation;
     }
 
-    // Check if ticket was already used (has a valid validation)
-    TicketValidationStatusEnum ticketValidationStatus = ticket.getValidations().stream()
-        .filter(v -> TicketValidationStatusEnum.VALID.equals(v.getStatus()))
-        .findFirst()
-        .map(v -> TicketValidationStatusEnum.ALREADY_USED)
-        .orElse(TicketValidationStatusEnum.VALID);
-
-    ticketValidation.setStatus(ticketValidationStatus);
-
-    // If this is a valid scan (first successful validation), mark the ticket as USED
-    if (TicketValidationStatusEnum.VALID.equals(ticketValidationStatus)) {
-      ticket.setStatus(TicketStatusEnum.USED);
-      ticketRepository.save(ticket);
-    }
-
-    return ticketValidationRepository.save(ticketValidation);
-  }
-
-  @Override
-  public TicketValidation validateTicketManually(UUID ticketId) {
-    Optional<Ticket> ticketOpt = ticketRepository.findById(Objects.requireNonNull(ticketId));
-    
-    // If ticket not found, return INVALID status
-    if (ticketOpt.isEmpty()) {
-      TicketValidation invalidValidation = new TicketValidation();
-      invalidValidation.setValidationMethod(TicketValidationMethod.MANUAL);
-      invalidValidation.setStatus(TicketValidationStatusEnum.INVALID);
-      return ticketValidationRepository.save(invalidValidation);
-    }
-    
-    return validateTicket(ticketOpt.get(), TicketValidationMethod.MANUAL);
+    // The status column is the single source of truth, and check-and-set is one atomic UPDATE:
+    // of two simultaneous scans of one ticket, only one can be VALID.
+    boolean admitted = ticketRepository.markUsed(
+        ticket.getId(), TicketStatusEnum.PURCHASED, TicketStatusEnum.USED, LocalDateTime.now()) == 1;
+    ticketValidation.setStatus(admitted
+        ? TicketValidationStatusEnum.VALID
+        : TicketValidationStatusEnum.ALREADY_USED);
+    return ticketValidation;
   }
 }
