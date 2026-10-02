@@ -1,6 +1,7 @@
 package com.venuesync.app.core.model
 
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -56,6 +57,18 @@ class EventMappersTest {
     fun `duplicate ticket ids are collapsed so list keys stay unique`() {
         val types = detail(ticketTypes = listOf(ticket(id = "a"), ticket(id = "a"))).toDomainOrNull()!!.ticketTypes
         assertEquals(1, types.size)
+    }
+
+    @Test
+    fun `server times keep the event's wall clock, with or without an offset`() {
+        val wallClock = LocalDateTime.of(2026, 10, 5, 19, 0)
+        assertEquals(wallClock, "2026-10-05T19:00:00+05:30".toLocalDateTimeOrNull()) // never converted to device zone
+        assertEquals(wallClock, "2026-10-05T19:00:00Z".toLocalDateTimeOrNull())
+        assertEquals(wallClock, "2026-10-05T19:00:00".toLocalDateTimeOrNull()) // servers before the offset change
+        assertEquals(
+            LocalDateTime.of(2026, 9, 30, 9, 0, 26, 996_534_000),
+            "2026-09-30T09:00:26.996534+05:30".toLocalDateTimeOrNull(), // fractional seconds, as seed data sends
+        )
     }
 
     @Test

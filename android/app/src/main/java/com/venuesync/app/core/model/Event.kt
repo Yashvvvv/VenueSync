@@ -2,6 +2,7 @@ package com.venuesync.app.core.model
 
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 /**
  * Domain model — what the UI and ViewModel see. Never a wire DTO: the backend's field
@@ -70,5 +71,12 @@ internal fun PublishedTicketTypeDto.toDomainOrNull(): TicketType? {
     )
 }
 
-private fun String.toLocalDateTimeOrNull(): LocalDateTime? =
-    runCatching { LocalDateTime.parse(this) }.getOrNull()
+/**
+ * Server times are wall-clock times in the event's zone, sent with that zone's offset
+ * ("2026-10-05T19:00:00+05:30", ADR-003). Keep the wall clock exactly as the organizer entered it —
+ * never convert to the device's zone. Servers before that change sent no offset; both parse.
+ */
+internal fun String.toLocalDateTimeOrNull(): LocalDateTime? =
+    runCatching { OffsetDateTime.parse(this).toLocalDateTime() }
+        .recoverCatching { LocalDateTime.parse(this) }
+        .getOrNull()
