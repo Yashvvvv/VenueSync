@@ -3,6 +3,8 @@ package com.venuesync.app.core.network
 import com.venuesync.app.core.model.ListTicketDto
 import com.venuesync.app.core.model.PageResponse
 import com.venuesync.app.core.model.TicketDto
+import com.venuesync.app.core.model.ValidationRequestDto
+import com.venuesync.app.core.model.ValidationResponseDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.timeout
@@ -11,7 +13,9 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.contentType
 
 /* Thin endpoint wrapper — mechanical HTTP only, no error mapping (that's repository work). */
 class TicketsApi(private val client: HttpClient) {
@@ -39,4 +43,14 @@ class TicketsApi(private val client: HttpClient) {
      */
     suspend fun getQrCode(ticketId: String): ByteArray =
         client.get("tickets/$ticketId/qr-codes") { accept(ContentType.Image.PNG) }.body()
+
+    /** Staff only. Keyed, so the client retries it safely and the server replays the first answer. */
+    suspend fun validate(request: ValidationRequestDto, idempotencyKey: String): ValidationResponseDto =
+        client.post("ticket-validations") {
+            header(IDEMPOTENCY_KEY_HEADER, idempotencyKey)
+            contentType(ContentType.Application.Json)
+            setBody(request)
+            // Someone is waiting at the door: fail fast into Try again (same key) rather than spin for 30s.
+            timeout { requestTimeoutMillis = 15_000 }
+        }.body()
 }

@@ -13,6 +13,9 @@ import com.venuesync.app.ui.events.EventDetailViewModel
 import com.venuesync.app.ui.events.EventListScreen
 import com.venuesync.app.ui.login.LoginScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
+import com.venuesync.app.ui.scanner.ScanEventPickerScreen
+import com.venuesync.app.ui.scanner.ScannerScreen
+import com.venuesync.app.ui.scanner.ScannerViewModel
 import com.venuesync.app.ui.tickets.MyTicketsScreen
 import com.venuesync.app.ui.tickets.TicketDetailScreen
 import com.venuesync.app.ui.tickets.TicketDetailViewModel
@@ -27,11 +30,14 @@ object Routes {
     const val EVENT_DETAIL = "events/{${EventDetailViewModel.EVENT_ID_ARG}}"
     const val PURCHASE_RESULT = "purchase-result/{${TicketDetailViewModel.TICKET_ID_ARG}}"
     const val MY_TICKETS = "my-tickets"
+    const val SCAN_EVENTS = "scan"
+    const val SCANNER = "scan/{${ScannerViewModel.EVENT_ID_ARG}}"
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
     fun ticketDetail(ticketId: String) = "tickets/$ticketId"
+    fun scanner(eventId: String) = "scan/$eventId"
 }
 
 @Composable
@@ -43,6 +49,7 @@ fun VenueSyncNavHost() {
                 onEventClick = { eventId -> navController.navigateOnce(entry, Routes.eventDetail(eventId)) },
                 onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
                 onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
+                onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
             )
         }
         composable(Routes.EVENT_DETAIL) {
@@ -61,6 +68,15 @@ fun VenueSyncNavHost() {
                 onTicketClick = { navController.navigateOnce(entry, Routes.ticketDetail(it)) },
                 onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
             )
+        }
+        composable(Routes.SCAN_EVENTS) { entry ->
+            ScanEventPickerScreen(
+                onBack = { navController.navigateUp() },
+                onEventClick = { navController.navigateOnce(entry, Routes.scanner(it)) },
+            )
+        }
+        composable(Routes.SCANNER) {
+            ScannerScreen(onBack = { navController.navigateUp() })
         }
         composable(Routes.TICKET_DETAIL) {
             TicketDetailScreen(onBack = { navController.navigateUp() })
