@@ -1,4 +1,6 @@
 export interface ErrorResponse {
+  /** Stable machine-readable code (e.g. INVITE_USED); `error` is display text. */
+  code?: string;
   error: string;
 }
 
@@ -205,4 +207,22 @@ export interface TicketValidationRequest {
 export interface TicketValidationResponse {
   ticketId: string;
   status: TicketValidationStatus;
+}
+
+/** A one-time code an organizer hands to one person to join their event's door staff. */
+export interface StaffInvite {
+  /** Displayed form, e.g. K7Q2M-9XH4P */
+  code: string;
+  expiresAt: string;
+}
+
+export interface EventStaffMember {
+  userId: string;
+  name?: string;
+  email?: string;
+}
+
+export interface AcceptStaffInviteResponse {
+  eventId: string;
+  eventName: string;
 }

@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { type EventSummary, EventStatusEnum, type SpringBootPagination } from "@/domain/domain"
 import { deleteEvent, listEvents, getEventCounts, type EventCounts } from "@/lib/api"
 import type { LucideIcon } from "lucide-react"
-import { AlertCircle, Calendar, Clock, Edit, MapPin, Plus, Tag, Trash2, MoreVertical, FileEdit, Globe, XCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, Calendar, Clock, Edit, MapPin, Plus, Tag, Trash2, MoreVertical, FileEdit, Globe, XCircle, CheckCircle2, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useAuth } from "react-oidc-context"
 import { Link } from "react-router"
@@ -304,6 +304,12 @@ const DashboardListEventsPage: React.FC = () => {
                                 Edit Event
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/dashboard/events/${event.id}/staff`} className="flex items-center gap-2">
+                                <Users className="w-4 h-4" />
+                                Door staff
+                              </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => {
@@ -364,6 +370,12 @@ const DashboardListEventsPage: React.FC = () => {
                           <Button variant="outline" size="sm" className="w-full glass border-border/50 bg-transparent">
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
+                          </Button>
+                        </Link>
+                        <Link to={`/dashboard/events/${event.id}/staff`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full glass border-border/50 bg-transparent">
+                            <Users className="w-4 h-4 mr-2" />
+                            Staff
                           </Button>
                         </Link>
                         <Button

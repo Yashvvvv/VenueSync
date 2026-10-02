@@ -1,11 +1,14 @@
 import {
+  AcceptStaffInviteResponse,
   CreateEventRequest,
   EventDetails,
+  EventStaffMember,
   EventSummary,
   isErrorResponse,
   PublishedEventDetails,
   PublishedEventSummary,
   SpringBootPagination,
+  StaffInvite,
   TicketDetails,
   TicketSummary,
   TicketValidationRequest,
@@ -434,3 +437,43 @@ export const validateTicket = async (
 
   return responseBody as Promise<TicketValidationResponse>;
 };
+
+/**
+ * Shared by the door-staff calls below: JSON in and out, the server's error text as the Error message,
+ * 204 as undefined.
+ */
+const send = async <T>(accessToken: string, path: string, init: RequestInit = {}): Promise<T> => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+    },
+  });
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new Error(isErrorResponse(body) ? body.error : "An unknown error occurred");
+  }
+  return body as T;
+};
+
+export const createStaffInvite = (accessToken: string, eventId: string) =>
+  send<StaffInvite>(accessToken, `/api/v1/events/${eventId}/staff-invites`, { method: "POST" });
+
+export const listEventStaff = (accessToken: string, eventId: string) =>
+  send<EventStaffMember[]>(accessToken, `/api/v1/events/${eventId}/staff`);
+
+export const removeEventStaff = (accessToken: string, eventId: string, userId: string) =>
+  send<void>(accessToken, `/api/v1/events/${eventId}/staff/${userId}`, { method: "DELETE" });
+
+export const acceptStaffInvite = (accessToken: string, code: string) =>
+  send<AcceptStaffInviteResponse>(accessToken, `/api/v1/staff-invites/${encodeURIComponent(code.trim())}/accept`, {
+    method: "POST",
+  });
+
+/** Events this user may scan: the ones they organize plus the ones they staff. */
+export const listMyStaffingEvents = (accessToken: string) =>
+  send<PublishedEventSummary[]>(accessToken, "/api/v1/users/me/staffing-events");
