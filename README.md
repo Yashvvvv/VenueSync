@@ -67,16 +67,16 @@ nothing in the app talks to it by default — see
 ### 2. Run the Backend
 
 Authentication is validated against Auth0, so `AUTH0_DOMAIN` and
-`AUTH0_AUDIENCE` must be real values even for local dev — Spring does not read
-`backend/.env` directly, so export them in your shell or IDE run config first
-(see `backend/.env.example`):
+`AUTH0_AUDIENCE` must be real values even for local dev. Put them in
+`backend/.env` (copy `backend/.env.example`) — the app imports that file when
+run locally, and real environment variables still take precedence:
 
 ```powershell
-$env:AUTH0_DOMAIN = "your-tenant.us.auth0.com"
-$env:AUTH0_AUDIENCE = "https://api.venuesync.app"
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
+
+In IntelliJ, use the shared **VenueSync Backend** run configuration (`backend/.run/`).
 
 (To instead run the backend itself in a container — e.g. to sanity-check the
 `prod` profile locally — copy `.env.example` to `.env` and run
@@ -89,6 +89,20 @@ cd frontend
 npm install
 npm run dev
 ```
+
+### Run the Android App Against the Local Backend
+
+Debug builds call `http://localhost:8080/api/v1`; release builds call the deployed API.
+With the backend running (step 2), connect a phone over USB (or start an emulator) and:
+
+```powershell
+adb reverse tcp:8080 tcp:8080   # the device's localhost:8080 now reaches this PC
+cd android
+.\gradlew.bat installDebug
+```
+
+`adb reverse` lasts until the device disconnects. To point a debug build somewhere else,
+set `venuesync.apiBaseUrl=...` in `android/local.properties`.
 
 ### 4. Run Tests
 

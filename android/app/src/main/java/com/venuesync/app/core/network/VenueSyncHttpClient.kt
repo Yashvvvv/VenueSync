@@ -96,7 +96,7 @@ object VenueSyncHttpClient {
         if (enableLogging) {
             install(Logging) {
                 // Logger.DEFAULT goes to SLF4J, which has no provider on Android: every line was silently
-                // dropped. ANDROID writes to Logcat (tag "HttpClient"). INFO = method, URL, status; no bodies.
+                // dropped. ANDROID writes to Logcat (tag "Ktor Client"). INFO = method, URL, status; no bodies.
                 logger = Logger.ANDROID
                 level = LogLevel.INFO
                 sanitizeHeader { it == HttpHeaders.Authorization }
