@@ -169,6 +169,7 @@ export interface TicketSummaryTicketType {
 
 export interface TicketSummary {
   id: string;
+  ticketCode?: string;
   status: TicketStatus;
   ticketType: TicketSummaryTicketType;
   eventName: string;
@@ -178,6 +179,8 @@ export interface TicketSummary {
 
 export interface TicketDetails {
   id: string;
+  /** Short code for manual check-in at the door, e.g. F5A3-038B. */
+  ticketCode?: string;
   status: TicketStatus;
   price: number;
   description: string;
