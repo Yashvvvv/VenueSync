@@ -3,6 +3,7 @@ import {
   CreateEventRequest,
   EventDetails,
   EventStaffMember,
+  Guest,
   EventSummary,
   isErrorResponse,
   PublishedEventDetails,
@@ -424,31 +425,39 @@ export const getTicketQr = async (
   }
 };
 
+/**
+ * Checks a ticket in at the door. One [idempotencyKey] per scan, and the SAME key when retrying that scan after an
+ * unknown outcome: the server then repeats its first answer instead of saying "already used" about the ticket this
+ * very scan admitted.
+ */
 export const validateTicket = async (
   accessToken: string,
   request: TicketValidationRequest,
+  idempotencyKey: string,
 ): Promise<TicketValidationResponse> => {
-  const response = await fetch(`${API_BASE}/api/v1/ticket-validations`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  });
-
-  const responseBody = await response.json();
-
-  if (!response.ok) {
-    if (isErrorResponse(responseBody)) {
-      throw new Error(responseBody.error);
-    } else {
-      console.error(JSON.stringify(responseBody));
-      throw new Error("An unknown error occurred");
-    }
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/v1/ticket-validations`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify(request),
+    });
+  } catch {
+    throw new ApiRequestError("No connection", 0);
   }
-
-  return responseBody as Promise<TicketValidationResponse>;
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new ApiRequestError(
+      isErrorResponse(body) ? body.error : "An unknown error occurred",
+      response.status,
+      isErrorResponse(body) ? body.code : undefined,
+    );
+  }
+  return body as TicketValidationResponse;
 };
 
 /**
@@ -490,3 +499,7 @@ export const acceptStaffInvite = (accessToken: string, code: string) =>
 /** Events this user may scan: the ones they organize plus the ones they staff. */
 export const listMyStaffingEvents = (accessToken: string) =>
   send<PublishedEventSummary[]>(accessToken, "/api/v1/users/me/staffing-events");
+
+/** The event's guests matching name, email or ticket code (staff/organizer; at least 2 characters, max 20). */
+export const searchGuests = (accessToken: string, eventId: string, query: string) =>
+  send<Guest[]>(accessToken, `/api/v1/staff/events/${eventId}/guests?q=${encodeURIComponent(query.trim())}`);

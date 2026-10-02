@@ -242,3 +242,13 @@ export interface AcceptStaffInviteResponse {
   eventId: string;
   eventName: string;
 }
+
+/** One row of the door guest list. The email arrives masked (ya***@gmail.com). */
+export interface Guest {
+  ticketId: string;
+  ticketCode: string;
+  attendeeName?: string;
+  attendeeEmail?: string;
+  ticketTypeName?: string;
+  status: TicketStatus;
+}
