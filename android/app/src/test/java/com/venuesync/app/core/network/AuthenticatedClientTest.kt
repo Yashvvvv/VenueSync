@@ -3,7 +3,7 @@ package com.venuesync.app.core.network
 import com.venuesync.app.core.auth.AuthApi
 import com.venuesync.app.core.auth.AuthTokens
 import com.venuesync.app.core.auth.SessionManager
-import com.venuesync.app.core.auth.TokenStore
+import com.venuesync.app.core.auth.FakeTokenStore
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -12,7 +12,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -21,14 +20,6 @@ import org.junit.Test
 
 /** The bearer rules on the real API client: who gets the token, and when it refreshes. */
 class AuthenticatedClientTest {
-
-    private class FakeTokenStore(initial: AuthTokens?) : TokenStore {
-        override val tokens = MutableStateFlow(initial)
-        override val forceLoginNext = MutableStateFlow(false)
-        override suspend fun save(tokens: AuthTokens) { this.tokens.value = tokens }
-        override suspend fun clear() { tokens.value = null }
-        override suspend fun setForceLoginNext(value: Boolean) { forceLoginNext.value = value }
-    }
 
     private val apiRequests = mutableListOf<HttpRequestData>()
     private var auth0Calls = 0
