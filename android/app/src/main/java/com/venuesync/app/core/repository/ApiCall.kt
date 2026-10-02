@@ -8,6 +8,8 @@ import io.ktor.client.plugins.ResponseException
 import io.ktor.serialization.ContentConvertException
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.SerializationException
 
 /**
@@ -17,7 +19,10 @@ import kotlinx.serialization.SerializationException
 internal suspend fun <T> apiCall(block: suspend () -> T): Result<T> = try {
     Result.success(block())
 } catch (e: CancellationException) {
-    throw e // never swallow coroutine cancellation
+    // Ours (screen closed, a newer search): stop, report nothing. Someone else's, handed over by a shared step (the
+    // auth token load): a failure the screen can show and retry, never a silent stop that leaves a spinner forever.
+    currentCoroutineContext().ensureActive()
+    Result.failure(ApiException(ApiError.Network))
 } catch (e: ApiException) {
     Result.failure(e) // already classified inside the block
 } catch (e: ResponseException) {
