@@ -13,9 +13,6 @@ const val ROLES_CLAIM = "https://venuesync.app/roles"
 /** Required by the backend to buy tickets and see your own. */
 const val ROLE_ATTENDEE = "ROLE_ATTENDEE"
 
-/** Required by the backend to validate tickets at the door. */
-const val ROLE_STAFF = "ROLE_STAFF"
-
 @Serializable
 data class AuthTokens(
     val accessToken: String,

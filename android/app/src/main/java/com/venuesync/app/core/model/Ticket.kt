@@ -8,6 +8,8 @@ enum class TicketStatus { Purchased, Used, Expired, Cancelled, Unknown }
 /** A ticket the user owns. Domain model: wire names and string timestamps stop at the repository. */
 data class Ticket(
     val id: String,
+    /** What door staff type when the QR code won't scan, e.g. F5A3-038B. */
+    val code: String,
     val status: TicketStatus,
     val ticketTypeName: String,
     /** Null when the server sent nothing usable; the UI then shows no price. */
@@ -31,6 +33,7 @@ internal fun TicketDto.toDomainOrNull(): Ticket? {
     val eventName = eventName?.takeIf { it.isNotBlank() } ?: return null
     return Ticket(
         id = id,
+        code = ticketCode?.takeIf { it.isNotBlank() } ?: ticketCodeOf(id),
         status = status.toTicketStatus(),
         ticketTypeName = ticketTypeName,
         price = price?.takeIf { it.isFinite() && it >= 0 }?.let { BigDecimal.valueOf(it) },
@@ -76,3 +79,25 @@ internal fun ListTicketDto.toDomainOrNull(): TicketSummary? {
         eventStart = eventStart?.toLocalDateTimeOrNull(),
     )
 }
+
+/**
+ * The server's rule (first 8 hex characters of the id, as XXXX-XXXX), used only when an older server sends no
+ * ticketCode, so the code is never blank.
+ */
+internal fun ticketCodeOf(ticketId: String): String {
+    val hex = ticketId.replace("-", "").take(8).uppercase()
+    return if (hex.length == 8) "${hex.take(4)}-${hex.drop(4)}" else hex
+}
+
+/**
+ * What staff typed, ready to send: a full ticket id as-is, or an 8-hex ticket code without its dash.
+ * Null when it can't be either, so nothing is sent.
+ */
+fun normalizeCheckInEntry(entry: String): String? {
+    val trimmed = entry.trim()
+    if (UuidPattern.matches(trimmed)) return trimmed
+    val hex = trimmed.replace("-", "").replace(" ", "")
+    return hex.takeIf { it.length == 8 && it.all { c -> c.isDigit() || c.lowercaseChar() in 'a'..'f' } }
+}
+
+private val UuidPattern = Regex("^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")

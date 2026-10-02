@@ -43,6 +43,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontFamily
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.core.model.Ticket
@@ -152,6 +155,22 @@ private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
                     }
                 }
             }
+        }
+        // The fallback when the QR code won't scan (cracked screen, glare) or won't even load: staff type this.
+        if (qr != QrState.Hidden) {
+            Text(
+                "Ticket code",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+            Text(
+                ticket.code,
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 3.sp,
+                modifier = Modifier.semantics { contentDescription = "Ticket code ${ticket.code.toList().joinToString(" ")}" },
+            )
         }
     }
 }

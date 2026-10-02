@@ -7,7 +7,11 @@ import com.venuesync.app.core.model.EventDetail
 import com.venuesync.app.core.model.SalesStatus
 import com.venuesync.app.core.model.ScanResult
 import com.venuesync.app.core.model.ScanStatus
+import com.venuesync.app.core.model.Guest
+import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.core.repository.EventsRepository
+import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.core.repository.StaffRepository
 import com.venuesync.app.core.repository.ValidationRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -29,9 +33,16 @@ class ScannerViewModelTest {
     /** Each validation waits on a deferred the test completes, so "checking" is a state the test can see. */
     private class FakeValidation : ValidationRepository {
         val calls = mutableListOf<Pair<String, String>>() // code to key
+        val manual = mutableListOf<Boolean>()
         var pending = CompletableDeferred<Result<ScanResult>>()
         override suspend fun validate(qrValue: String, eventId: String, idempotencyKey: String): Result<ScanResult> {
             calls += qrValue to idempotencyKey
+            manual += false
+            return pending.await().also { pending = CompletableDeferred() }
+        }
+        override suspend fun checkIn(entry: String, eventId: String, idempotencyKey: String): Result<ScanResult> {
+            calls += entry to idempotencyKey
+            manual += true
             return pending.await().also { pending = CompletableDeferred() }
         }
     }
@@ -42,9 +53,20 @@ class ScannerViewModelTest {
             Result.success(EventDetail(id, "Summer Vibes", null, null, null, emptyList(), SalesStatus.OnSale, null, null))
     }
 
+    private class FakeStaff : StaffRepository {
+        val queries = mutableListOf<String>()
+        override suspend fun staffingEvents() = error("not used")
+        override suspend fun acceptInvite(code: String) = error("not used")
+        override suspend fun searchGuests(eventId: String, query: String): Result<List<Guest>> {
+            queries += query
+            return Result.success(listOf(Guest("t-1", "F5A3-038B", "Yash", "ya***@gmail.com", "VIP", TicketStatus.Purchased)))
+        }
+    }
+
     private val validation = FakeValidation()
+    private val staff = FakeStaff()
     private val handle = SavedStateHandle(mapOf(ScannerViewModel.EVENT_ID_ARG to "e1"))
-    private fun vm(savedState: SavedStateHandle = handle) = ScannerViewModel(savedState, validation, FakeEvents())
+    private fun vm(savedState: SavedStateHandle = handle) = ScannerViewModel(savedState, validation, FakeEvents(), staff)
     private fun answer(status: ScanStatus) = validation.pending.complete(Result.success(ScanResult(status)))
     private fun fail(error: ApiError) = validation.pending.complete(Result.failure(ApiException(error)))
 
@@ -108,5 +130,35 @@ class ScannerViewModelTest {
         assertTrue(vm.state.value is ScanState.Error)
         vm.onScanned("code-1")
         assertTrue(validation.calls.isEmpty())
+    }
+
+    @Test
+    fun `a typed code checks in manually, and a restored one replays manually too`() = runTest {
+        vm().onCodeEntered("F5A3-038B") // in flight when the process dies
+        val restored = vm(SavedStateHandle(handle.keys().associateWith { handle.get<Any>(it) }))
+        restored.retry()
+        assertEquals(listOf(true, true), validation.manual)
+        assertEquals(validation.calls[0], validation.calls[1])
+    }
+
+    @Test
+    fun `checking in a guest sends their ticket id`() = runTest {
+        val vm = vm()
+        vm.checkIn(Guest("t-1", "F5A3-038B", "Yash", null, "VIP", TicketStatus.Purchased))
+        assertEquals("t-1" to validation.calls.single().second, validation.calls.single())
+        assertEquals(listOf(true), validation.manual)
+    }
+
+    @Test
+    fun `guest search waits for 2 characters and a pause in typing`() = runTest {
+        val vm = vm()
+        vm.searchGuests("y")
+        assertEquals(GuestSearch("y"), vm.guests.value)
+        vm.searchGuests("ya")
+        vm.searchGuests("yas")
+        vm.searchGuests("yash")
+        testScheduler.advanceUntilIdle()
+        assertEquals(listOf("yash"), staff.queries) // only the last keystroke reached the server
+        assertTrue(vm.guests.value.results is UiState.Success)
     }
 }
