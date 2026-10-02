@@ -312,33 +312,46 @@ export const getPublishedEvent = async (
   return responseBody as PublishedEventDetails;
 };
 
+/** An API failure with the server's stable `code` (when it sent one) and the HTTP status; status 0 = no response. */
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Buys one ticket. The CALLER owns [idempotencyKey]: it must send the same key again when retrying an attempt whose
+ * outcome is unknown (lost response, 5xx), so the server returns the same ticket instead of selling a second one.
+ */
 export const purchaseTicket = async (
   accessToken: string,
   eventId: string,
   ticketTypeId: string,
-): Promise<void> => {
-  const response = await fetch(
-    `${API_BASE}/api/v1/events/${eventId}/ticket-types/${ticketTypeId}/tickets`,
-    {
+  idempotencyKey: string,
+): Promise<TicketDetails> => {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/v1/events/${eventId}/ticket-types/${ticketTypeId}/tickets`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        // One key per purchase click: the server turns a repeated request into the same ticket.
-        "Idempotency-Key": crypto.randomUUID(),
-      },
-    },
-  );
-
-  if (!response.ok) {
-    const responseBody = await response.json();
-    if (isErrorResponse(responseBody)) {
-      throw new Error(responseBody.error);
-    } else {
-      console.error(JSON.stringify(responseBody));
-      throw new Error("An unknown error occurred");
-    }
+      headers: { Authorization: `Bearer ${accessToken}`, "Idempotency-Key": idempotencyKey },
+    });
+  } catch {
+    throw new ApiRequestError("No connection", 0);
   }
+  // A gateway error page isn't JSON; that must not turn into a confusing parse error.
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new ApiRequestError(
+      isErrorResponse(body) ? body.error : "An unknown error occurred",
+      response.status,
+      isErrorResponse(body) ? body.code : undefined,
+    );
+  }
+  return body as TicketDetails;
 };
 
 export const listTickets = async (

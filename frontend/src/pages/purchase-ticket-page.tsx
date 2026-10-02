@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
-import { getPublishedEvent, purchaseTicket } from "@/lib/api"
+import { ApiRequestError, getPublishedEvent, purchaseTicket } from "@/lib/api"
+import { availabilityLabel, availabilityOf } from "@/lib/availability"
 import { useCallback, useEffect, useState } from "react"
 import { useAuth } from "react-oidc-context"
 import { useParams, Link } from "react-router"
@@ -21,6 +22,48 @@ import { useAudience } from "@/hooks/use-audience"
 import { ArrowLeft, CheckCircle, Info, WarningCircle } from "@/components/icons"
 
 const money = (value: number) => `$${value.toFixed(2)}`
+
+/*
+ * The idempotency key of an attempt whose outcome is unknown. Kept in sessionStorage so it survives a reload of this
+ * tab: retrying with it returns the ticket that attempt may already have bought, never a second one (same rule as the
+ * Android app). Cleared once the server has answered definitely.
+ */
+const pendingKeyName = (eventId: string, ticketTypeId: string) => `venuesync:purchase:${eventId}:${ticketTypeId}`
+const storage = {
+  get: (name: string) => {
+    try {
+      return sessionStorage.getItem(name)
+    } catch {
+      return null
+    }
+  },
+  set: (name: string, value: string) => {
+    try {
+      sessionStorage.setItem(name, value)
+    } catch {
+      /* private mode: the key still lives for this attempt */
+    }
+  },
+  remove: (name: string) => {
+    try {
+      sessionStorage.removeItem(name)
+    } catch {
+      /* nothing to clean up */
+    }
+  },
+}
+
+/** The server refused before creating anything: the key is spent, and this is what to tell the buyer. */
+const refusal = (err: ApiRequestError): string | undefined => {
+  if (err.code === "TICKETS_SOLD_OUT") return "Sold out. Someone got the last one."
+  if (err.code === "SALES_NOT_STARTED") return "Tickets for this event aren't on sale yet."
+  if (err.code === "SALES_ENDED") return "Sales for this event have ended."
+  if (err.status === 401) return "Your session expired. Sign in again, then try once more."
+  if (err.status === 403) return "This account can't buy tickets."
+  if (err.status === 404) return "This ticket type is no longer available."
+  if (err.status === 409) return "This changed while you were looking. Check the event and try again."
+  return undefined
+}
 const EASE = [0.16, 1, 0.3, 1] as const
 
 const PurchaseTicketPage: React.FC = () => {
@@ -37,6 +80,10 @@ const PurchaseTicketPage: React.FC = () => {
   const [error, setError] = useState<string | undefined>()
   const [isPurchaseSuccess, setIsPurchaseSuccess] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [purchasedTicketId, setPurchasedTicketId] = useState<string>()
+  const keyName = eventId && ticketTypeId ? pendingKeyName(eventId, ticketTypeId) : undefined
+  // An earlier attempt in this tab never got an answer (lost connection, closed tab, reload).
+  const [isUnconfirmed, setIsUnconfirmed] = useState(() => Boolean(keyName && storage.get(keyName)))
 
   /* The old page asked people to confirm a purchase showing nothing but two
      ids in the URL. Loading the event means the summary can state the event,
@@ -85,22 +132,37 @@ const PurchaseTicketPage: React.FC = () => {
   }, [isPurchaseSuccess, reduce])
 
   const handlePurchase = async () => {
-    if (isAuthLoading || !user?.access_token || !eventId || !ticketTypeId) return
+    if (isProcessing || isAuthLoading || !user?.access_token || !eventId || !ticketTypeId || !keyName) return
 
+    // Reuse the key of an unconfirmed attempt: if that one went through, the server hands back the same ticket.
+    const key = storage.get(keyName) ?? crypto.randomUUID()
+    storage.set(keyName, key)
     setIsProcessing(true)
     setError(undefined)
     try {
-      await purchaseTicket(user.access_token, eventId, ticketTypeId)
+      const ticket = await purchaseTicket(user.access_token, eventId, ticketTypeId, key)
+      storage.remove(keyName)
+      setIsUnconfirmed(false)
+      setPurchasedTicketId(ticket?.id)
       setIsPurchaseSuccess(true)
     } catch (err) {
-      console.error("Purchase failed:", err)
-      setError(
-        err instanceof Error && err.message ? err.message : "The purchase did not go through.",
-      )
+      const refused = err instanceof ApiRequestError ? refusal(err) : undefined
+      if (refused) {
+        storage.remove(keyName) // nothing was created
+        setIsUnconfirmed(false)
+        setError(refused)
+        if (err instanceof ApiRequestError && (err.status === 404 || err.status === 409)) loadEvent() // show what changed
+      } else {
+        // No answer, a 5xx or anything unexpected: the ticket may exist. Keep the key for the retry.
+        setIsUnconfirmed(true)
+        setError("We couldn't confirm your ticket. Try again: you won't get a second ticket.")
+      }
     } finally {
       setIsProcessing(false)
     }
   }
+
+  const unavailable = event && tier ? availabilityLabel(availabilityOf(event, tier)) : undefined
 
   const start = event?.start ? parseWallClockDate(event.start) : undefined
 
@@ -130,8 +192,8 @@ const PurchaseTicketPage: React.FC = () => {
               </p>
 
               <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
-                <Link to="/dashboard/tickets" className="flex-1">
-                  <Button className="w-full">View my tickets</Button>
+                <Link to={purchasedTicketId ? `/dashboard/tickets/${purchasedTicketId}` : "/dashboard/tickets"} className="flex-1">
+                  <Button className="w-full">{purchasedTicketId ? "View my ticket" : "View my tickets"}</Button>
                 </Link>
                 <Link to={`/events/${eventId}`} className="flex-1">
                   <Button variant="outline" className="w-full">
@@ -231,6 +293,20 @@ const PurchaseTicketPage: React.FC = () => {
                 )}
               </div>
 
+              {unavailable && !error && (
+                <div role="status" className="mt-5 rounded-md border border-border bg-secondary p-4">
+                  <p className="text-sm text-foreground">{unavailable}. This ticket can't be bought right now.</p>
+                </div>
+              )}
+
+              {isUnconfirmed && !error && (
+                <div role="status" className="mt-5 rounded-md border border-border bg-secondary p-4">
+                  <p className="text-sm text-foreground">
+                    Your last attempt wasn't confirmed. Getting the ticket now finishes that attempt, so you won't get two.
+                  </p>
+                </div>
+              )}
+
               {error && (
                 <div
                   role="alert"
@@ -244,9 +320,9 @@ const PurchaseTicketPage: React.FC = () => {
                 size="lg"
                 className="mt-6 w-full"
                 onClick={handlePurchase}
-                disabled={isProcessing || isLoadingEvent || !!loadError || !tier}
+                disabled={isProcessing || isLoadingEvent || !!loadError || !tier || !!unavailable}
               >
-                {isProcessing ? "Issuing your ticket" : "Get my ticket"}
+                {isProcessing ? "Issuing your ticket" : isUnconfirmed ? "Try again" : "Get my ticket"}
               </Button>
             </motion.div>
           )}
