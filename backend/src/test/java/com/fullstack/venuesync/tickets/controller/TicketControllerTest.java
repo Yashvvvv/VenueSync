@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import com.fullstack.venuesync.tickets.dto.GetTicketResponseDto;
 import com.fullstack.venuesync.tickets.dto.ListTicketResponseDto;
 import com.fullstack.venuesync.tickets.mapper.TicketMapper;
 import com.fullstack.venuesync.tickets.service.TicketService;
+import com.fullstack.venuesync.validation.exception.QrCodeNotFoundException;
 import com.fullstack.venuesync.validation.service.QrCodeService;
 
 @WebMvcTest(TicketController.class)
@@ -199,6 +201,19 @@ class TicketControllerTest {
                   new SimpleGrantedAuthority("ROLE_ATTENDEE"))))
           .andExpect(status().isOk())
           .andExpect(content().contentType(MediaType.IMAGE_PNG));
+    }
+
+    @Test
+    @DisplayName("should return 404 when the ticket has no QR code the user may see")
+    void shouldReturn404WhenQrCodeNotFound() throws Exception {
+      when(qrCodeService.getQrCodeImageForUserAndTicket(any(UUID.class), eq(ticketId)))
+          .thenThrow(new QrCodeNotFoundException());
+
+      mockMvc.perform(get("/api/v1/tickets/{ticketId}/qr-codes", ticketId)
+              .with(jwt().jwt(createAttendeeJwt()).authorities(
+                  new SimpleGrantedAuthority("ROLE_ATTENDEE"))))
+          .andExpect(status().isNotFound())
+          .andExpect(jsonPath("$.code").value("QR_CODE_NOT_FOUND"));
     }
   }
 }

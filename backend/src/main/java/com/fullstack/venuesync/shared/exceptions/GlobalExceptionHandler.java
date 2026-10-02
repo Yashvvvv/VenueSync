@@ -63,7 +63,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(QrCodeNotFoundException.class)
   public ResponseEntity<ErrorDto> handleQrCodeNotFoundException(QrCodeNotFoundException ex) {
-    return respond(HttpStatus.INTERNAL_SERVER_ERROR, "QR_CODE_ERROR", "QR code not found", ex);
+    return respond(HttpStatus.NOT_FOUND, "QR_CODE_NOT_FOUND", "QR code not found", ex);
   }
 
   @ExceptionHandler(QrCodeGenerationException.class)

@@ -21,6 +21,7 @@ import com.fullstack.venuesync.tickets.domain.Ticket;
 import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.validation.domain.QrCode;
 import com.fullstack.venuesync.validation.domain.QrCodeStatusEnum;
+import com.fullstack.venuesync.validation.exception.QrCodeGenerationException;
 import com.fullstack.venuesync.validation.exception.QrCodeNotFoundException;
 import com.fullstack.venuesync.validation.repository.QrCodeRepository;
 import com.google.zxing.WriterException;
@@ -123,8 +124,8 @@ class QrCodeServiceImplTest {
     }
 
     @Test
-    @DisplayName("should throw QrCodeNotFoundException when base64 is invalid")
-    void shouldThrowQrCodeNotFoundWhenBase64Invalid() {
+    @DisplayName("should throw QrCodeGenerationException (500, our bug) when stored base64 is corrupt")
+    void shouldThrowQrCodeGenerationWhenBase64Invalid() {
       QrCode qrCode = new QrCode();
       qrCode.setId(UUID.randomUUID());
       qrCode.setValue("not-valid-base64!!!");
@@ -133,7 +134,7 @@ class QrCodeServiceImplTest {
       when(qrCodeRepository.findByTicketIdAndTicketPurchaserId(ticketId, userId))
           .thenReturn(Optional.of(qrCode));
 
-      assertThrows(QrCodeNotFoundException.class,
+      assertThrows(QrCodeGenerationException.class,
           () -> qrCodeService.getQrCodeImageForUserAndTicket(userId, ticketId));
     }
   }
