@@ -4,6 +4,7 @@ import android.util.Log
 import com.venuesync.app.BuildConfig
 import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.network.EventsApi
+import com.venuesync.app.core.network.TicketsApi
 import com.venuesync.app.core.network.VenueSyncHttpClient
 import dagger.Module
 import dagger.Provides
@@ -63,4 +64,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideEventsApi(client: HttpClient): EventsApi = EventsApi(client)
+
+    @Provides
+    @Singleton
+    fun provideTicketsApi(client: HttpClient): TicketsApi = TicketsApi(client)
 }
