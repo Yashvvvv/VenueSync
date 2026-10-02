@@ -21,6 +21,8 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.Url
 import io.ktor.serialization.kotlinx.json.json
 import java.io.IOException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 /** Server-side dedupe: a request carrying this header can be repeated without doing the work twice. */
@@ -96,8 +98,17 @@ object VenueSyncHttpClient {
             install(Auth) {
                 bearer {
                     // Ktor never sees the refresh token; SessionManager owns it.
-                    loadTokens { session.currentTokens()?.let { BearerTokens(it.accessToken, null) } }
-                    refreshTokens { session.refresh(oldTokens?.accessToken)?.let { BearerTokens(it.accessToken, null) } }
+                    // NonCancellable: Ktor runs ONE load/refresh for all concurrent requests and hands the starter's
+                    // cancellation to every waiter, so a cancelled search (each keystroke cancels the last) killed the
+                    // next one too. Finishing it serves the others, and a refresh is never cut off after Auth0 has
+                    // already rotated the refresh token (which would lose the new one and end the session).
+                    loadTokens {
+                        withContext(NonCancellable) { session.currentTokens() }?.let { BearerTokens(it.accessToken, null) }
+                    }
+                    refreshTokens {
+                        val rejected = oldTokens?.accessToken
+                        withContext(NonCancellable) { session.refresh(rejected) }?.let { BearerTokens(it.accessToken, null) }
+                    }
                     sendWithoutRequest { true } // SingleOriginGuard guarantees every request is to our API
                 }
             }
