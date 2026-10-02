@@ -11,6 +11,7 @@ import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.EventDetail
 import com.venuesync.app.core.model.SalesStatus
 import com.venuesync.app.core.model.Ticket
+import com.venuesync.app.core.model.TicketFilter
 import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.core.model.TicketType
 import com.venuesync.app.core.repository.EventsRepository
@@ -52,6 +53,9 @@ class EventDetailPurchaseTest {
 
     /** Each purchase waits on a deferred the test completes, so "in flight" is a state the test can see. */
     private class Tickets : TicketsRepository {
+        override suspend fun listTickets(filter: TicketFilter, page: Int) = error("not used")
+        override suspend fun getTicket(id: String) = error("not used")
+        override suspend fun getQrCode(ticketId: String) = error("not used")
         val keys = mutableListOf<String>()
         var pending = CompletableDeferred<Result<Ticket>>()
         override suspend fun purchase(eventId: String, ticketTypeId: String, idempotencyKey: String): Result<Ticket> {
