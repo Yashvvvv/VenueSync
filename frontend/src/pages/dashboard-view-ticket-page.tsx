@@ -62,6 +62,10 @@ const DashboardViewTicketPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>()
+  // Separate from `error`: at the door the ticket and its code must stay on screen even when a refresh or the
+  // QR image fails on bad signal.
+  const [refreshFailed, setRefreshFailed] = useState(false)
+  const [qrFailed, setQrFailed] = useState(false)
 
   const { id } = useParams()
   const { isLoading: isAuthLoading, user } = useAuth()
@@ -77,25 +81,41 @@ const DashboardViewTicketPage: React.FC = () => {
     }
     
     try {
-      const [ticketData, qrBlob] = await Promise.all([
-        getTicket(user.access_token, id),
-        getTicketQr(user.access_token, id),
-      ])
+      const ticketData = await getTicket(user.access_token, id)
       setTicket(ticketData)
-      setQrCodeUrl(URL.createObjectURL(qrBlob))
       setLastUpdated(new Date())
+      setRefreshFailed(false)
       setError(undefined)
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message)
+      if (showLoading) {
+        setError(err instanceof Error ? err.message : "An unknown error has occurred")
       } else {
-        setError("An unknown error has occurred")
+        setRefreshFailed(true) // keep showing the last good ticket and code
       }
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [user?.access_token, id])
+
+  /* The QR image never changes for a ticket, so it is fetched once, not on every refresh. Not at all for a ticket that
+     can no longer get in. A failure only affects the code box, never the rest of the ticket. */
+  const fetchQr = useCallback(async () => {
+    if (!user?.access_token || !id) return
+    setQrFailed(false)
+    try {
+      setQrCodeUrl(URL.createObjectURL(await getTicketQr(user.access_token, id)))
+    } catch {
+      setQrFailed(true)
+    }
+  }, [user?.access_token, id])
+
+  const ticketStatus = ticket?.status
+  useEffect(() => {
+    if (!ticketStatus || qrCodeUrl || qrFailed) return
+    if (ticketStatus === TicketStatus.EXPIRED || ticketStatus === TicketStatus.CANCELLED) return
+    fetchQr()
+  }, [ticketStatus, qrCodeUrl, qrFailed, fetchQr])
 
   // Initial fetch
   useEffect(() => {
@@ -246,6 +266,13 @@ const DashboardViewTicketPage: React.FC = () => {
                           alt="Ticket QR Code"
                           className="w-40 h-40 object-contain"
                         />
+                      ) : qrFailed ? (
+                        <div className="w-40 h-40 flex flex-col items-center justify-center gap-2 text-center">
+                          <p className="text-xs text-neutral-700">Couldn't load the code.</p>
+                          <Button size="sm" variant="outline" onClick={fetchQr}>
+                            Retry
+                          </Button>
+                        </div>
                       ) : (
                         <div className="w-40 h-40 flex items-center justify-center">
                           <QrCode className="w-16 h-16 text-muted-foreground" />
@@ -257,6 +284,11 @@ const DashboardViewTicketPage: React.FC = () => {
                   <p className={`text-center text-sm mb-6 ${isInactive ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
                     {status.description}
                   </p>
+                  {refreshFailed && (
+                    <p role="status" className="-mt-4 mb-6 text-center text-xs text-muted-foreground">
+                      Couldn't refresh. Showing your ticket as last loaded.
+                    </p>
+                  )}
 
                   {/* Divider with dashed line */}
                   <div className="relative my-6">
