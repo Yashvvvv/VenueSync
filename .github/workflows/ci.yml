@@ -81,6 +81,41 @@ jobs:
           path: frontend/dist
           retention-days: 7
 
+  # ─── Android Unit Tests ─────────────────────────────────────────
+  android:
+    name: Android Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # JDK 21, as on the dev machine; AGP 8.7 needs 17+. The runner image ships the Android SDK.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # JVM unit tests only (no emulator): repositories, ViewModels, the HTTP client, theme contrast.
+      # No local.properties here, so debug builds against the default localhost API URL; tests never call it.
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: android/app/build/reports/tests/
+          retention-days: 7
+
   # ─── Docker Build (on main only) ───────────────────────────────
   docker:
     name: Docker Build
