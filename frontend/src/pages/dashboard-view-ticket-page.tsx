@@ -5,7 +5,7 @@ import type React from "react"
 import { type TicketDetails, TicketStatus } from "@/domain/domain"
 import { getTicket, getTicketQr } from "@/lib/api"
 import { format } from "date-fns"
-import { Calendar, MapPin, Tag, DollarSign, ArrowLeft, Download, QrCode, CheckCircle, Clock, XCircle, Ticket, RefreshCw } from "lucide-react"
+import { Calendar, MapPin, Tag, DollarSign, ArrowLeft, QrCode, CheckCircle, Clock, XCircle, Ticket, RefreshCw } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "react-oidc-context"
 import { useParams, useNavigate } from "react-router"
@@ -16,7 +16,7 @@ import { motion } from "framer-motion"
 import { Skeleton } from "@/components/common/loading-skeleton"
 import { parseWallClockDate } from "@/lib/date-utils"
 
-const AUTO_REFRESH_INTERVAL = 10000 // 10 seconds
+const AUTO_REFRESH_INTERVAL = 15_000 // while the page is visible and the ticket is still valid
 
 const statusConfig: Record<TicketStatus, { label: string; className: string; icon: React.ReactNode; description: string }> = {
   [TicketStatus.PURCHASED]: {
@@ -123,19 +123,35 @@ const DashboardViewTicketPage: React.FC = () => {
     fetchTicketData(true)
   }, [user?.access_token, isAuthLoading, id, fetchTicketData])
 
-  // Auto-refresh every 10 seconds for active tickets
+  /* Keeps a ticket that is still valid in step with the door: when staff scan it, this page flips to "Used". Only while
+     the page is actually on screen, and only for a ticket that can still change that way. It used to poll every 10 s in
+     background tabs too, and for used tickets: 360 requests an hour per open tab, which also kept the free server awake.
+     Coming back to the tab refreshes once straight away. */
   useEffect(() => {
-    if (!ticket || ticket.status === TicketStatus.EXPIRED || ticket.status === TicketStatus.CANCELLED) {
-      return
+    if (ticketStatus !== TicketStatus.PURCHASED) return
+    let intervalId: ReturnType<typeof setInterval> | undefined
+    const start = () => {
+      if (intervalId === undefined) intervalId = setInterval(() => fetchTicketData(false), AUTO_REFRESH_INTERVAL)
     }
-
-    const intervalId = setInterval(() => {
-      fetchTicketData(false)
-    }, AUTO_REFRESH_INTERVAL)
-
-    return () => clearInterval(intervalId)
-  }, [ticket, fetchTicketData])
-
+    const stop = () => {
+      clearInterval(intervalId)
+      intervalId = undefined
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchTicketData(false)
+        start()
+      } else {
+        stop()
+      }
+    }
+    if (document.visibilityState === "visible") start()
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [ticketStatus, fetchTicketData])
   // Cleanup QR code URL on unmount
   useEffect(() => {
     return () => {
@@ -216,8 +232,8 @@ const DashboardViewTicketPage: React.FC = () => {
               {/* Main Ticket */}
               <div className={`relative rounded-3xl p-1 ${isInactive ? 'bg-muted/50' : 'gradient-primary'}`}>
                 {/* Cutouts that sit on top of the gradient border */}
-                <div className="absolute left-0 top-1/2 w-5 h-10 -ml-2 rounded-r-full z-10" style={{ backgroundColor: 'hsl(var(--background))' }} />
-                <div className="absolute right-0 top-1/2 w-5 h-10 -mr-2 rounded-l-full z-10" style={{ backgroundColor: 'hsl(var(--background))' }} />
+                <div className="absolute left-0 top-1/2 w-5 h-10 -ml-2 rounded-r-full z-10" style={{ backgroundColor: 'var(--background)' }} />
+                <div className="absolute right-0 top-1/2 w-5 h-10 -mr-2 rounded-l-full z-10" style={{ backgroundColor: 'var(--background)' }} />
                 
                 <div className="bg-background/95 backdrop-blur-xl rounded-[22px] p-6 relative">
                   {/* Status Badge */}
@@ -313,7 +329,7 @@ const DashboardViewTicketPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Price Paid</p>
-                        <p className="font-medium text-foreground">${ticket.price}</p>
+                        <p className="font-mono font-medium tabular-nums text-foreground">${ticket.price.toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -328,19 +344,6 @@ const DashboardViewTicketPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Download Button */}
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 glass border-border/50 h-12 bg-transparent"
-                  onClick={() => {
-                    // Could implement PDF download here
-                  }}
-                >
-                  <Download className="w-4 h-4" />
-                  Download Ticket
-                </Button>
-              </div>
             </div>
           </motion.div>
         </div>

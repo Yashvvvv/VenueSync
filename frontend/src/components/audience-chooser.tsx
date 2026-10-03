@@ -16,7 +16,7 @@ const PALETTE = {
   hype: {
     bg: "oklch(0.045 0 0)",
     panel: "oklch(0.085 0 0)",
-    line: "oklch(0.45 0 0)",
+    line: "oklch(0.5 0 0)",
     ink: "oklch(0.98 0 0)",
     muted: "oklch(0.72 0 0)",
     accent: "oklch(0.86 0.21 128)",
