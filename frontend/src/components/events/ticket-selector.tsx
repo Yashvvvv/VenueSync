@@ -2,7 +2,9 @@
 
 import type React from "react"
 
-import type { PublishedEventTicketTypeDetails } from "@/domain/domain"
+import type { PublishedEventDetails, PublishedEventTicketTypeDetails } from "@/domain/domain"
+import { availabilityLabel, availabilityOf } from "@/lib/availability"
+import { useAuth } from "react-oidc-context"
 import { motion, useReducedMotion } from "framer-motion"
 import { ArrowRight, Check, Info } from "@/components/icons"
 import { Button } from "../ui/button"
@@ -10,6 +12,8 @@ import { Link } from "react-router"
 import { useRoles } from "@/hooks/use-roles"
 
 interface TicketSelectorProps {
+  /** For the sales window: whether the tickets can be bought at all right now. */
+  event: Pick<PublishedEventDetails, "salesStatus" | "salesStart">
   ticketTypes: PublishedEventTicketTypeDetails[]
   selectedTicketType: PublishedEventTicketTypeDetails | undefined
   onSelect: (ticketType: PublishedEventTicketTypeDetails) => void
@@ -19,12 +23,14 @@ interface TicketSelectorProps {
 const money = (value: number) => `$${value.toFixed(2)}`
 
 export const TicketSelector: React.FC<TicketSelectorProps> = ({
+  event,
   ticketTypes,
   selectedTicketType,
   onSelect,
   eventId,
 }) => {
-  const { isLoading: isRolesLoading, isOrganizer, isAttendee, isStaff } = useRoles()
+  const { isAuthenticated } = useAuth()
+  const { isLoading: isRolesLoading, isOrganizer, isAttendee } = useRoles()
   const reduce = useReducedMotion()
 
   if (isRolesLoading) return null
@@ -40,20 +46,25 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
       <div role="radiogroup" aria-label="Ticket type" className="mt-4 space-y-2">
         {ticketTypes.map((ticketType, index) => {
           const isSelected = selectedTicketType?.id === ticketType.id
+          const unavailable = availabilityLabel(availabilityOf(event, ticketType))
 
           return (
             <motion.button
               key={ticketType.id}
               role="radio"
               aria-checked={isSelected}
+              aria-disabled={unavailable ? true : undefined}
+              disabled={!!unavailable}
               initial={reduce ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.06, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               onClick={() => onSelect(ticketType)}
               className={`focus-ring w-full rounded-md border p-4 text-left transition-colors duration-150 ${
-                isSelected
-                  ? "border-primary bg-primary/[0.07]"
-                  : "border-border hover:border-foreground/30"
+                unavailable
+                  ? "cursor-not-allowed border-border opacity-60"
+                  : isSelected
+                    ? "border-primary bg-primary/[0.07]"
+                    : "border-border hover:border-foreground/30"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -76,6 +87,11 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
                   {ticketType.description && (
                     <p className="mt-1.5 pl-6 text-xs leading-relaxed text-muted-foreground">
                       {ticketType.description}
+                    </p>
+                  )}
+                  {unavailable && (
+                    <p className="mt-1.5 pl-6 font-mono text-xs uppercase tracking-[0.08em] text-foreground">
+                      {unavailable}
                     </p>
                   )}
                 </div>
@@ -114,10 +130,11 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
             That is the total. Nothing gets added at checkout.
           </p>
 
-          {isAttendee && (
+          {/* Signed out: the purchase route sends them through login and back here, so this is never a dead end. */}
+          {(isAttendee || !isAuthenticated) && (
             <Link to={`/events/${eventId}/purchase/${selectedTicketType.id}`} className="mt-5 block">
               <Button size="lg" className="w-full gap-2">
-                Get tickets
+                {isAuthenticated ? "Get tickets" : "Sign in to get tickets"}
                 <ArrowRight weight="bold" size={16} />
               </Button>
             </Link>
@@ -132,14 +149,6 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
             </div>
           )}
 
-          {isStaff && !isAttendee && (
-            <div className="mt-5 flex items-start gap-2.5 rounded-md border border-primary/25 bg-primary/[0.06] p-3">
-              <Info weight="fill" size={15} className="mt-0.5 shrink-0 text-primary" />
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Staff accounts scan tickets from the validation page rather than buying here.
-              </p>
-            </div>
-          )}
         </motion.div>
       )}
     </div>

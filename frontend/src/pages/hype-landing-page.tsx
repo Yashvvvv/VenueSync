@@ -146,7 +146,11 @@ const HypeLandingPage: React.FC = () => {
      half-typed in the box. Paging and the empty state both need this. */
   const [activeQuery, setActiveQuery] = useState("")
 
+  // Only the newest request may update the feed: a slow older one (or an in-flight "load more" from before a new
+  // search) arriving last must not overwrite it.
+  const latestLoad = useRef(0)
   const load = useCallback(async (term: string, pageNum: number, append: boolean) => {
+    const loadId = ++latestLoad.current
     if (append) setIsLoadingMore(true)
     else setIsLoading(true)
     setError(null)
@@ -154,16 +158,19 @@ const HypeLandingPage: React.FC = () => {
       const res = term
         ? await searchPublishedEvents(term, pageNum, PAGE_SIZE)
         : await listPublishedEvents(pageNum, PAGE_SIZE)
+      if (loadId !== latestLoad.current) return
       setEvents((prev) => (append ? [...prev, ...res.content] : res.content))
       setPage(res.number)
       setIsLast(res.last)
       setActiveQuery(term)
     } catch (err) {
+      if (loadId !== latestLoad.current) return
       console.error("Failed to load events:", err)
       setError("Could not reach the events service.")
     } finally {
+      // A superseded request still clears its own spinner flag, or "load more" could stay stuck on.
       if (append) setIsLoadingMore(false)
-      else setIsLoading(false)
+      else if (loadId === latestLoad.current) setIsLoading(false)
     }
   }, [])
 

@@ -4,10 +4,12 @@ import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router"
 import { Scanner } from "@yudiel/react-qr-scanner"
 import {
+  Guest,
+  TicketStatus,
   TicketValidationMethod,
   TicketValidationResponse,
   TicketValidationStatus,
@@ -16,7 +18,7 @@ import { useStaffingEvents } from "@/hooks/use-staffing-events"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircle, Check, X, QrCode, Keyboard, RotateCcw, ScanLine, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { validateTicket } from "@/lib/api"
+import { ApiRequestError, searchGuests, validateTicket } from "@/lib/api"
 import { useAuth } from "react-oidc-context"
 import Navbar from "@/components/layout/navbar"
 import PageContainer from "@/components/layout/page-container"
@@ -33,6 +35,15 @@ const DashboardValidateQrPage: React.FC = () => {
     TicketValidationStatus | undefined
   >()
   const [result, setResult] = useState<TicketValidationResponse>()
+  // A check whose answer never arrived: Try again resends it with the SAME key, so the server repeats its first answer.
+  const [unconfirmed, setUnconfirmed] = useState<{ id: string; method: TicketValidationMethod; key: string }>()
+  const [lastMethod, setLastMethod] = useState<TicketValidationMethod>()
+  // Synchronous: the camera can report the same code twice in one frame, before any state has re-rendered.
+  const checking = useRef(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [guestQuery, setGuestQuery] = useState("")
+  const [guests, setGuests] = useState<Guest[]>()
+  const [isSearchingGuests, setIsSearchingGuests] = useState(false)
   const { events, isLoading: isEventsLoading, error: eventsError } = useStaffingEvents()
   const [params] = useSearchParams()
   const [eventId, setEventId] = useState<string>()
@@ -50,7 +61,35 @@ const DashboardValidateQrPage: React.FC = () => {
     setError(undefined)
     setValidationStatus(undefined)
     setResult(undefined)
+    setUnconfirmed(undefined)
+    setGuestQuery("")
+    setGuests(undefined)
   }
+
+  // Guest list: search after a pause in typing; only the newest search may fill the list.
+  useEffect(() => {
+    const q = guestQuery.trim()
+    if (!user?.access_token || !eventId || q.length < 2) {
+      setGuests(undefined)
+      return
+    }
+    let current = true
+    const timer = setTimeout(async () => {
+      setIsSearchingGuests(true)
+      try {
+        const found = await searchGuests(user.access_token, eventId, q)
+        if (current) setGuests(found)
+      } catch (err) {
+        if (current) handleError(err)
+      } finally {
+        if (current) setIsSearchingGuests(false)
+      }
+    }, 300)
+    return () => {
+      current = false
+      clearTimeout(timer)
+    }
+  }, [guestQuery, eventId, user?.access_token])
 
   const handleError = (err: unknown) => {
     if (err instanceof Error) {
@@ -62,17 +101,23 @@ const DashboardValidateQrPage: React.FC = () => {
     }
   }
 
-  const handleValidate = async (id: string, method: TicketValidationMethod) => {
-    if (!user?.access_token || !eventId) {
+  /** One check at a time; [retryKey] repeats an unconfirmed check, anything else is a new scan with a new key. */
+  const handleValidate = async (id: string, method: TicketValidationMethod, retryKey?: string) => {
+    if (!user?.access_token || !eventId || checking.current) {
       return
     }
+    checking.current = true
+    setIsChecking(true)
+    const key = retryKey ?? crypto.randomUUID()
     try {
       setError(undefined)
       const response = await validateTicket(user.access_token, {
         id: id.trim(),
         method,
         eventId,
-      })
+      }, key)
+      setUnconfirmed(undefined)
+      setLastMethod(method)
       setValidationStatus(response.status)
       setResult(response)
       
@@ -88,7 +133,18 @@ const DashboardValidateQrPage: React.FC = () => {
         toast.error(response.eventName ? `This ticket is for ${response.eventName}` : "Ticket is for another event")
       }
     } catch (err) {
-      handleError(err)
+      const answered = err instanceof ApiRequestError && err.status >= 400 && err.status < 500
+      if (answered) {
+        setUnconfirmed(undefined) // refused (not staff, signed out): retrying the same check won't change it
+        handleError(err)
+      } else {
+        // No answer or a server error: the ticket may already be admitted. Keep the key so Try again can't say "used".
+        setUnconfirmed({ id, method, key })
+        setError("Couldn't confirm this check. Try again before letting them in.")
+      }
+    } finally {
+      checking.current = false
+      setIsChecking(false)
     }
   }
 
@@ -172,10 +228,13 @@ const DashboardValidateQrPage: React.FC = () => {
           >
             {/* Scanner Viewport */}
             <div className="rounded-2xl overflow-hidden mb-6 relative bg-black/50 aspect-square">
+              {/* No remount per scan (that re-read the code still in front of the camera and sent a second check,
+                  whose "already used" could replace the first one's "valid"). The camera pauses while a check runs
+                  or a result shows; Reset Scanner resumes it. */}
               <Scanner
-                key={`scanner-${data}-${validationStatus}`}
+                paused={isChecking || !!validationStatus || !!unconfirmed}
                 onScan={(result) => {
-                  if (result) {
+                  if (result && !checking.current && !validationStatus) {
                     const qrCodeId = result[0].rawValue
                     setData(qrCodeId)
                     handleValidate(qrCodeId, TicketValidationMethod.QR_SCAN)
@@ -266,6 +325,11 @@ const DashboardValidateQrPage: React.FC = () => {
                     {validationStatus === TicketValidationStatus.VALID && result?.ticketTypeName && (
                       <p className="mt-1 font-mono text-sm text-muted-foreground">1 × {result.ticketTypeName}</p>
                     )}
+                    {validationStatus === TicketValidationStatus.INVALID && lastMethod === TicketValidationMethod.MANUAL && (
+                      <p className="mt-1 max-w-xs px-4 text-center text-sm text-muted-foreground">
+                        No ticket with this code for this event, or it was cancelled. Check the code and the event.
+                      </p>
+                    )}
                     {validationStatus === TicketValidationStatus.WRONG_EVENT && (
                       <p className="mt-1 text-sm text-muted-foreground">
                         {result?.eventName ? `This ticket is for ${result.eventName}` : "This ticket is for another event"}
@@ -306,11 +370,55 @@ const DashboardValidateQrPage: React.FC = () => {
                     onClick={() =>
                       handleValidate(data || "", TicketValidationMethod.MANUAL)
                     }
-                    disabled={!data}
+                    disabled={!data || isChecking}
                   >
                     <QrCode className="w-5 h-5 mr-2" />
                     Validate Ticket
                   </Button>
+
+                  {/* Guest list: when the QR won't scan and they don't know their code, find them by name. */}
+                  <div className="pt-2">
+                    <Input
+                      className="w-full bg-secondary border-border text-foreground h-12"
+                      placeholder="Guest list: name, email or ticket code"
+                      aria-label="Search the guest list"
+                      value={guestQuery}
+                      onChange={(e) => setGuestQuery(e.target.value)}
+                    />
+                    {isSearchingGuests && <p className="mt-2 text-xs text-muted-foreground">Searching…</p>}
+                    {guests && guests.length === 0 && !isSearchingGuests && (
+                      <p className="mt-2 text-xs text-muted-foreground">No guest matches.</p>
+                    )}
+                    {guests && guests.length > 0 && (
+                      <ul className="mt-2 divide-y divide-border rounded-md border border-border">
+                        {guests.map((guest) => (
+                          <li key={guest.ticketId} className="flex items-center justify-between gap-3 px-3 py-2">
+                            <div className="min-w-0 text-left">
+                              <p className="truncate text-sm font-medium text-foreground">{guest.attendeeName ?? "No name"}</p>
+                              <p className="truncate font-mono text-xs text-muted-foreground">
+                                {[guest.ticketTypeName, guest.ticketCode].filter(Boolean).join(" · ")}
+                                {guest.status !== TicketStatus.PURCHASED ? ` · ${guest.status.toLowerCase()}` : ""}
+                              </p>
+                              {guest.attendeeEmail && (
+                                <p className="truncate text-xs text-muted-foreground">{guest.attendeeEmail}</p>
+                              )}
+                            </div>
+                            {/* An explicit button: a stray tap on the row admits nobody. */}
+                            <Button
+                              size="sm"
+                              disabled={isChecking}
+                              onClick={() => {
+                                setData(guest.ticketCode)
+                                handleValidate(guest.ticketId, TicketValidationMethod.MANUAL)
+                              }}
+                            >
+                              Check in
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div
@@ -331,6 +439,17 @@ const DashboardValidateQrPage: React.FC = () => {
               )}
             </AnimatePresence>
           </motion.div>
+
+          {unconfirmed && (
+            <Button
+              className="w-full h-12 mb-3"
+              disabled={isChecking}
+              onClick={() => handleValidate(unconfirmed.id, unconfirmed.method, unconfirmed.key)}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Try again
+            </Button>
+          )}
 
           {/* Reset Button */}
           <Button
