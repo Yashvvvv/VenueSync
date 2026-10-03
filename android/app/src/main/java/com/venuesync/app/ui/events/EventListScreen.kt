@@ -48,6 +48,7 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.theme.LocalExperience
 import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
@@ -157,7 +158,7 @@ internal fun StubRow(
     spent: Boolean = false,
     body: @Composable ColumnScope.() -> Unit,
 ) {
-    StubCard(shape = TicketShape(Counterfoil, vertical = true), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    StubCard(shape = TicketShape(Counterfoil, vertical = true, LocalExperience.current.radius), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             DateStub(start, spent, Modifier.width(Counterfoil).padding(vertical = 16.dp))
             Perforation(vertical = true, modifier = Modifier.fillMaxHeight().width(1.dp))

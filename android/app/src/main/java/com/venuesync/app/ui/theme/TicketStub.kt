@@ -26,15 +26,15 @@ import androidx.compose.ui.unit.dp
 // The web's ticket motif (.perf + .notch in index.css): a dashed tear line with a punched hole at each end.
 
 /**
- * A 6dp card with a half-circle cut out of both edges where the perforation runs: [at] from the start edge when
+ * A card with [corner] radius and a half-circle cut out of both edges where the perforation runs: [at] from the start edge when
  * [vertical], from the top otherwise. A real cut, so the border follows the hole and the page shows through.
  */
-data class TicketShape(val at: Dp, val vertical: Boolean) : Shape {
+data class TicketShape(val at: Dp, val vertical: Boolean, val corner: Dp) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val radius = with(density) { NotchRadius.toPx() }
         val offset = with(density) { at.toPx() }
         val card = Path().apply {
-            addRoundRect(RoundRect(Rect(Offset.Zero, size), CornerRadius(with(density) { 6.dp.toPx() })))
+            addRoundRect(RoundRect(Rect(Offset.Zero, size), CornerRadius(with(density) { corner.toPx() })))
         }
         val holes = Path().apply {
             if (vertical) {
@@ -52,10 +52,11 @@ data class TicketShape(val at: Dp, val vertical: Boolean) : Shape {
 
 private val NotchRadius = 10.dp
 
-/** The dashed tear line, centred in its bounds. Give it 1dp across and the full length of the card. */
+/** The dashed tear line, centred in its bounds. Give it the border width across and the full length of the card. */
 @Composable
 fun Perforation(vertical: Boolean, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.outlineVariant
+    val width = LocalExperience.current.border // Hype prints its tear line at 2dp, like every other rule
     Canvas(modifier) {
         val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
         val (start, end) = if (vertical) {
@@ -63,7 +64,7 @@ fun Perforation(vertical: Boolean, modifier: Modifier = Modifier) {
         } else {
             Offset(0f, size.height / 2) to Offset(size.width, size.height / 2)
         }
-        drawLine(color, start, end, strokeWidth = 1.dp.toPx(), pathEffect = dash)
+        drawLine(color, start, end, strokeWidth = width.toPx(), pathEffect = dash)
     }
 }
 
@@ -76,7 +77,7 @@ fun StubCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    val border = BorderStroke(LocalExperience.current.border, MaterialTheme.colorScheme.outlineVariant)
     if (onClick != null) {
         OutlinedCard(onClick, modifier, shape = shape, colors = colors, border = border, content = content)
     } else {

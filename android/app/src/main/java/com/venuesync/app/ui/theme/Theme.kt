@@ -2,70 +2,99 @@ package com.venuesync.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
-// Flat fills, one accent: secondary/tertiary are neutral, containers equal their base, and surfaceTint is the surface
-// itself so elevated components get no ember wash.
-internal val DarkColors = darkColorScheme(
-    primary = Ember, onPrimary = Ink, primaryContainer = Ember, onPrimaryContainer = Ink,
-    inversePrimary = DeepEmber,
-    secondary = DarkForeground, onSecondary = DarkBackground,
-    secondaryContainer = DarkAccent, onSecondaryContainer = DarkForeground,
-    tertiary = DarkForeground, onTertiary = DarkBackground,
-    tertiaryContainer = DarkAccent, onTertiaryContainer = DarkForeground,
-    background = DarkBackground, onBackground = DarkForeground,
-    surface = DarkBackground, onSurface = DarkForeground,
-    surfaceVariant = DarkSecondary, onSurfaceVariant = DarkMuted,
-    surfaceTint = DarkBackground,
-    inverseSurface = DarkForeground, inverseOnSurface = DarkBackground,
-    error = DarkError, onError = Ink,
-    outline = DarkOutline, outlineVariant = DarkBorder,
-    surfaceBright = DarkAccent, surfaceDim = DarkBackground,
-    surfaceContainerLowest = DarkBackground, surfaceContainerLow = DarkCard, surfaceContainer = DarkPopover,
-    surfaceContainerHigh = DarkSecondary, surfaceContainerHighest = DarkAccent,
+/**
+ * Flat fills, one accent: secondary/tertiary are neutral, containers equal their base, and surfaceTint is the surface
+ * itself so elevated components get no accent wash. [low] is the card, [container] the menu, [high] the dialog.
+ */
+@Suppress("LongParameterList")
+private fun scheme(
+    dark: Boolean,
+    background: Color, low: Color, container: Color, high: Color, highest: Color,
+    foreground: Color, muted: Color, outline: Color, border: Color,
+    primary: Color, onPrimary: Color, error: Color, onError: Color,
+    // Text on inverseSurface (snackbar actions): the other mode's accent.
+    inversePrimary: Color,
+): ColorScheme {
+    val base = if (dark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = primary, onPrimary = onPrimary, primaryContainer = primary, onPrimaryContainer = onPrimary,
+        inversePrimary = inversePrimary,
+        secondary = foreground, onSecondary = background,
+        secondaryContainer = highest, onSecondaryContainer = foreground,
+        tertiary = foreground, onTertiary = background,
+        tertiaryContainer = highest, onTertiaryContainer = foreground,
+        background = background, onBackground = foreground,
+        surface = background, onSurface = foreground,
+        surfaceVariant = high, onSurfaceVariant = muted,
+        surfaceTint = background,
+        inverseSurface = foreground, inverseOnSurface = background,
+        error = error, onError = onError,
+        outline = outline, outlineVariant = border,
+        // Dark grounds lift toward the light; on paper the card is the brightest surface.
+        surfaceBright = if (dark) highest else low, surfaceDim = if (dark) background else highest,
+        surfaceContainerLowest = if (dark) background else low, surfaceContainerLow = low,
+        surfaceContainer = container, surfaceContainerHigh = high, surfaceContainerHighest = highest,
+    )
+}
+
+internal val ClassicDark = scheme(
+    dark = true,
+    background = CalmBackground, low = CalmCard, container = CalmPopover, high = CalmSecondary, highest = CalmAccent,
+    foreground = CalmForeground, muted = CalmMuted, outline = CalmOutline, border = CalmBorder,
+    primary = CalmEmber, onPrimary = Ink, error = ErrorText, onError = Ink, inversePrimary = DeepEmber,
 )
 
-internal val LightColors = lightColorScheme(
-    primary = DeepEmber, onPrimary = Color.White, primaryContainer = DeepEmber, onPrimaryContainer = Color.White,
-    inversePrimary = Ember,
-    secondary = LightForeground, onSecondary = LightBackground,
-    secondaryContainer = LightContainerHighest, onSecondaryContainer = LightForeground,
-    tertiary = LightForeground, onTertiary = LightBackground,
-    tertiaryContainer = LightContainerHighest, onTertiaryContainer = LightForeground,
-    background = LightBackground, onBackground = LightForeground,
-    surface = LightBackground, onSurface = LightForeground,
-    surfaceVariant = LightContainerHigh, onSurfaceVariant = LightMuted,
-    surfaceTint = LightBackground,
-    inverseSurface = LightForeground, inverseOnSurface = LightBackground,
-    error = LightError, onError = Color.White,
-    outline = LightOutline, outlineVariant = LightBorder,
-    surfaceBright = LightCard, surfaceDim = LightContainerHighest,
-    surfaceContainerLowest = LightCard, surfaceContainerLow = LightCard, surfaceContainer = LightContainer,
-    surfaceContainerHigh = LightContainerHigh, surfaceContainerHighest = LightContainerHighest,
+internal val ClassicLight = scheme(
+    dark = false,
+    background = LightBackground, low = LightCard, container = LightContainer, high = LightContainerHigh,
+    highest = LightContainerHighest,
+    foreground = LightForeground, muted = LightMuted, outline = LightOutline, border = LightBorder,
+    primary = DeepEmber, onPrimary = Color.White, error = LightError, onError = Color.White,
+    inversePrimary = CalmEmber,
 )
 
-/** 6dp everywhere (web --radius: 0.375rem): cards, fields, menus, dialogs, sheets. Buttons pass shapes.small. */
-private val Radius = RoundedCornerShape(6.dp)
-internal val VenueSyncShapes = Shapes(
-    extraSmall = Radius, small = Radius, medium = Radius, large = Radius, extraLarge = Radius,
+/** Black stock. Border and field edge are the same 0.5 grey: in Hype every edge is a printed 2dp rule. */
+internal val HypeColors = scheme(
+    dark = true,
+    background = AcidBackground, low = AcidCard, container = AcidPopover, high = AcidSecondary, highest = AcidAccent,
+    foreground = AcidForeground, muted = AcidMuted, outline = AcidBorder, border = AcidBorder,
+    primary = Lime, onPrimary = LimeInk, error = ErrorText, onError = Ink, inversePrimary = LimeInk,
 )
 
-/** Brand colours in both modes. No dynamic colour: on Android 12+ it would paint the app from the wallpaper. */
+/** Hype is dark only (a flyer on black stock); Classic follows the system. */
+internal fun colorsFor(experience: Experience, darkTheme: Boolean): ColorScheme = when {
+    experience == Experience.Hype -> HypeColors
+    darkTheme -> ClassicDark
+    else -> ClassicLight
+}
+
+/** Brand colours in every mode. No dynamic colour: on Android 12+ it would paint the app from the wallpaper. */
 @Composable
 fun VenueSyncTheme(
+    experience: Experience = Experience.Classic,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = Typography,
-        shapes = VenueSyncShapes,
-        content = content,
-    )
+    val colors = colorsFor(experience, darkTheme)
+    val style = remember(experience, colors) { experienceStyle(experience, colors) }
+    // One radius everywhere (web --radius): cards, fields, menus, dialogs, sheets. Buttons pass shapes.small.
+    val shapes = remember(style.radius) { RoundedCornerShape(style.radius).let { Shapes(it, it, it, it, it) } }
+    CompositionLocalProvider(LocalExperience provides style) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = remember(style) { typographyFor(style) },
+            shapes = shapes,
+            content = content,
+        )
+    }
 }

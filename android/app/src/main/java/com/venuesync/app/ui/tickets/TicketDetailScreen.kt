@@ -65,6 +65,7 @@ import com.venuesync.app.ui.events.Centered
 import com.venuesync.app.ui.events.DateFormat
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.events.priceLabel
+import com.venuesync.app.ui.theme.LocalExperience
 import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
@@ -118,7 +119,7 @@ private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
     val density = LocalDensity.current
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         StubCard(
-            shape = perforationAt?.let { TicketShape(it, vertical = false) } ?: MaterialTheme.shapes.medium,
+            shape = perforationAt?.let { TicketShape(it, vertical = false, LocalExperience.current.radius) } ?: MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth(),
         ) {
             EventBlock(ticket)

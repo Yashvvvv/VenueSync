@@ -18,18 +18,22 @@ val Archivo = FontFamily(Weights.map { Font(R.font.archivo, it) })
 /** Data: dates, prices, codes, anything a person compares character by character. JetBrains Mono, as on the web. */
 val Mono = FontFamily(Weights.map { Font(R.font.jetbrains_mono, it) })
 
-private fun TextStyle.display() = copy(fontFamily = Archivo, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).em)
+// Classic headlines stay SemiBold with -0.02em (the web's hero tracking crowds at phone sizes); Hype sets every headline
+// in its poster face. The hero sizes (displayHero, 8.4) also take the scale and line height.
+private fun TextStyle.display(style: ExperienceStyle) = when (style.experience) {
+    Experience.Classic -> copy(fontFamily = Archivo, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.02).em)
+    Experience.Hype -> copy(fontFamily = style.displayFamily, fontWeight = style.displayWeight, letterSpacing = style.displayTracking)
+}
 private fun TextStyle.text(weight: FontWeight) = copy(fontFamily = Archivo, fontWeight = weight)
 
-// The web's display tracking is -0.035em at hero sizes; -0.02em keeps phone-size headlines from crowding.
-val Typography = Typography().run {
+internal fun typographyFor(style: ExperienceStyle) = Typography().run {
     copy(
-        displayLarge = displayLarge.display(),
-        displayMedium = displayMedium.display(),
-        displaySmall = displaySmall.display(),
-        headlineLarge = headlineLarge.display(),
-        headlineMedium = headlineMedium.display(),
-        headlineSmall = headlineSmall.display(),
+        displayLarge = displayLarge.display(style),
+        displayMedium = displayMedium.display(style),
+        displaySmall = displaySmall.display(style),
+        headlineLarge = headlineLarge.display(style),
+        headlineMedium = headlineMedium.display(style),
+        headlineSmall = headlineSmall.display(style),
         titleLarge = titleLarge.text(FontWeight.SemiBold),
         titleMedium = titleMedium.text(FontWeight.Medium),
         titleSmall = titleSmall.text(FontWeight.Medium),
