@@ -76,6 +76,8 @@ class MyTicketsViewModel @Inject constructor(
                 onSuccess = { first ->
                     isLast = first.isLast
                     _state.value = if (first.tickets.isEmpty()) UiState.Empty else UiState.Success(first.tickets)
+                    // Live list: bring the phone's copy up to date (new tickets saved, used ones dropped).
+                    if (filter == TicketFilter.Active && first.savedAt == null) repository.syncOffline()
                 },
                 onFailure = { _state.value = UiState.Error(it.toApiError()) },
             )

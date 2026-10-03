@@ -10,6 +10,7 @@ import com.venuesync.app.core.model.TicketSummary
 import com.venuesync.app.core.repository.TicketPage
 import com.venuesync.app.core.repository.TicketsRepository
 import com.venuesync.app.ui.common.UiState
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -26,7 +27,10 @@ import org.junit.Test
 class TicketsViewModelsTest {
 
     private class FakeTickets : TicketsRepository {
-        override fun syncOffline(force: Boolean) = Unit
+        var syncs = 0
+        override fun syncOffline(force: Boolean) {
+            syncs++
+        }
         val listCalls = mutableListOf<Pair<TicketFilter, Int>>()
         var pages: (TicketFilter, Int) -> Result<TicketPage> = { _, _ -> Result.success(TicketPage(emptyList(), true)) }
         var ticket: Result<Ticket> = Result.failure(ApiException(ApiError.NotFound))
@@ -86,6 +90,20 @@ class TicketsViewModelsTest {
         vm.loadMore() // server said last: no request
         assertEquals(UiState.Success(listOf(summary("p0"), summary("p1"))), vm.state.value)
         assertEquals(2, repo.listCalls.size)
+    }
+
+    @Test
+    fun `a live Active list refreshes the phone's copy, an offline one or Past doesn't`() = runTest {
+        repo.pages = { _, _ -> Result.success(TicketPage(listOf(summary("a")), isLast = true)) }
+        val vm = MyTicketsViewModel(SavedStateHandle(), repo)
+        assertEquals(1, repo.syncs)
+
+        vm.select(TicketFilter.Past)
+        assertEquals(1, repo.syncs)
+
+        repo.pages = { _, _ -> Result.success(TicketPage(listOf(summary("a")), isLast = true, savedAt = Instant.EPOCH)) }
+        vm.select(TicketFilter.Active)
+        assertEquals(1, repo.syncs) // syncing from the copy would only fail again
     }
 
     // ── Ticket detail ──
