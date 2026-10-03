@@ -83,7 +83,7 @@ class TicketsRepositoryImpl @Inject constructor(
         val saved = upcoming().takeIf { it.isNotEmpty() } ?: return@recoverOffline null // "No connection", not "no tickets"
         TicketPage(
             tickets = saved.sortedBy { it.eventStart }
-                .map { TicketSummary(it.id, it.status, it.ticketTypeName, it.eventName, it.eventStart) },
+                .map { TicketSummary(it.id, it.status, it.ticketTypeName, it.eventName, it.eventStart, it.price, it.eventEnd) },
             isLast = true,
             savedAt = saved.minOf { it.savedAt!! }, // the oldest copy sets the honest age
         )

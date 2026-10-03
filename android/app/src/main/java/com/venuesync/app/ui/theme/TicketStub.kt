@@ -6,7 +6,15 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -68,7 +76,10 @@ fun Perforation(vertical: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-/** Card stock: the web's `bg-card border`. Clickable when [onClick] is given. */
+/**
+ * Card stock: the web's `bg-card border`. Clickable when [onClick] is given, with the 1dp press nudge. Hype prints a
+ * hard offset shadow instead of elevation: 5dp in the rule colour, 7dp in the plate while pressed.
+ */
 @Composable
 fun StubCard(
     modifier: Modifier = Modifier,
@@ -76,11 +87,28 @@ fun StubCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    val border = BorderStroke(LocalExperience.current.border, MaterialTheme.colorScheme.outlineVariant)
-    if (onClick != null) {
-        OutlinedCard(onClick, modifier, shape = shape, colors = colors, border = border, content = content)
+    val style = LocalExperience.current
+    val scheme = MaterialTheme.colorScheme
+    val colors = CardDefaults.outlinedCardColors(containerColor = scheme.surfaceContainerLow)
+    val border = BorderStroke(style.border, scheme.outlineVariant)
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val shadow = if (style.hardShadow) {
+        Modifier.hardShadow(shape, if (pressed) 7.dp else 5.dp, if (pressed) scheme.primary else scheme.outlineVariant)
     } else {
-        OutlinedCard(modifier, shape = shape, colors = colors, border = border, content = content)
+        Modifier
     }
+    if (onClick != null) {
+        OutlinedCard(
+            onClick, modifier.pressNudge(interaction).then(shadow),
+            shape = shape, colors = colors, border = border, interactionSource = interaction, content = content,
+        )
+    } else {
+        OutlinedCard(modifier.then(shadow), shape = shape, colors = colors, border = border, content = content)
+    }
+}
+
+private fun Modifier.hardShadow(shape: Shape, offset: Dp, color: Color) = drawBehind {
+    val px = offset.toPx()
+    translate(px, px) { drawOutline(shape.createOutline(size, layoutDirection, this), color) }
 }
