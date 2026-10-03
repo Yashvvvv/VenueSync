@@ -131,6 +131,15 @@ class TicketsViewModelsTest {
     }
 
     @Test
+    fun `a live ticket whose code is already on the phone doesn't download it again`() = runTest {
+        repo.ticket = Result.success(ticket(TicketStatus.Purchased)) // live: savedAt is null
+        repo.savedQr = byteArrayOf(9)
+        val vm = detailVm()
+        assertTrue(vm.qr.value is QrState.Ready)
+        assertEquals(0, repo.qrCalls)
+    }
+
+    @Test
     fun `used ticket shows no code and never requests one`() = runTest {
         repo.ticket = Result.success(ticket(TicketStatus.Used))
         val vm = detailVm()

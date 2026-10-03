@@ -66,7 +66,7 @@ class TicketDetailViewModel @Inject constructor(
             repository.getTicket(id).fold(
                 onSuccess = {
                     _ticket.value = UiState.Success(it)
-                    if (it.hasCode()) loadQr(fromPhone = it.savedAt != null) else _qr.value = QrState.Hidden
+                    if (it.hasCode()) loadQr() else _qr.value = QrState.Hidden
                 },
                 onFailure = { _ticket.value = UiState.Error(it.toApiError()) },
             )
@@ -74,19 +74,18 @@ class TicketDetailViewModel @Inject constructor(
     }
 
     /**
-     * [fromPhone]: the ticket itself just came from the phone because the network failed, so asking the network for
-     * the code would only add the same retries again (seconds, at a door). Retry on the screen goes live again.
+     * The code is made once at purchase and never changes, so a copy saved on the phone is always right: no download
+     * (each one cost ~1.2 s on Render), and it works with no signal. Only a ticket without a saved code fetches it.
+     * Whether the ticket can still get in comes from the ticket itself, which is always asked for first.
      */
-    private fun loadQr(fromPhone: Boolean = false) {
+    private fun loadQr() {
         val id = ticketId ?: return
         qrJob?.cancel()
         _qr.value = QrState.Loading
         qrJob = viewModelScope.launch {
-            if (fromPhone) {
-                repository.savedQrCode(id)?.let {
-                    _qr.value = QrState.Ready(it)
-                    return@launch
-                }
+            repository.savedQrCode(id)?.let {
+                _qr.value = QrState.Ready(it)
+                return@launch
             }
             repository.getQrCode(id).fold(
                 onSuccess = { _qr.value = QrState.Ready(it) },
