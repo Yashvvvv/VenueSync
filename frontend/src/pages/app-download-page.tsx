@@ -40,17 +40,20 @@ const IOS_DOWNLOAD_URL: string | null = null
 const APP_VERSION = "0.1.0-m0"
 const MIN_ANDROID = "Android 8.0"
 
-/* What the Android module actually does today versus what is scaffolded.
-   VenueSyncNavHost declares six routes and wires exactly one. Saying
-   otherwise on a download page is how you earn one-star reviews. */
+/* What the Android app actually does today versus what is next. Checked against the app module
+   (android/app/src/main/java/com/venuesync/app/ui), not written from memory: saying otherwise on a
+   download page is how you earn one-star reviews. Update it when a screen ships. */
 const shipped = [
-  { Icon: MagnifyingGlass, label: "Browse published events", note: "Live in the beta build" },
+  { Icon: MagnifyingGlass, label: "Browse and search events", note: "Everything that is on sale" },
+  { Icon: ShieldCheck, label: "Sign in with your VenueSync account", note: "Same account as the website" },
+  { Icon: Ticket, label: "Get a ticket", note: "One tap from the event page, never charged twice" },
+  { Icon: QrCode, label: "Your tickets, with the gate code", note: "Saved on the phone, so they open with no signal" },
+  { Icon: DeviceMobile, label: "Door scanner for staff", note: "Scan, type a code or check a guest in by name" },
 ]
 
 const planned = [
-  { Icon: Ticket, label: "Event detail and checkout" },
-  { Icon: QrCode, label: "Your tickets, with the gate code" },
-  { Icon: ShieldCheck, label: "Sign in with your VenueSync account" },
+  { Icon: DeviceMobile, label: "Hands-free scanning for busy doors" },
+  { Icon: ArrowRight, label: "Public release on Google Play" },
 ]
 
 const EASE = [0.16, 1, 0.3, 1] as const
@@ -113,8 +116,8 @@ const AppDownloadPage: React.FC = () => {
               </h1>
 
               <p className="mt-6 max-w-[46ch] text-[1.0625rem] leading-relaxed text-muted-foreground">
-                The VenueSync app is in early beta on Android. It browses events today, and it gets
-                the rest of the flow next.
+                The VenueSync app is in early beta on Android. Find an event, get a ticket and walk
+                in with the code, even when the venue has no signal.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -254,8 +257,7 @@ const AppDownloadPage: React.FC = () => {
                 ))}
               </ul>
               <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
-                Everything on this side works on the web app today. The phone build is catching up
-                screen by screen.
+                Both are next on the list. Until the Play release, the beta is shared directly.
               </p>
             </div>
           </div>
