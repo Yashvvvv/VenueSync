@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +34,17 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.Perforation
+import com.venuesync.app.ui.theme.StubCard
+import com.venuesync.app.ui.theme.TicketShape
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -113,16 +123,71 @@ private fun EventList(events: List<Event>, onEventClick: (String) -> Unit, onEnd
 
 @Composable
 internal fun EventCard(event: Event, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(event.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            event.venue?.let { Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            event.start?.let {
-                Text(it.format(DateFormat), style = MaterialTheme.typography.bodySmall)
-            }
+    StubRow(start = event.start, onClick = onClick) {
+        Text(event.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        event.venue?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
+
+/**
+ * A ticket stub: the counterfoil holds the date, a perforation, then [body]. [spent] (a used or past ticket) drops
+ * the ember, like the web's faded stub.
+ */
+@Composable
+internal fun StubRow(
+    start: LocalDateTime?,
+    onClick: () -> Unit,
+    spent: Boolean = false,
+    body: @Composable ColumnScope.() -> Unit,
+) {
+    StubCard(shape = TicketShape(Counterfoil, vertical = true), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            DateStub(start, spent, Modifier.width(Counterfoil).padding(vertical = 16.dp))
+            Perforation(vertical = true, modifier = Modifier.fillMaxHeight().width(1.dp))
+            Column(
+                modifier = Modifier.weight(1f).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+                content = body,
+            )
+        }
+    }
+}
+
+/** OCT / 12 / 7:30 PM in mono, the way a printed stub carries its date. */
+@Composable
+private fun DateStub(start: LocalDateTime?, spent: Boolean, modifier: Modifier) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (start == null) {
+            Text("TBA", style = MaterialTheme.typography.labelMedium, fontFamily = Mono, color = muted)
+        } else {
+            Text(start.format(MonthFormat).uppercase(), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = muted)
+            Text(
+                start.dayOfMonth.toString(),
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = Mono,
+                color = if (spent) muted else MaterialTheme.colorScheme.primary,
+            )
+            Text(start.format(TimeFormat), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = muted)
+        }
+    }
+}
+
+private val Counterfoil = 80.dp
+private val MonthFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM")
+private val TimeFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
 /** Fires [onEndReached] when the last item scrolls into view. */
 @Composable
