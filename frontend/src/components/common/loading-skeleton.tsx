@@ -33,19 +33,22 @@ export const EventCardSkeleton: React.FC = () => {
   )
 }
 
+/** Mirrors TicketCard: counterfoil, perforation punched top and bottom, body. Nothing shifts when tickets land. */
 export const TicketCardSkeleton: React.FC = () => {
   return (
-    <div className="rounded-xl border border-border/30 bg-card/30 overflow-hidden">
-      <div className="flex items-center gap-4 px-5 py-4 pl-6">
-        <Skeleton className="w-12 h-12 rounded-xl flex-shrink-0" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-48" />
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-3.5 w-14" />
-            <Skeleton className="h-3.5 w-24" />
-          </div>
-        </div>
-        <Skeleton className="w-4 h-4 rounded flex-shrink-0" />
+    <div className="relative flex items-stretch rounded-md border border-border bg-card">
+      <div className="flex w-[104px] shrink-0 flex-col justify-center gap-2 px-4 py-4 sm:w-[124px]">
+        <Skeleton className="h-4 w-14 rounded-sm" />
+        <Skeleton className="h-2.5 w-16 rounded-sm" />
+      </div>
+      <div className="relative shrink-0 border-l border-dashed border-border" aria-hidden>
+        <span className="notch -left-[10px] -top-[10px]" />
+        <span className="notch -bottom-[10px] -left-[10px]" />
+      </div>
+      <div className="flex-1 space-y-2 px-4 py-4 sm:px-5">
+        <Skeleton className="h-4 w-48 max-w-full rounded-sm" />
+        <Skeleton className="h-3 w-24 rounded-sm" />
+        <Skeleton className="h-3 w-36 rounded-sm" />
       </div>
     </div>
   )
