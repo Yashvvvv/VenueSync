@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -72,6 +71,8 @@ fun MyTicketsScreen(
                         selected = tab == filter,
                         onClick = { viewModel.select(tab) },
                         text = { Text(tab.label()) },
+                        // M3 paints the unselected tab in the selected colour; muted makes the choice readable.
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -87,9 +88,9 @@ fun MyTicketsScreen(
                 is UiState.Error -> Centered {
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
                     if (s.error == ApiError.Unauthorized) {
-                        Button(onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
                     } else {
-                        Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                     }
                 }
                 is UiState.Success -> TicketList(s.data, onTicketClick, onEndReached = viewModel::loadMore)

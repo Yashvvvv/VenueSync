@@ -4,12 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,10 +23,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +48,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,28 +58,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import com.venuesync.app.ui.theme.DoorColors
-import com.venuesync.app.ui.theme.Mono
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.venuesync.app.core.model.Guest
+import com.venuesync.app.core.model.ScanResult
+import com.venuesync.app.core.model.ScanStatus
 import com.venuesync.app.core.model.normalizeCheckInEntry
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.events.message
+import com.venuesync.app.ui.theme.DoorColors
+import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.tickets.statusLabel
-import com.venuesync.app.core.model.ScanResult
-import com.venuesync.app.core.model.ScanStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,7 +254,7 @@ private fun GuestListSheet(
 
 @Composable
 private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    StubCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -271,7 +271,7 @@ private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
                 statusLabel(guest.status)?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
             }
             // A used/expired/cancelled ticket can still be "checked in": the server answers, and the door sees why not.
-            Button(onClick = onCheckIn) { Text("Check in") }
+            Button(shape = MaterialTheme.shapes.small, onClick = onCheckIn) { Text("Check in") }
         }
     }
 }
@@ -293,14 +293,14 @@ private fun Prompt(
         problem?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         }
-        Button(onClick = primary.second, modifier = Modifier.fillMaxWidth().height(64.dp)) {
+        Button(shape = MaterialTheme.shapes.small, onClick = primary.second, modifier = Modifier.fillMaxWidth().height(64.dp)) {
             Text(primary.first, style = MaterialTheme.typography.titleMedium)
         }
         secondary?.let { (label, action) ->
-            OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
         extra.forEach { (label, action) ->
-            OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
     }
 }
@@ -332,6 +332,7 @@ private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit)
         Text(title, style = MaterialTheme.typography.displayMedium, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
         Text(detail, style = MaterialTheme.typography.titleLarge, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
         Button(
+            shape = MaterialTheme.shapes.small,
             onClick = onNext,
             colors = ButtonDefaults.buttonColors(containerColor = DoorColors.OnDoor, contentColor = color),
             modifier = Modifier.padding(top = 24.dp).fillMaxWidth().height(64.dp),

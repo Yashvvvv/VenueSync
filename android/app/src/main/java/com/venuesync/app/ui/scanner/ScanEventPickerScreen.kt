@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.venuesync.app.ui.theme.Mono
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +44,7 @@ import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.events.Centered
 import com.venuesync.app.ui.events.EventCard
 import com.venuesync.app.ui.events.message
+import com.venuesync.app.ui.theme.Mono
 
 /**
  * Staff pick the event whose door they're working; every scan is then checked against it. Only events they can
@@ -95,16 +95,16 @@ fun ScanEventPickerScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp),
                     )
-                    Button(onClick = { showCodeDialog = true }, modifier = Modifier.padding(top = 16.dp)) {
+                    Button(shape = MaterialTheme.shapes.small, onClick = { showCodeDialog = true }, modifier = Modifier.padding(top = 16.dp)) {
                         Text("Enter invite code")
                     }
                 }
                 is UiState.Error -> Centered {
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
                     if (s.error == ApiError.Unauthorized) {
-                        Button(onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
                     } else {
-                        Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                     }
                 }
                 is UiState.Success -> EventsToScan(s.data, onEventClick, onEnterCode = { showCodeDialog = true })
@@ -140,7 +140,7 @@ private fun EventsToScan(events: List<Event>, onEventClick: (String) -> Unit, on
         }
         items(events, key = Event::id) { event -> EventCard(event, onClick = { onEventClick(event.id) }) }
         item {
-            OutlinedButton(onClick = onEnterCode, modifier = Modifier.fillMaxWidth()) { Text("Enter invite code") }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onEnterCode, modifier = Modifier.fillMaxWidth()) { Text("Enter invite code") }
         }
     }
 }
