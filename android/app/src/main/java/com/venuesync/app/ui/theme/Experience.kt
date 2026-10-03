@@ -61,7 +61,7 @@ internal fun experienceStyle(experience: Experience, colors: ColorScheme) = when
     Experience.Hype -> ExperienceStyle(
         experience = experience,
         radius = 0.dp, border = 2.dp, hardShadow = true,
-        displayFamily = Archivo, displayWeight = FontWeight.Bold, // Anton arrives with the assets (8.2)
+        displayFamily = Anton, displayWeight = FontWeight.Normal,
         displayScale = 1.22f, displayTracking = (-0.005).em, displayLineHeight = 0.9f,
         uppercaseDisplay = true, uppercaseCta = true,
         eyebrow = Magenta,

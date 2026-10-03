@@ -2,4 +2,6 @@
 <resources>
     <!-- Window colour before Compose draws: matches the theme's background, so launch never flashes. -->
     <color name="vs_background">#F9F6F3</color>
+    <!-- Launcher icon ground, the same in both modes: Classic's warm black (the calm background token). -->
+    <color name="vs_launcher_background">#050403</color>
 </resources>

@@ -34,7 +34,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.venuesync.app.ui.events.Wordmark
+import com.venuesync.app.ui.theme.BrandMark
+import com.venuesync.app.ui.theme.Wordmark
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,6 +78,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            BrandMark(56.dp, Modifier.padding(bottom = 16.dp))
             Wordmark(
                 style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.semantics {

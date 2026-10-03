@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The mark's tear line (55%) and spark (90%), tinted with onPrimary over ic_mark_body. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="29dp" android:viewportWidth="40" android:viewportHeight="29">
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.55" android:pathData="M14.4,4 h1.2 v2.4 h-1.2 Z M14.4,8.6 h1.2 v2.4 h-1.2 Z M14.4,13.2 h1.2 v2.4 h-1.2 Z M14.4,17.8 h1.2 v2.4 h-1.2 Z M14.4,22.4 h1.2 v2.4 h-1.2 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.9" android:pathData="M28,5.5 L21.5,15.5 H26 L23.5,23.5 L31.5,13 H26.5 Z" />
+</vector>

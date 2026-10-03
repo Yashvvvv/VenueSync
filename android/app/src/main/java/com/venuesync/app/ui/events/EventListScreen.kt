@@ -35,13 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.core.model.ApiError
@@ -49,6 +44,7 @@ import com.venuesync.app.core.model.Event
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.theme.LocalExperience
+import com.venuesync.app.ui.theme.Lockup
 import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
@@ -72,7 +68,7 @@ fun EventListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Wordmark() },
+                title = { Lockup() },
                 actions = {
                     AccountAction(
                         onSignInClick = onSignInClick,
@@ -215,19 +211,6 @@ internal fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
     }
-}
-
-/** "VenueSync" set like the web's logotype: Archivo SemiBold, tight, "Sync" in ember. */
-@Composable
-internal fun Wordmark(modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.titleLarge) {
-    Text(
-        buildAnnotatedString {
-            append("Venue")
-            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Sync") }
-        },
-        style = style.copy(letterSpacing = (-0.02).em),
-        modifier = modifier,
-    )
 }
 
 internal val DateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)

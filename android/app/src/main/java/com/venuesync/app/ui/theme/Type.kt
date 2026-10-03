@@ -18,6 +18,9 @@ val Archivo = FontFamily(Weights.map { Font(R.font.archivo, it) })
 /** Data: dates, prices, codes, anything a person compares character by character. JetBrains Mono, as on the web. */
 val Mono = FontFamily(Weights.map { Font(R.font.jetbrains_mono, it) })
 
+/** Hype's poster face, display sizes only. One weight (400): asking it for bold would synthesise a smear. */
+val Anton = FontFamily(Font(R.font.anton, FontWeight.Normal))
+
 // Classic headlines stay SemiBold with -0.02em (the web's hero tracking crowds at phone sizes); Hype sets every headline
 // in its poster face. The hero sizes (displayHero, 8.4) also take the scale and line height.
 private fun TextStyle.display(style: ExperienceStyle) = when (style.experience) {
