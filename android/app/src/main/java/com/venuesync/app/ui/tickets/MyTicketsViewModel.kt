@@ -9,6 +9,7 @@ import com.venuesync.app.core.model.toApiError
 import com.venuesync.app.core.repository.TicketsRepository
 import com.venuesync.app.ui.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,10 @@ class MyTicketsViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<UiState<List<TicketSummary>>>(UiState.Loading)
     val state: StateFlow<UiState<List<TicketSummary>>> = _state.asStateFlow()
+
+    /** Set while the list shown is the copy on the phone (no signal): when it was saved. */
+    private val _savedAt = MutableStateFlow<Instant?>(null)
+    val savedAt: StateFlow<Instant?> = _savedAt.asStateFlow()
 
     private var page = 0
     private var isLast = false
@@ -70,11 +75,13 @@ class MyTicketsViewModel @Inject constructor(
         page = 0
         isLast = false
         _state.value = UiState.Loading
+        _savedAt.value = null
         val filter = _filter.value
         job = viewModelScope.launch {
             repository.listTickets(filter, page = 0).fold(
                 onSuccess = { first ->
                     isLast = first.isLast
+                    _savedAt.value = first.savedAt
                     _state.value = if (first.tickets.isEmpty()) UiState.Empty else UiState.Success(first.tickets)
                     // Live list: bring the phone's copy up to date (new tickets saved, used ones dropped).
                     if (filter == TicketFilter.Active && first.savedAt == null) repository.syncOffline()

@@ -42,6 +42,7 @@ class EventDetailViewModelTest {
 
     private class FakeTickets : TicketsRepository {
         override fun syncOffline(force: Boolean) = Unit
+        override suspend fun savedQrCode(ticketId: String): ByteArray? = null
         override suspend fun listTickets(filter: TicketFilter, page: Int) = error("not used")
         override suspend fun getTicket(id: String) = error("not used")
         override suspend fun getQrCode(ticketId: String) = error("not used")

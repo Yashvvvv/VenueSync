@@ -27,6 +27,8 @@ import org.junit.Test
 class TicketsViewModelsTest {
 
     private class FakeTickets : TicketsRepository {
+        var savedQr: ByteArray? = null
+        override suspend fun savedQrCode(ticketId: String) = savedQr
         var syncs = 0
         override fun syncOffline(force: Boolean) {
             syncs++
@@ -117,6 +119,15 @@ class TicketsViewModelsTest {
         val vm = detailVm()
         assertTrue(vm.ticket.value is UiState.Success)
         assertTrue(vm.qr.value is QrState.Ready)
+    }
+
+    @Test
+    fun `a ticket from the phone shows the phone's code without trying the network again`() = runTest {
+        repo.ticket = Result.success(ticket(TicketStatus.Purchased).copy(savedAt = Instant.EPOCH))
+        repo.savedQr = byteArrayOf(9)
+        val vm = detailVm()
+        assertTrue(vm.qr.value is QrState.Ready)
+        assertEquals(0, repo.qrCalls)
     }
 
     @Test

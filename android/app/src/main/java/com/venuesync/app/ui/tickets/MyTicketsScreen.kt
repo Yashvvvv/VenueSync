@@ -1,9 +1,12 @@
 package com.venuesync.app.ui.tickets
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,12 +21,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -38,6 +47,7 @@ import com.venuesync.app.ui.events.LoadMoreOnEnd
 import com.venuesync.app.ui.events.StubRow
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.theme.Mono
+import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +60,7 @@ fun MyTicketsScreen(
 ) {
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val savedAt by viewModel.savedAt.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -93,7 +104,10 @@ fun MyTicketsScreen(
                         Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                     }
                 }
-                is UiState.Success -> TicketList(s.data, onTicketClick, onEndReached = viewModel::loadMore)
+                is UiState.Success -> {
+                    savedAt?.let { OfflineBanner(it, onRetry = viewModel::retry) }
+                    TicketList(s.data, onTicketClick, onEndReached = viewModel::loadMore)
+                }
             }
         }
     }
@@ -126,6 +140,33 @@ private fun TicketRow(ticket: TicketSummary, onClick: () -> Unit) {
             Text(it.uppercase(), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, modifier = Modifier.padding(top = 4.dp))
         }
     }
+}
+
+/** No signal: say plainly that this is the copy on the phone and how old it is. */
+@Composable
+internal fun OfflineBanner(savedAt: Instant, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 12.dp)) {
+            Text(
+                "Offline. Saved on this phone ${savedAgo(savedAt)}.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+            )
+            TextButton(onClick = onRetry) { Text("Retry") }
+        }
+    }
+}
+
+private fun savedAgo(savedAt: Instant): String {
+    val now = System.currentTimeMillis()
+    if (now - savedAt.toEpochMilli() < DateUtils.MINUTE_IN_MILLIS) return "just now"
+    return DateUtils.getRelativeTimeSpanString(savedAt.toEpochMilli(), now, DateUtils.MINUTE_IN_MILLIS).toString()
 }
 
 private fun TicketFilter.label() = when (this) {

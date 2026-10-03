@@ -34,6 +34,9 @@ interface TicketsRepository {
     /** The ticket's QR code as PNG bytes, checked to really be a PNG of sane size. Falls back like [getTicket]. */
     suspend fun getQrCode(ticketId: String): Result<ByteArray>
 
+    /** The QR code saved on the phone, without trying the network: for a ticket that just came from the phone. */
+    suspend fun savedQrCode(ticketId: String): ByteArray?
+
     /**
      * Saves the upcoming tickets (details + QR code) on the phone so they open with no signal. Fire and forget;
      * one at a time; skipped if one finished under a minute ago, unless [force] (a purchase just happened).
@@ -107,8 +110,11 @@ class TicketsRepositoryImpl @Inject constructor(
             api.getQrCode(ticketId).takeIf { it.size <= MAX_QR_BYTES && it.startsWith(PngSignature) }
                 ?: throw ApiException(ApiError.InvalidResponse)
         }.onSuccess { attachQr(ticketId, it) }
-            .recoverOffline { saved(ticketId)?.qrPng?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() } }
+            .recoverOffline { savedQrCode(ticketId) }
     }
+
+    override suspend fun savedQrCode(ticketId: String): ByteArray? =
+        saved(ticketId)?.qrPng?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() }
 
     override fun syncOffline(force: Boolean) {
         scope.launch { syncNow(force) }

@@ -101,7 +101,10 @@ fun TicketDetailScreen(
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
                     Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retryTicket, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                 }
-                is UiState.Success -> TicketContent(s.data, qr, onRetryQr = viewModel::retryQr)
+                is UiState.Success -> Column {
+                    s.data.savedAt?.let { OfflineBanner(it, onRetry = viewModel::retryTicket) }
+                    TicketContent(s.data, qr, onRetryQr = viewModel::retryQr)
+                }
             }
         }
     }
