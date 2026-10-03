@@ -31,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -58,6 +57,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.venuesync.app.ui.theme.DoorColors
 import com.venuesync.app.ui.theme.Mono
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -309,19 +309,19 @@ private fun Prompt(
 @Composable
 private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit) {
     val (color, title, detail) = when (result.status) {
-        ScanStatus.Valid -> Triple(Go, "Let in", result.ticketTypeName?.let { "1 × $it" } ?: "Valid ticket")
-        ScanStatus.AlreadyUsed -> Triple(Stop, "Already used", "This ticket was scanned before. Don't let in.")
-        ScanStatus.Expired -> Triple(Stop, "Expired", "This ticket's event is over.")
+        ScanStatus.Valid -> Triple(DoorColors.Go, "Let in", result.ticketTypeName?.let { "1 × $it" } ?: "Valid ticket")
+        ScanStatus.AlreadyUsed -> Triple(DoorColors.Stop, "Already used", "This ticket was scanned before. Don't let in.")
+        ScanStatus.Expired -> Triple(DoorColors.Stop, "Expired", "This ticket's event is over.")
         // A typed code is only looked up within this event (short codes are guessable, so the server won't search
         // other organizers' events). So "invalid" here usually means a typo or the wrong event, not a fake ticket.
         ScanStatus.Invalid -> Triple(
-            Stop,
+            DoorColors.Stop,
             "Not a valid ticket",
             if (manual) "No ticket with this code for this event, or it was cancelled. Check the code and the event."
             else "Not a VenueSync ticket, or it was cancelled.",
         )
-        ScanStatus.WrongEvent -> Triple(Caution, "Wrong event", result.eventName?.let { "This ticket is for $it." } ?: "This ticket is for another event.")
-        ScanStatus.Unknown -> Triple(Neutral, "Couldn't verify", "Check the ticket by hand.")
+        ScanStatus.WrongEvent -> Triple(DoorColors.Caution, "Wrong event", result.eventName?.let { "This ticket is for $it." } ?: "This ticket is for another event.")
+        ScanStatus.Unknown -> Triple(DoorColors.Neutral, "Couldn't verify", "Check the ticket by hand.")
     }
     Column(
         modifier = Modifier.fillMaxSize().background(color).padding(24.dp)
@@ -329,11 +329,11 @@ private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit)
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = MaterialTheme.typography.displayMedium, color = Color.White, textAlign = TextAlign.Center)
-        Text(detail, style = MaterialTheme.typography.titleLarge, color = Color.White, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.displayMedium, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
+        Text(detail, style = MaterialTheme.typography.titleLarge, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
         Button(
             onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = color),
+            colors = ButtonDefaults.buttonColors(containerColor = DoorColors.OnDoor, contentColor = color),
             modifier = Modifier.padding(top = 24.dp).fillMaxWidth().height(64.dp),
         ) { Text("Scan next", style = MaterialTheme.typography.titleMedium) }
     }
@@ -361,8 +361,3 @@ private fun KeepScreenOn() {
     }
 }
 
-// ponytail: fixed door colours (white text passes contrast on all four); move into the theme in the step 6 pass.
-private val Go = Color(0xFF1B7F3B)
-private val Stop = Color(0xFFB3261E)
-private val Caution = Color(0xFF8A5A00)
-private val Neutral = Color(0xFF5F6368)

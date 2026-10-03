@@ -35,6 +35,13 @@ class ThemeContrastTest {
         assertContrast("outline on surfaceContainerLow", s.outline, s.surfaceContainerLow, 3.0)
     }
 
+    // The detail line is titleLarge (22sp), not "large text", so 4.5 rather than 3. "Scan next" inverts the pair.
+    @Test fun doorAnswers() = with(DoorColors) {
+        mapOf("Go" to Go, "Stop" to Stop, "Caution" to Caution, "Neutral" to Neutral).forEach { (name, door) ->
+            assertContrast("OnDoor on $name", OnDoor, door, 4.5)
+        }
+    }
+
     private fun each(check: (ColorScheme) -> Unit) = schemes.forEach { (mode, scheme) ->
         try {
             check(scheme)

@@ -38,3 +38,15 @@ internal val LightError = Color(0xFFBE2323) //         oklch(0.52 0.19 27)
  * paper. This is the darkest ember that stays in sRGB and passes both ways, with white text.
  */
 internal val DeepEmber = Color(0xFFA7490D) //          oklch(0.52 0.14 46)
+
+/**
+ * Full-screen scan answers, from the web's semantic tokens. The same in light and dark: the colour is the message.
+ * Ink text on all four (white would fail on Go and Caution); ThemeContrastTest checks each.
+ */
+object DoorColors {
+    val Go = Color(0xFF41AA66) //      --success      oklch(0.66 0.14 152)
+    val Stop = Color(0xFFED4B43) //    oklch(0.64 0.2 27): --destructive (0.58) gives ink only 4.2:1
+    val Caution = Color(0xFFD3B63B) // --warning      oklch(0.78 0.14 95)
+    val Neutral = Color(0xFFA39D98) // oklch(0.7 0.01 60)
+    val OnDoor = Ink
+}
