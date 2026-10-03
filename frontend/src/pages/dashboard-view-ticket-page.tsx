@@ -16,7 +16,7 @@ import { motion } from "framer-motion"
 import { Skeleton } from "@/components/common/loading-skeleton"
 import { parseWallClockDate } from "@/lib/date-utils"
 
-const AUTO_REFRESH_INTERVAL = 10000 // 10 seconds
+const AUTO_REFRESH_INTERVAL = 15_000 // while the page is visible and the ticket is still valid
 
 const statusConfig: Record<TicketStatus, { label: string; className: string; icon: React.ReactNode; description: string }> = {
   [TicketStatus.PURCHASED]: {
@@ -123,19 +123,35 @@ const DashboardViewTicketPage: React.FC = () => {
     fetchTicketData(true)
   }, [user?.access_token, isAuthLoading, id, fetchTicketData])
 
-  // Auto-refresh every 10 seconds for active tickets
+  /* Keeps a ticket that is still valid in step with the door: when staff scan it, this page flips to "Used". Only while
+     the page is actually on screen, and only for a ticket that can still change that way. It used to poll every 10 s in
+     background tabs too, and for used tickets: 360 requests an hour per open tab, which also kept the free server awake.
+     Coming back to the tab refreshes once straight away. */
   useEffect(() => {
-    if (!ticket || ticket.status === TicketStatus.EXPIRED || ticket.status === TicketStatus.CANCELLED) {
-      return
+    if (ticketStatus !== TicketStatus.PURCHASED) return
+    let intervalId: ReturnType<typeof setInterval> | undefined
+    const start = () => {
+      if (intervalId === undefined) intervalId = setInterval(() => fetchTicketData(false), AUTO_REFRESH_INTERVAL)
     }
-
-    const intervalId = setInterval(() => {
-      fetchTicketData(false)
-    }, AUTO_REFRESH_INTERVAL)
-
-    return () => clearInterval(intervalId)
-  }, [ticket, fetchTicketData])
-
+    const stop = () => {
+      clearInterval(intervalId)
+      intervalId = undefined
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchTicketData(false)
+        start()
+      } else {
+        stop()
+      }
+    }
+    if (document.visibilityState === "visible") start()
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [ticketStatus, fetchTicketData])
   // Cleanup QR code URL on unmount
   useEffect(() => {
     return () => {
