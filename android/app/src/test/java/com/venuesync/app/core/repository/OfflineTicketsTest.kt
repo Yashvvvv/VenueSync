@@ -153,6 +153,16 @@ class OfflineTicketsTest {
     }
 
     @Test
+    fun `a sync that lists a saved ticket confirms it as of now`() = runTest {
+        cache.saved = listOf(saved(a)) // saved an hour ago
+        serveList(0, last = true, a)
+
+        repo.syncNow(force = false)
+
+        assertEquals(nowAt.toEpochMilli(), cache.saved.single().savedAt)
+    }
+
+    @Test
     fun `a sync that couldn't see the whole list drops nothing`() = runTest {
         cache.saved = listOf(saved(b))
         serveList(0, last = false, a)
