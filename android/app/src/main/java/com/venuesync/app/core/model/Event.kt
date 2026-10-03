@@ -16,13 +16,18 @@ data class Event(
     val venue: String?,
 )
 
-internal fun ListPublishedEventResponseDto.toDomain() = Event(
-    id = id,
-    name = name,
-    start = start?.toLocalDateTimeOrNull(),
-    end = end?.toLocalDateTimeOrNull(),
-    venue = venue,
-)
+/** Null when the row has no id or name; the repository drops it and keeps the rest of the page. */
+internal fun ListPublishedEventResponseDto.toDomainOrNull(): Event? {
+    val id = id?.takeIf { it.isNotBlank() } ?: return null
+    val name = name?.takeIf { it.isNotBlank() } ?: return null
+    return Event(
+        id = id,
+        name = name,
+        start = start?.toLocalDateTimeOrNull(),
+        end = end?.toLocalDateTimeOrNull(),
+        venue = venue?.takeIf { it.isNotBlank() },
+    )
+}
 
 data class EventDetail(
     val id: String,

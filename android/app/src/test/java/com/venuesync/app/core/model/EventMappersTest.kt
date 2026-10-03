@@ -26,6 +26,13 @@ class EventMappersTest {
     }
 
     @Test
+    fun `a list row without id or name is dropped, not fatal`() {
+        assertNull(ListPublishedEventResponseDto(id = null, name = "Show").toDomainOrNull())
+        assertNull(ListPublishedEventResponseDto(id = "e1", name = " ").toDomainOrNull())
+        assertEquals("Show", ListPublishedEventResponseDto(id = "e1", name = "Show").toDomainOrNull()!!.name)
+    }
+
+    @Test
     fun `null ticketTypes becomes an empty list`() {
         assertEquals(emptyList<TicketType>(), detail(ticketTypes = null).toDomainOrNull()!!.ticketTypes)
     }

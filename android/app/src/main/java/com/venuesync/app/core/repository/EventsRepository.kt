@@ -4,7 +4,6 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.core.model.EventDetail
-import com.venuesync.app.core.model.toDomain
 import com.venuesync.app.core.model.toDomainOrNull
 import com.venuesync.app.core.network.EventsApi
 import javax.inject.Inject
@@ -28,7 +27,7 @@ class EventsRepositoryImpl @Inject constructor(
 
     override suspend fun getPublishedEvents(query: String?, page: Int): Result<EventPage> = apiCall {
         val response = api.getPublishedEvents(query = query, page = page)
-        EventPage(events = response.content.map { it.toDomain() }, isLast = response.last)
+        EventPage(events = response.content.mapNotNull { it.toDomainOrNull() }, isLast = response.last)
     }
 
     override suspend fun getPublishedEvent(id: String): Result<EventDetail> {

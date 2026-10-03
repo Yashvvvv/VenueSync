@@ -48,8 +48,8 @@ class StaffRepositoryTest {
     private fun Result<*>.error() = (exceptionOrNull() as ApiException).error
 
     @Test
-    fun `staffing events map and dedupe`() = runTest {
-        val events = staff(body = """[{"id":"$eventId","name":"Summer Vibes"},{"id":"$eventId","name":"Summer Vibes"}]""")
+    fun `staffing events map and dedupe, and a nameless row is dropped`() = runTest {
+        val events = staff(body = """[{"id":"$eventId","name":"Summer Vibes"},{"id":"$eventId","name":"Summer Vibes"},{"id":"$eventId"}]""")
             .staffingEvents().getOrThrow()
         assertEquals("/api/v1/users/me/staffing-events", requests.single().url.encodedPath)
         assertEquals(listOf("Summer Vibes"), events.map { it.name })
