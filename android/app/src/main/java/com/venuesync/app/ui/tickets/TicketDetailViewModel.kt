@@ -66,18 +66,28 @@ class TicketDetailViewModel @Inject constructor(
             repository.getTicket(id).fold(
                 onSuccess = {
                     _ticket.value = UiState.Success(it)
-                    if (it.hasCode()) loadQr() else _qr.value = QrState.Hidden
+                    if (it.hasCode()) loadQr(fromPhone = it.savedAt != null) else _qr.value = QrState.Hidden
                 },
                 onFailure = { _ticket.value = UiState.Error(it.toApiError()) },
             )
         }
     }
 
-    private fun loadQr() {
+    /**
+     * [fromPhone]: the ticket itself just came from the phone because the network failed, so asking the network for
+     * the code would only add the same retries again (seconds, at a door). Retry on the screen goes live again.
+     */
+    private fun loadQr(fromPhone: Boolean = false) {
         val id = ticketId ?: return
         qrJob?.cancel()
         _qr.value = QrState.Loading
         qrJob = viewModelScope.launch {
+            if (fromPhone) {
+                repository.savedQrCode(id)?.let {
+                    _qr.value = QrState.Ready(it)
+                    return@launch
+                }
+            }
             repository.getQrCode(id).fold(
                 onSuccess = { _qr.value = QrState.Ready(it) },
                 onFailure = { _qr.value = QrState.Error(it.toApiError()) },

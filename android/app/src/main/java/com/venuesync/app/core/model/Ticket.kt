@@ -1,6 +1,7 @@
 package com.venuesync.app.core.model
 
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDateTime
 
 enum class TicketStatus { Purchased, Used, Expired, Cancelled, Unknown }
@@ -20,6 +21,8 @@ data class Ticket(
     val eventStart: LocalDateTime?,
     val eventEnd: LocalDateTime?,
     val purchasedAt: LocalDateTime?,
+    /** Null when this is live data; when the network failed, the moment the copy on the phone was saved. */
+    val savedAt: Instant? = null,
 )
 
 /**
