@@ -1,9 +1,13 @@
 package com.venuesync.app.ui.purchase
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -25,17 +29,19 @@ fun PurchaseResultScreen(onDone: () -> Unit, onViewTicket: (() -> Unit)?, modifi
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // A short ember rule: the single accent, marking the moment.
+            Box(Modifier.size(width = 32.dp, height = 3.dp).background(MaterialTheme.colorScheme.primary))
             Text(
                 "You're in!",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.semantics { heading() },
             )
-            Text("Your ticket is booked.", style = MaterialTheme.typography.bodyLarge)
+            Text("Your ticket is booked.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (onViewTicket != null) {
-                Button(onClick = onViewTicket, modifier = Modifier.padding(top = 12.dp)) { Text("View ticket") }
+                Button(shape = MaterialTheme.shapes.small, onClick = onViewTicket, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("View ticket") }
                 TextButton(onClick = onDone) { Text("Done") }
             } else {
-                Button(onClick = onDone, modifier = Modifier.padding(top = 12.dp)) { Text("Done") }
+                Button(shape = MaterialTheme.shapes.small, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("Done") }
             }
         }
     }

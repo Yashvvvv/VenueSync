@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +11,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,9 +34,10 @@ import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.core.model.TicketSummary
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.events.Centered
-import com.venuesync.app.ui.events.DateFormat
 import com.venuesync.app.ui.events.LoadMoreOnEnd
+import com.venuesync.app.ui.events.StubRow
 import com.venuesync.app.ui.events.message
+import com.venuesync.app.ui.theme.Mono
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +71,8 @@ fun MyTicketsScreen(
                         selected = tab == filter,
                         onClick = { viewModel.select(tab) },
                         text = { Text(tab.label()) },
+                        // M3 paints the unselected tab in the selected colour; muted makes the choice readable.
+                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -87,9 +88,9 @@ fun MyTicketsScreen(
                 is UiState.Error -> Centered {
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
                     if (s.error == ApiError.Unauthorized) {
-                        Button(onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
                     } else {
-                        Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+                        Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                     }
                 }
                 is UiState.Success -> TicketList(s.data, onTicketClick, onEndReached = viewModel::loadMore)
@@ -113,14 +114,16 @@ private fun TicketList(tickets: List<TicketSummary>, onTicketClick: (String) -> 
 
 @Composable
 private fun TicketRow(ticket: TicketSummary, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(ticket.eventName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("1 × ${ticket.ticketTypeName}", style = MaterialTheme.typography.bodyMedium)
-            ticket.eventStart?.let { Text(it.format(DateFormat), style = MaterialTheme.typography.bodySmall) }
-            statusLabel(ticket.status)?.let {
-                Text(it, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
-            }
+    val spent = ticket.status != TicketStatus.Purchased && ticket.status != TicketStatus.Unknown
+    StubRow(start = ticket.eventStart, onClick = onClick, spent = spent) {
+        Text(ticket.eventName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            "1 × ${ticket.ticketTypeName}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        statusLabel(ticket.status)?.let {
+            Text(it.uppercase(), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

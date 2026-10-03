@@ -4,12 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,10 +23,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +41,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -39,6 +48,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,27 +58,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.venuesync.app.core.model.Guest
+import com.venuesync.app.core.model.ScanResult
+import com.venuesync.app.core.model.ScanStatus
 import com.venuesync.app.core.model.normalizeCheckInEntry
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.events.message
+import com.venuesync.app.ui.theme.DoorColors
+import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.tickets.statusLabel
-import com.venuesync.app.core.model.ScanResult
-import com.venuesync.app.core.model.ScanStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -193,13 +193,13 @@ private fun TicketCodeDialog(onCheckIn: (String) -> Unit, onDismiss: () -> Unit)
                     entry = it.take(40)
                     showFormatHint = false
                 },
-                placeholder = { Text("F5A3-038B", fontFamily = FontFamily.Monospace) },
+                placeholder = { Text("F5A3-038B", fontFamily = Mono) },
                 singleLine = true,
                 isError = showFormatHint,
                 supportingText = {
                     Text(if (showFormatHint) "Ticket codes look like F5A3-038B." else "Under the QR code on their ticket.")
                 },
-                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = Mono),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Characters,
                     autoCorrectEnabled = false,
@@ -254,7 +254,7 @@ private fun GuestListSheet(
 
 @Composable
 private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    StubCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -265,13 +265,13 @@ private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
                 Text(
                     listOfNotNull(guest.ticketTypeName, guest.ticketCode).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                 )
                 guest.email?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 statusLabel(guest.status)?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
             }
             // A used/expired/cancelled ticket can still be "checked in": the server answers, and the door sees why not.
-            Button(onClick = onCheckIn) { Text("Check in") }
+            Button(shape = MaterialTheme.shapes.small, onClick = onCheckIn) { Text("Check in") }
         }
     }
 }
@@ -293,14 +293,14 @@ private fun Prompt(
         problem?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         }
-        Button(onClick = primary.second, modifier = Modifier.fillMaxWidth().height(64.dp)) {
+        Button(shape = MaterialTheme.shapes.small, onClick = primary.second, modifier = Modifier.fillMaxWidth().height(64.dp)) {
             Text(primary.first, style = MaterialTheme.typography.titleMedium)
         }
         secondary?.let { (label, action) ->
-            OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
         extra.forEach { (label, action) ->
-            OutlinedButton(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = action, modifier = Modifier.fillMaxWidth()) { Text(label) }
         }
     }
 }
@@ -309,19 +309,19 @@ private fun Prompt(
 @Composable
 private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit) {
     val (color, title, detail) = when (result.status) {
-        ScanStatus.Valid -> Triple(Go, "Let in", result.ticketTypeName?.let { "1 × $it" } ?: "Valid ticket")
-        ScanStatus.AlreadyUsed -> Triple(Stop, "Already used", "This ticket was scanned before. Don't let in.")
-        ScanStatus.Expired -> Triple(Stop, "Expired", "This ticket's event is over.")
+        ScanStatus.Valid -> Triple(DoorColors.Go, "Let in", result.ticketTypeName?.let { "1 × $it" } ?: "Valid ticket")
+        ScanStatus.AlreadyUsed -> Triple(DoorColors.Stop, "Already used", "This ticket was scanned before. Don't let in.")
+        ScanStatus.Expired -> Triple(DoorColors.Stop, "Expired", "This ticket's event is over.")
         // A typed code is only looked up within this event (short codes are guessable, so the server won't search
         // other organizers' events). So "invalid" here usually means a typo or the wrong event, not a fake ticket.
         ScanStatus.Invalid -> Triple(
-            Stop,
+            DoorColors.Stop,
             "Not a valid ticket",
             if (manual) "No ticket with this code for this event, or it was cancelled. Check the code and the event."
             else "Not a VenueSync ticket, or it was cancelled.",
         )
-        ScanStatus.WrongEvent -> Triple(Caution, "Wrong event", result.eventName?.let { "This ticket is for $it." } ?: "This ticket is for another event.")
-        ScanStatus.Unknown -> Triple(Neutral, "Couldn't verify", "Check the ticket by hand.")
+        ScanStatus.WrongEvent -> Triple(DoorColors.Caution, "Wrong event", result.eventName?.let { "This ticket is for $it." } ?: "This ticket is for another event.")
+        ScanStatus.Unknown -> Triple(DoorColors.Neutral, "Couldn't verify", "Check the ticket by hand.")
     }
     Column(
         modifier = Modifier.fillMaxSize().background(color).padding(24.dp)
@@ -329,11 +329,12 @@ private fun ResultPanel(result: ScanResult, manual: Boolean, onNext: () -> Unit)
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = MaterialTheme.typography.displayMedium, color = Color.White, textAlign = TextAlign.Center)
-        Text(detail, style = MaterialTheme.typography.titleLarge, color = Color.White, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.displayMedium, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
+        Text(detail, style = MaterialTheme.typography.titleLarge, color = DoorColors.OnDoor, textAlign = TextAlign.Center)
         Button(
+            shape = MaterialTheme.shapes.small,
             onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = color),
+            colors = ButtonDefaults.buttonColors(containerColor = DoorColors.OnDoor, contentColor = color),
             modifier = Modifier.padding(top = 24.dp).fillMaxWidth().height(64.dp),
         ) { Text("Scan next", style = MaterialTheme.typography.titleMedium) }
     }
@@ -361,8 +362,3 @@ private fun KeepScreenOn() {
     }
 }
 
-// ponytail: fixed door colours (white text passes contrast on all four); move into the theme in the step 6 pass.
-private val Go = Color(0xFF1B7F3B)
-private val Stop = Color(0xFFB3261E)
-private val Caution = Color(0xFF8A5A00)
-private val Neutral = Color(0xFF5F6368)

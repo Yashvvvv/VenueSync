@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,6 +39,8 @@ import com.venuesync.app.core.model.EventDetail
 import com.venuesync.app.core.model.TicketType
 import com.venuesync.app.core.model.availabilityOf
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.StubCard
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Currency
@@ -98,7 +99,7 @@ fun EventDetailScreen(
                 UiState.Empty -> Centered { Text("Not found.") }
                 is UiState.Error -> Centered {
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+                    Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                 }
                 is UiState.Success -> EventDetailContent(s.data, onBuy = viewModel::buy)
             }
@@ -119,12 +120,12 @@ private fun EventDetailContent(event: EventDetail, onBuy: (TicketType) -> Unit) 
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.semantics { heading() },
                 )
-                event.venue?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+                event.venue?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 event.start?.let { start ->
                     val range = event.end?.takeIf { it.isAfter(start) }
                         ?.let { "${start.format(DateFormat)} – ${it.format(DateFormat)}" }
                         ?: start.format(DateFormat)
-                    Text(range, style = MaterialTheme.typography.bodyMedium)
+                    Text(range, style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -141,7 +142,7 @@ private fun EventDetailContent(event: EventDetail, onBuy: (TicketType) -> Unit) 
 
 @Composable
 private fun TicketTypeRow(ticketType: TicketType, availability: Availability, onBuy: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    StubCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -151,16 +152,32 @@ private fun TicketTypeRow(ticketType: TicketType, availability: Availability, on
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(end = 12.dp),
                 )
-                Text(priceFormat().format(ticketType.price), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    priceFormat().format(ticketType.price),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontFamily = Mono,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
             ticketType.description?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
             if (availability == Availability.Buyable) {
-                Button(onClick = onBuy, modifier = Modifier.padding(top = 8.dp)) { Text("Get ticket") }
+                Button(shape = MaterialTheme.shapes.small, onClick = onBuy, modifier = Modifier.padding(top = 8.dp)) { Text("Get ticket") }
             } else {
                 availabilityLabel(availability)?.let {
-                    Text(it, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
+                    Text(
+                        it.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 }
             }
         }

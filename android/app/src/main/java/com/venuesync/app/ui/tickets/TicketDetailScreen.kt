@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,21 +31,31 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontFamily
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.core.model.Ticket
@@ -55,6 +65,10 @@ import com.venuesync.app.ui.events.Centered
 import com.venuesync.app.ui.events.DateFormat
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.events.priceLabel
+import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.Perforation
+import com.venuesync.app.ui.theme.StubCard
+import com.venuesync.app.ui.theme.TicketShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +99,7 @@ fun TicketDetailScreen(
                 UiState.Empty -> Centered { Text("Not found.") }
                 is UiState.Error -> Centered {
                     Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = viewModel::retryTicket, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+                    Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retryTicket, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
                 }
                 is UiState.Success -> TicketContent(s.data, qr, onRetryQr = viewModel::retryQr)
             }
@@ -93,12 +107,36 @@ fun TicketDetailScreen(
     }
 }
 
+/** One ticket stub: the event above the perforation, the code below it. */
 @Composable
 private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
+    // The holes sit on the perforation, whose height depends on the event block; plain corners until it's placed.
+    var perforationAt by remember { mutableStateOf<Dp?>(null) }
+    val density = LocalDensity.current
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        StubCard(
+            shape = perforationAt?.let { TicketShape(it, vertical = false) } ?: MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            EventBlock(ticket)
+            Perforation(
+                vertical = false,
+                modifier = Modifier.fillMaxWidth().height(1.dp).onPlaced {
+                    perforationAt = with(density) { it.positionInParent().y.toDp() } + 0.5.dp
+                },
+            )
+            CodeBlock(ticket, qr, onRetryQr)
+        }
+    }
+}
+
+@Composable
+private fun EventBlock(ticket: Ticket) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             ticket.eventName,
@@ -106,68 +144,82 @@ private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
             textAlign = TextAlign.Center,
             modifier = Modifier.semantics { heading() },
         )
-        ticket.venue?.let { Text(it, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center) }
+        ticket.venue?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = muted, textAlign = TextAlign.Center) }
         ticket.eventStart?.let { start ->
             val range = ticket.eventEnd?.takeIf { it.isAfter(start) }
                 ?.let { "${start.format(DateFormat)} – ${it.format(DateFormat)}" }
                 ?: start.format(DateFormat)
-            Text(range, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+            Text(range, style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, color = muted, textAlign = TextAlign.Center)
         }
         Text(
-            listOfNotNull("1 × ${ticket.ticketTypeName}", ticket.price?.let(::priceLabel)).joinToString(" · "),
+            buildAnnotatedString {
+                append("1 × ${ticket.ticketTypeName}")
+                ticket.price?.let {
+                    append(" · ")
+                    withStyle(SpanStyle(fontFamily = Mono)) { append(priceLabel(it)) }
+                }
+            },
             style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
         )
+    }
+}
 
-        Box(modifier = Modifier.padding(top = 16.dp), contentAlignment = Alignment.Center) {
-            when (qr) {
-                QrState.Hidden -> Text(
-                    unusableMessage(ticket.status),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
-                QrState.Loading -> Box(Modifier.size(QrSize), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                is QrState.Error -> QrError(qr.error.message(), onRetryQr)
-                is QrState.Ready -> {
-                    // A null decode (bytes passed the PNG check but aren't a readable image) shows an error, never crashes.
-                    val image = remember(qr) { BitmapFactory.decodeByteArray(qr.png, 0, qr.png.size)?.asImageBitmap() }
-                    if (image == null) {
-                        QrError("We couldn't show the code.", onRetryQr)
-                    } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            FullBrightness()
-                            // White with padding in every theme: scanners need the contrast and the quiet zone.
-                            Box(
-                                modifier = Modifier.size(QrSize).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(16.dp),
-                            ) {
-                                Image(
-                                    image,
-                                    contentDescription = "Ticket QR code",
-                                    filterQuality = FilterQuality.None, // keep the modules' edges sharp when scaled
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            }
-                            Text(
-                                "Show this code at the entrance.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(top = 12.dp),
-                            )
-                        }
+@Composable
+private fun CodeBlock(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (qr) {
+            QrState.Hidden -> Text(
+                unusableMessage(ticket.status),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+            QrState.Loading -> Box(Modifier.size(QrSize), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            is QrState.Error -> QrError(qr.error.message(), onRetryQr)
+            is QrState.Ready -> {
+                // A null decode (bytes passed the PNG check but aren't a readable image) shows an error, never crashes.
+                val image = remember(qr) { BitmapFactory.decodeByteArray(qr.png, 0, qr.png.size)?.asImageBitmap() }
+                if (image == null) {
+                    QrError("We couldn't show the code.", onRetryQr)
+                } else {
+                    FullBrightness()
+                    // White with padding in every theme: scanners need the contrast and the quiet zone.
+                    Box(
+                        modifier = Modifier.size(QrSize).clip(MaterialTheme.shapes.medium).background(Color.White).padding(16.dp),
+                    ) {
+                        Image(
+                            image,
+                            contentDescription = "Ticket QR code",
+                            filterQuality = FilterQuality.None, // keep the modules' edges sharp when scaled
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
+                    Text(
+                        "Show this code at the entrance.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
         // The fallback when the QR code won't scan (cracked screen, glare) or won't even load: staff type this.
         if (qr != QrState.Hidden) {
             Text(
-                "Ticket code",
-                style = MaterialTheme.typography.labelMedium,
+                "TICKET CODE",
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = Mono,
+                letterSpacing = 0.1.em,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp),
+                modifier = Modifier.padding(top = 8.dp).clearAndSetSemantics {},
             )
             Text(
                 ticket.code,
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 letterSpacing = 3.sp,
                 modifier = Modifier.semantics { contentDescription = "Ticket code ${ticket.code.toList().joinToString(" ")}" },
             )
@@ -182,7 +234,7 @@ private fun QrError(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(message, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-        Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+        Button(shape = MaterialTheme.shapes.small, onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
     }
 }
 
