@@ -34,7 +34,7 @@ interface TicketsRepository {
     /** The ticket's QR code as PNG bytes, checked to really be a PNG of sane size. Falls back like [getTicket]. */
     suspend fun getQrCode(ticketId: String): Result<ByteArray>
 
-    /** The QR code saved on the phone, without trying the network: for a ticket that just came from the phone. */
+    /** The QR code saved on the phone, without trying the network. It never changes, so this is always safe to show. */
     suspend fun savedQrCode(ticketId: String): ByteArray?
 
     /**
