@@ -5,7 +5,7 @@ import type React from "react"
 import { type TicketDetails, TicketStatus } from "@/domain/domain"
 import { getTicket, getTicketQr } from "@/lib/api"
 import { format } from "date-fns"
-import { Calendar, MapPin, Tag, DollarSign, ArrowLeft, Download, QrCode, CheckCircle, Clock, XCircle, Ticket, RefreshCw } from "lucide-react"
+import { Calendar, MapPin, Tag, DollarSign, ArrowLeft, QrCode, CheckCircle, Clock, XCircle, Ticket, RefreshCw } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "react-oidc-context"
 import { useParams, useNavigate } from "react-router"
@@ -232,8 +232,8 @@ const DashboardViewTicketPage: React.FC = () => {
               {/* Main Ticket */}
               <div className={`relative rounded-3xl p-1 ${isInactive ? 'bg-muted/50' : 'gradient-primary'}`}>
                 {/* Cutouts that sit on top of the gradient border */}
-                <div className="absolute left-0 top-1/2 w-5 h-10 -ml-2 rounded-r-full z-10" style={{ backgroundColor: 'hsl(var(--background))' }} />
-                <div className="absolute right-0 top-1/2 w-5 h-10 -mr-2 rounded-l-full z-10" style={{ backgroundColor: 'hsl(var(--background))' }} />
+                <div className="absolute left-0 top-1/2 w-5 h-10 -ml-2 rounded-r-full z-10" style={{ backgroundColor: 'var(--background)' }} />
+                <div className="absolute right-0 top-1/2 w-5 h-10 -mr-2 rounded-l-full z-10" style={{ backgroundColor: 'var(--background)' }} />
                 
                 <div className="bg-background/95 backdrop-blur-xl rounded-[22px] p-6 relative">
                   {/* Status Badge */}
@@ -329,7 +329,7 @@ const DashboardViewTicketPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Price Paid</p>
-                        <p className="font-medium text-foreground">${ticket.price}</p>
+                        <p className="font-mono font-medium tabular-nums text-foreground">${ticket.price.toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -344,19 +344,6 @@ const DashboardViewTicketPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Download Button */}
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 glass border-border/50 h-12 bg-transparent"
-                  onClick={() => {
-                    // Could implement PDF download here
-                  }}
-                >
-                  <Download className="w-4 h-4" />
-                  Download Ticket
-                </Button>
-              </div>
             </div>
           </motion.div>
         </div>
