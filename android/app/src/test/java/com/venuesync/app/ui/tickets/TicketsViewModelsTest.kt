@@ -26,6 +26,7 @@ import org.junit.Test
 class TicketsViewModelsTest {
 
     private class FakeTickets : TicketsRepository {
+        override fun syncOffline(force: Boolean) = Unit
         val listCalls = mutableListOf<Pair<TicketFilter, Int>>()
         var pages: (TicketFilter, Int) -> Result<TicketPage> = { _, _ -> Result.success(TicketPage(emptyList(), true)) }
         var ticket: Result<Ticket> = Result.failure(ApiException(ApiError.NotFound))

@@ -53,6 +53,7 @@ class EventDetailPurchaseTest {
 
     /** Each purchase waits on a deferred the test completes, so "in flight" is a state the test can see. */
     private class Tickets : TicketsRepository {
+        override fun syncOffline(force: Boolean) = Unit
         override suspend fun listTickets(filter: TicketFilter, page: Int) = error("not used")
         override suspend fun getTicket(id: String) = error("not used")
         override suspend fun getQrCode(ticketId: String) = error("not used")
