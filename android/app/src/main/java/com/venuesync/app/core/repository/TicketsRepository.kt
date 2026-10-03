@@ -142,6 +142,9 @@ class TicketsRepositoryImpl @Inject constructor(
             .map { it.id }.distinct().take(MAX_SAVED)
         // Used, cancelled or ended tickets leave the Active list; only the complete list proves one is gone.
         if (complete) edit { saved -> saved.filter { it.ticket.id in ids } }
+        // The server just listed these as still valid: the copy is confirmed as of now, which is what the banner's age means.
+        val confirmedAt = now().toEpochMilli()
+        edit { saved -> saved.map { if (it.ticket.id in ids) it.copy(savedAt = confirmedAt) else it } }
         // getTicket/getQrCode save as they go. Their offline fallback can't fire here: there's nothing saved to fall back to.
         for (id in ids) {
             if (saved(id) == null && getTicket(id).isFailure) return false

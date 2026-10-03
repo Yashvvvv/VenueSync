@@ -12,7 +12,7 @@ data class CachedTicket(
     val ticket: TicketDto,
     /** Base64 PNG; null until the code has been fetched once. */
     val qrPng: String? = null,
-    /** Epoch millis of the live response this came from. */
+    /** Epoch millis the server last vouched for this ticket: its detail was fetched, or a sync listed it as Active. */
     val savedAt: Long,
 )
 
