@@ -42,7 +42,7 @@ class TicketsRepositoryTest {
             engine = engine,
             retryBaseDelayMs = 0,
         )
-        return TicketsRepositoryImpl(TicketsApi(client))
+        return TicketsRepositoryImpl(TicketsApi(client), FakeTicketCache(), NoBackgroundWork)
     }
 
     private suspend fun TicketsRepository.errorFor(

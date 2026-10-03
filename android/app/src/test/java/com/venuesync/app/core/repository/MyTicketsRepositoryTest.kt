@@ -38,6 +38,8 @@ class MyTicketsRepositoryTest {
                     retryBaseDelayMs = 0,
                 ),
             ),
+            FakeTicketCache(),
+            NoBackgroundWork,
         )
 
     private fun json(text: String) = repo { text.toByteArray() }

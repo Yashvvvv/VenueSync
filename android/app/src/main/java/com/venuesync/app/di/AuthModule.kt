@@ -1,10 +1,12 @@
 package com.venuesync.app.di
 
 import com.venuesync.app.BuildConfig
+import com.venuesync.app.auth.KeystoreTicketCache
 import com.venuesync.app.auth.KeystoreTokenStore
 import com.venuesync.app.core.auth.AuthApi
 import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.auth.TokenStore
+import com.venuesync.app.core.repository.TicketCache
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -26,6 +28,9 @@ annotation class ApplicationScope
 abstract class AuthModule {
     @Binds
     abstract fun bindTokenStore(impl: KeystoreTokenStore): TokenStore
+
+    @Binds
+    abstract fun bindTicketCache(impl: KeystoreTicketCache): TicketCache
 
     companion object {
         @Provides

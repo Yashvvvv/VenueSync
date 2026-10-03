@@ -10,6 +10,7 @@ import com.venuesync.app.core.model.TicketSummary
 import com.venuesync.app.core.repository.TicketPage
 import com.venuesync.app.core.repository.TicketsRepository
 import com.venuesync.app.ui.common.UiState
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -26,6 +27,12 @@ import org.junit.Test
 class TicketsViewModelsTest {
 
     private class FakeTickets : TicketsRepository {
+        var savedQr: ByteArray? = null
+        override suspend fun savedQrCode(ticketId: String) = savedQr
+        var syncs = 0
+        override fun syncOffline(force: Boolean) {
+            syncs++
+        }
         val listCalls = mutableListOf<Pair<TicketFilter, Int>>()
         var pages: (TicketFilter, Int) -> Result<TicketPage> = { _, _ -> Result.success(TicketPage(emptyList(), true)) }
         var ticket: Result<Ticket> = Result.failure(ApiException(ApiError.NotFound))
@@ -87,6 +94,20 @@ class TicketsViewModelsTest {
         assertEquals(2, repo.listCalls.size)
     }
 
+    @Test
+    fun `a live Active list refreshes the phone's copy, an offline one or Past doesn't`() = runTest {
+        repo.pages = { _, _ -> Result.success(TicketPage(listOf(summary("a")), isLast = true)) }
+        val vm = MyTicketsViewModel(SavedStateHandle(), repo)
+        assertEquals(1, repo.syncs)
+
+        vm.select(TicketFilter.Past)
+        assertEquals(1, repo.syncs)
+
+        repo.pages = { _, _ -> Result.success(TicketPage(listOf(summary("a")), isLast = true, savedAt = Instant.EPOCH)) }
+        vm.select(TicketFilter.Active)
+        assertEquals(1, repo.syncs) // syncing from the copy would only fail again
+    }
+
     // ── Ticket detail ──
 
     private fun detailVm() = TicketDetailViewModel(SavedStateHandle(mapOf(TicketDetailViewModel.TICKET_ID_ARG to "t1")), repo)
@@ -98,6 +119,15 @@ class TicketsViewModelsTest {
         val vm = detailVm()
         assertTrue(vm.ticket.value is UiState.Success)
         assertTrue(vm.qr.value is QrState.Ready)
+    }
+
+    @Test
+    fun `a ticket from the phone shows the phone's code without trying the network again`() = runTest {
+        repo.ticket = Result.success(ticket(TicketStatus.Purchased).copy(savedAt = Instant.EPOCH))
+        repo.savedQr = byteArrayOf(9)
+        val vm = detailVm()
+        assertTrue(vm.qr.value is QrState.Ready)
+        assertEquals(0, repo.qrCalls)
     }
 
     @Test
