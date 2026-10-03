@@ -4,4 +4,6 @@
     <color name="vs_background">#F9F6F3</color>
     <!-- Launcher icon ground, the same in both modes: Classic's warm black (the calm background token). -->
     <color name="vs_launcher_background">#050403</color>
+    <!-- Hype's black stock (the acid background token), the same in both modes. -->
+    <color name="vs_hype_background">#000000</color>
 </resources>

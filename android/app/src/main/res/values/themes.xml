@@ -3,4 +3,10 @@
     <style name="Theme.VenueSync" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/vs_background</item>
     </style>
+
+    <!-- Hype is black stock in every system mode. Set as the splash theme (API 33+) once Hype is chosen, so the
+         system's launch window is already black on the next cold start. -->
+    <style name="Theme.VenueSync.Hype" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/vs_hype_background</item>
+    </style>
 </resources>
