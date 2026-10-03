@@ -45,7 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontFamily
+import com.venuesync.app.ui.theme.Mono
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.core.model.Ticket
@@ -167,7 +167,7 @@ private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
             Text(
                 ticket.code,
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 letterSpacing = 3.sp,
                 modifier = Modifier.semantics { contentDescription = "Ticket code ${ticket.code.toList().joinToString(" ")}" },
             )

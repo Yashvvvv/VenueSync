@@ -58,7 +58,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.ui.text.font.FontFamily
+import com.venuesync.app.ui.theme.Mono
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.venuesync.app.core.model.Guest
@@ -193,13 +193,13 @@ private fun TicketCodeDialog(onCheckIn: (String) -> Unit, onDismiss: () -> Unit)
                     entry = it.take(40)
                     showFormatHint = false
                 },
-                placeholder = { Text("F5A3-038B", fontFamily = FontFamily.Monospace) },
+                placeholder = { Text("F5A3-038B", fontFamily = Mono) },
                 singleLine = true,
                 isError = showFormatHint,
                 supportingText = {
                     Text(if (showFormatHint) "Ticket codes look like F5A3-038B." else "Under the QR code on their ticket.")
                 },
-                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.typography.titleLarge.copy(fontFamily = Mono),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Characters,
                     autoCorrectEnabled = false,
@@ -265,7 +265,7 @@ private fun GuestRow(guest: Guest, onCheckIn: () -> Unit) {
                 Text(
                     listOfNotNull(guest.ticketTypeName, guest.ticketCode).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                 )
                 guest.email?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 statusLabel(guest.status)?.let { Text(it, style = MaterialTheme.typography.labelLarge) }

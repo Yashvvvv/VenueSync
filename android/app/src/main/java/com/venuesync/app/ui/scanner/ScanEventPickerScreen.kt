@@ -32,7 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import com.venuesync.app.ui.theme.Mono
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -161,10 +161,10 @@ private fun InviteCodeDialog(join: JoinState, onJoin: (String) -> Unit, onDismis
                         code = it.take(16)
                         onEdit() // typing again clears the last error
                     },
-                    placeholder = { Text("K7Q2M-9XH4P", fontFamily = FontFamily.Monospace) },
+                    placeholder = { Text("K7Q2M-9XH4P", fontFamily = Mono) },
                     singleLine = true,
                     enabled = !joining,
-                    textStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
                     isError = join is JoinState.Failed,
                     supportingText = (join as? JoinState.Failed)?.let { failed -> { Text(failed.message) } },
                     keyboardOptions = KeyboardOptions(
