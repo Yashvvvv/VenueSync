@@ -42,6 +42,8 @@ object VenueSyncHttpClient {
         engine: HttpClientEngine = OkHttp.create(),
         retryBaseDelayMs: Long = 1_000, // tests pass 0
         session: SessionManager? = null, // null = anonymous client (tests)
+        /** False when the phone has no network at all (airplane mode); supplied by the app, core stays android-free. */
+        hasNetwork: () -> Boolean = { true },
     ): HttpClient = HttpClient(engine) {
         // Non-2xx must throw (ResponseException) — otherwise a 400 ErrorDto would silently
         // deserialize into an empty PageResponse because every field has a default.
@@ -68,8 +70,10 @@ object VenueSyncHttpClient {
             }
             // A request timeout is not retried: Ktor reports it as cancellation, not IOException (RetryPolicyTest
             // pins this). That matters for purchase: the user gets Try again after 60s, not after 3 x 60s.
+            // With no network at all a retry can't succeed; it only delays the offline fallback (a saved ticket at the
+            // door) by 1s + 2s. A flaky network (venue Wi-Fi) still has a network, so it keeps its retries.
             retryOnExceptionIf { request, cause ->
-                cause is IOException &&
+                cause is IOException && hasNetwork() &&
                     (request.method == HttpMethod.Get || request.headers.contains(IDEMPOTENCY_KEY_HEADER))
             }
             // 1s, then 2s. Retry-After is ignored so a hostile/buggy header can't freeze the screen for an hour.

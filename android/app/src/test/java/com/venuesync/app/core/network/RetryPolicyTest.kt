@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.http.HttpStatusCode
@@ -19,7 +20,7 @@ class RetryPolicyTest {
 
     private val requests = mutableListOf<HttpRequestData>()
 
-    private fun client(handler: suspend () -> HttpStatusCode): HttpClient = VenueSyncHttpClient.create(
+    private fun client(hasNetwork: Boolean = true, handler: suspend () -> HttpStatusCode): HttpClient = VenueSyncHttpClient.create(
         "https://api.example/api/v1",
         enableLogging = false,
         engine = MockEngine { request ->
@@ -27,9 +28,22 @@ class RetryPolicyTest {
             respond("", handler())
         },
         retryBaseDelayMs = 0,
+        hasNetwork = { hasNetwork },
     )
 
     private suspend fun HttpClient.attempt(block: suspend HttpClient.() -> Unit) = runCatching { block() }
+
+    @Test
+    fun `a connection failure is retried while there is a network`() = runBlocking {
+        client { throw IOException("reset") }.attempt { get("x") }
+        assertEquals(3, requests.size)
+    }
+
+    @Test
+    fun `with no network at all a failure is final at once, so the offline copy shows without waiting`() = runBlocking {
+        client(hasNetwork = false) { throw IOException("Unable to resolve host") }.attempt { get("x") }
+        assertEquals(1, requests.size)
+    }
 
     @Test
     fun `POST without a key is never retried`() = runBlocking {
