@@ -67,6 +67,7 @@ fun VenueSyncNavHost() {
                 onBack = { navController.navigateUp() },
                 onTicketClick = { navController.navigateOnce(entry, Routes.ticketDetail(it)) },
                 onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+                onBrowse = { navController.navigateUp() },
             )
         }
         composable(Routes.SCAN_EVENTS) { entry ->

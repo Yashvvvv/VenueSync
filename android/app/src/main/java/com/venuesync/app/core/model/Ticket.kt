@@ -72,9 +72,12 @@ data class TicketSummary(
      * What the row says. The server keeps a ticket PURCHASED after its event ends, so, like the web, an ended event
      * reads as Expired. Display only: the scanner, not this, decides who gets in.
      */
-    fun displayStatus(now: LocalDateTime): TicketStatus =
-        if (status == TicketStatus.Purchased && eventEnd?.isBefore(now) == true) TicketStatus.Expired else status
+    fun displayStatus(now: LocalDateTime): TicketStatus = displayStatus(status, eventEnd, now)
 }
+
+/** The rule behind every status the app shows: PURCHASED for an event that has ended reads as Expired. */
+fun displayStatus(status: TicketStatus, eventEnd: LocalDateTime?, now: LocalDateTime): TicketStatus =
+    if (status == TicketStatus.Purchased && eventEnd?.isBefore(now) == true) TicketStatus.Expired else status
 
 /** Server-side split: Active = purchased and the event hasn't ended; Past = everything else. */
 enum class TicketFilter(val wire: String) { Active("active"), Past("past") }
