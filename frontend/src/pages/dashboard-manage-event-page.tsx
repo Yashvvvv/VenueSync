@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import Navbar from "@/components/layout/navbar"
@@ -555,7 +556,7 @@ const DashboardManageEventPage: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-foreground">{ticket.name}</span>
                                 <Badge variant="outline" className="text-primary border-primary/30">
-                                  ${ticket.price}
+                                  {formatInr(ticket.price)}
                                 </Badge>
                               </div>
                               {ticket.totalAvailable && (
@@ -639,7 +640,7 @@ const DashboardManageEventPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-foreground">Price ($)</Label>
+              <Label className="text-foreground">Price (₹)</Label>
               <Input
                 type="number"
                 min="0"

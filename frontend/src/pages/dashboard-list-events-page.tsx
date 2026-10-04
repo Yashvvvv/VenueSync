@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import Navbar from "@/components/layout/navbar"
@@ -352,7 +353,7 @@ const DashboardListEventsPage: React.FC = () => {
                             <div className="flex flex-wrap gap-1.5">
                               {event.ticketTypes.slice(0, 2).map((ticket) => (
                                 <span key={ticket.id} className="text-xs px-2 py-0.5 rounded-md bg-secondary">
-                                  {ticket.name} - ${ticket.price}
+                                  {ticket.name} - {formatInr(ticket.price)}
                                 </span>
                               ))}
                               {event.ticketTypes.length > 2 && (

@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -21,7 +22,7 @@ import { VIBE_CONFETTI } from "@/lib/vibe"
 import { useAudience } from "@/hooks/use-audience"
 import { ArrowLeft, CheckCircle, Info, WarningCircle } from "@/components/icons"
 
-const money = (value: number) => `$${value.toFixed(2)}`
+const money = formatInr
 
 /*
  * The idempotency key of an attempt whose outcome is unknown. Kept in sessionStorage so it survives a reload of this

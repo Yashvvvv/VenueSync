@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import { type TicketDetails, TicketStatus } from "@/domain/domain"
@@ -329,7 +330,7 @@ const DashboardViewTicketPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Price Paid</p>
-                        <p className="font-mono font-medium tabular-nums text-foreground">${ticket.price.toFixed(2)}</p>
+                        <p className="font-mono font-medium tabular-nums text-foreground">{formatInr(ticket.price)}</p>
                       </div>
                     </div>
                   </div>
