@@ -1,272 +1,194 @@
 package com.fullstack.venuesync.shared.config;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.repository.EventRepository;
+import com.fullstack.venuesync.events.service.EventImageService;
 import com.fullstack.venuesync.tickets.domain.TicketType;
-
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Data loader that seeds the database with sample events on startup.
- * Adds sample events that don't already exist (checks by name).
+ * The demo catalogue: twelve events across India, each with INR prices and a photo (from Unsplash, free to use; see
+ * resources/demo-events/CREDITS.md).
+ *
+ * <p>Runs on every start and only ever converges: an event that's missing is created; one still carrying its old
+ * US demo name is rewritten in place (same id, so tickets already bought for it stay valid); one without a photo gets
+ * its photo. A demo event is found by its exact name and venue together (the old US ones by theirs), which no
+ * organizer's event shares, so nothing an organizer made is touched.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DataLoader implements CommandLineRunner {
 
-    private final EventRepository eventRepository;
+  private final EventRepository eventRepository;
+  private final EventImageService imageService;
+  private final TransactionTemplate transactions;
 
-    @Override
-    public void run(String... args) {
-        log.info("Checking for sample events to add...");
-        List<Event> sampleEvents = createSampleEvents();
-        
-        // Get existing event names to avoid duplicates
-        List<String> existingNames = eventRepository.findAll().stream()
-                .map(Event::getName)
-                .toList();
-        
-        // Filter out events that already exist
-        List<Event> newEvents = sampleEvents.stream()
-                .filter(event -> !existingNames.contains(event.getName()))
-                .toList();
-        
-        if (newEvents.isEmpty()) {
-            log.info("All sample events already exist, skipping.");
-            return;
-        }
-        
-        eventRepository.saveAll(newEvents);
-        log.info("Successfully added {} new sample events.", newEvents.size());
+  @Override
+  public void run(String... args) {
+    int created = 0;
+    int rewritten = 0;
+    for (Demo demo : DEMOS) {
+      try {
+        // One transaction per event: the photo's bulk update clears the persistence context, and a failure in one
+        // demo event must never stop the app from starting.
+        Outcome outcome = transactions.execute(status -> converge(demo));
+        if (outcome == Outcome.CREATED) created++;
+        if (outcome == Outcome.REWRITTEN) rewritten++;
+      } catch (RuntimeException e) {
+        log.warn("Demo event '{}' skipped: {}", demo.name(), e.getMessage());
+      }
     }
+    log.info("Demo catalogue: {} created, {} rewritten for India.", created, rewritten);
+  }
 
-    private List<Event> createSampleEvents() {
-        List<Event> events = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+  private enum Outcome { CREATED, REWRITTEN, UNCHANGED }
 
-        // 1. Tech Conference
-        Event techConf = Event.builder()
-                .name("TechCon 2025 - AI & Innovation Summit")
-                .venue("Silicon Valley Convention Center, San Francisco, CA")
-                .start(now.plusDays(30).withHour(9).withMinute(0))
-                .end(now.plusDays(32).withHour(18).withMinute(0))
-                .salesStart(now.minusDays(30))
-                .salesEnd(now.plusDays(28))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(techConf, 
-            new TicketTypeInfo("Early Bird", 299.99, "Limited early bird pricing - includes all sessions", 100),
-            new TicketTypeInfo("General Admission", 499.99, "Full access to all conference sessions and workshops", 500),
-            new TicketTypeInfo("VIP Pass", 999.99, "VIP seating, exclusive networking dinner, and swag bag", 50)
-        );
-        events.add(techConf);
-
-        // 2. Music Festival
-        Event musicFest = Event.builder()
-                .name("Summer Vibes Music Festival")
-                .venue("Central Park Amphitheater, New York, NY")
-                .start(now.plusDays(45).withHour(14).withMinute(0))
-                .end(now.plusDays(45).withHour(23).withMinute(0))
-                .salesStart(now.minusDays(15))
-                .salesEnd(now.plusDays(44))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(musicFest,
-            new TicketTypeInfo("General Admission", 79.99, "Standing area access", 2000),
-            new TicketTypeInfo("Premium", 149.99, "Reserved seating with great views", 500),
-            new TicketTypeInfo("VIP Experience", 299.99, "Front row access, meet & greet, complimentary drinks", 100)
-        );
-        events.add(musicFest);
-
-        // 3. Comedy Night
-        Event comedyNight = Event.builder()
-                .name("Stand-Up Comedy Night with Top Comedians")
-                .venue("The Laugh Factory, Los Angeles, CA")
-                .start(now.plusDays(14).withHour(20).withMinute(0))
-                .end(now.plusDays(14).withHour(23).withMinute(0))
-                .salesStart(now.minusDays(7))
-                .salesEnd(now.plusDays(13))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(comedyNight,
-            new TicketTypeInfo("Standard Seat", 35.00, "Great seats for a night of laughs", 200),
-            new TicketTypeInfo("Front Row", 65.00, "Best seats in the house - be prepared to be part of the show!", 30)
-        );
-        events.add(comedyNight);
-
-        // 4. Art Exhibition
-        Event artExhibition = Event.builder()
-                .name("Modern Art Gala - Contemporary Masters")
-                .venue("Metropolitan Art Gallery, Chicago, IL")
-                .start(now.plusDays(21).withHour(18).withMinute(0))
-                .end(now.plusDays(21).withHour(22).withMinute(0))
-                .salesStart(now.minusDays(14))
-                .salesEnd(now.plusDays(20))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(artExhibition,
-            new TicketTypeInfo("General Entry", 45.00, "Access to all exhibition halls", 300),
-            new TicketTypeInfo("Guided Tour", 75.00, "Includes expert-led tour of the exhibition", 50),
-            new TicketTypeInfo("Patron Package", 250.00, "Private viewing, champagne reception, artist meet & greet", 25)
-        );
-        events.add(artExhibition);
-
-        // 5. Sports Event
-        Event sportsEvent = Event.builder()
-                .name("Championship Finals - Basketball Showdown")
-                .venue("Madison Square Garden, New York, NY")
-                .start(now.plusDays(60).withHour(19).withMinute(30))
-                .end(now.plusDays(60).withHour(22).withMinute(30))
-                .salesStart(now)
-                .salesEnd(now.plusDays(59))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(sportsEvent,
-            new TicketTypeInfo("Upper Level", 89.99, "Great view of the entire court", 1000),
-            new TicketTypeInfo("Lower Level", 199.99, "Closer to the action", 500),
-            new TicketTypeInfo("Courtside", 599.99, "Experience the game up close", 50)
-        );
-        events.add(sportsEvent);
-
-        // 6. Food & Wine Festival
-        Event foodFest = Event.builder()
-                .name("Gourmet Food & Wine Festival")
-                .venue("Napa Valley Vineyards, California")
-                .start(now.plusDays(25).withHour(11).withMinute(0))
-                .end(now.plusDays(25).withHour(20).withMinute(0))
-                .salesStart(now.minusDays(20))
-                .salesEnd(now.plusDays(24))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(foodFest,
-            new TicketTypeInfo("Tasting Pass", 125.00, "10 tasting tickets, souvenir glass", 400),
-            new TicketTypeInfo("Connoisseur", 225.00, "Unlimited tastings, chef demos, recipe book", 150),
-            new TicketTypeInfo("Grand Cru", 450.00, "All access + private vineyard tour + dinner", 40)
-        );
-        events.add(foodFest);
-
-        // 7. Startup Pitch Night
-        Event startupPitch = Event.builder()
-                .name("Startup Pitch Night - Shark Tank Style")
-                .venue("Innovation Hub, Austin, TX")
-                .start(now.plusDays(10).withHour(18).withMinute(0))
-                .end(now.plusDays(10).withHour(21).withMinute(30))
-                .salesStart(now.minusDays(5))
-                .salesEnd(now.plusDays(9))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(startupPitch,
-            new TicketTypeInfo("Observer", 25.00, "Watch the pitches and networking", 200),
-            new TicketTypeInfo("Investor Circle", 150.00, "Priority seating, post-event mixer with founders", 50)
-        );
-        events.add(startupPitch);
-
-        // 8. Yoga Retreat
-        Event yogaRetreat = Event.builder()
-                .name("Sunrise Yoga & Wellness Retreat")
-                .venue("Serenity Gardens, Sedona, AZ")
-                .start(now.plusDays(35).withHour(6).withMinute(0))
-                .end(now.plusDays(37).withHour(12).withMinute(0))
-                .salesStart(now.minusDays(10))
-                .salesEnd(now.plusDays(30))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(yogaRetreat,
-            new TicketTypeInfo("Day Pass", 85.00, "Single day access to all sessions", 100),
-            new TicketTypeInfo("Full Retreat", 350.00, "3-day full experience with meals included", 50),
-            new TicketTypeInfo("Private Sessions", 550.00, "Includes 1-on-1 sessions with master instructors", 15)
-        );
-        events.add(yogaRetreat);
-
-        // 9. Gaming Tournament
-        Event gamingTourney = Event.builder()
-                .name("eSports Championship - League Finals")
-                .venue("Esports Arena, Las Vegas, NV")
-                .start(now.plusDays(40).withHour(12).withMinute(0))
-                .end(now.plusDays(40).withHour(22).withMinute(0))
-                .salesStart(now)
-                .salesEnd(now.plusDays(39))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(gamingTourney,
-            new TicketTypeInfo("Spectator", 45.00, "Watch the action live", 800),
-            new TicketTypeInfo("Gamer Lounge", 95.00, "Access to gaming stations and swag", 200),
-            new TicketTypeInfo("All-Access", 175.00, "Backstage tour, player autographs, exclusive merch", 75)
-        );
-        events.add(gamingTourney);
-
-        // 10. Jazz Night
-        Event jazzNight = Event.builder()
-                .name("Jazz Under the Stars")
-                .venue("Blue Note Jazz Club, New Orleans, LA")
-                .start(now.plusDays(7).withHour(20).withMinute(0))
-                .end(now.plusDays(7).withHour(23).withMinute(30))
-                .salesStart(now.minusDays(14))
-                .salesEnd(now.plusDays(6))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(jazzNight,
-            new TicketTypeInfo("Standing", 40.00, "Standing room with bar access", 150),
-            new TicketTypeInfo("Table Seating", 75.00, "Reserved table for two", 40),
-            new TicketTypeInfo("VIP Booth", 200.00, "Private booth, bottle service included", 10)
-        );
-        events.add(jazzNight);
-
-        // 11. Workshop - Photography
-        Event photoWorkshop = Event.builder()
-                .name("Master Photography Workshop")
-                .venue("Creative Studios, Seattle, WA")
-                .start(now.plusDays(18).withHour(10).withMinute(0))
-                .end(now.plusDays(18).withHour(17).withMinute(0))
-                .salesStart(now.minusDays(7))
-                .salesEnd(now.plusDays(17))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(photoWorkshop,
-            new TicketTypeInfo("Workshop Ticket", 189.00, "Full day workshop, includes materials and lunch", 30)
-        );
-        events.add(photoWorkshop);
-
-        // 12. Book Signing
-        Event bookSigning = Event.builder()
-                .name("Bestselling Author Book Signing & Talk")
-                .venue("Barnes & Noble Union Square, New York, NY")
-                .start(now.plusDays(5).withHour(18).withMinute(0))
-                .end(now.plusDays(5).withHour(20).withMinute(0))
-                .salesStart(now.minusDays(10))
-                .salesEnd(now.plusDays(4))
-                .status(EventStatusEnum.PUBLISHED)
-                .build();
-        addTicketTypes(bookSigning,
-            new TicketTypeInfo("Free Entry", 0.00, "Free admission - book purchase encouraged", 100),
-            new TicketTypeInfo("Book Bundle", 35.00, "Includes signed copy of the new book", 75)
-        );
-        events.add(bookSigning);
-
-        return events;
+  private Outcome converge(Demo demo) {
+    LocalDateTime now = LocalDateTime.now();
+    Optional<Event> current = eventRepository.findFirstByNameAndVenue(demo.name(), demo.venue());
+    Outcome outcome = Outcome.UNCHANGED;
+    Event event;
+    if (current.isPresent()) {
+      event = current.get();
+    } else {
+      Optional<Event> legacy = eventRepository.findFirstByNameAndVenue(demo.legacyName(), demo.legacyVenue());
+      event = legacy.orElseGet(Event::new);
+      outcome = legacy.isPresent() ? Outcome.REWRITTEN : Outcome.CREATED;
+      apply(demo, event, now, legacy.isEmpty());
+      event = eventRepository.saveAndFlush(event);
     }
-
-    private void addTicketTypes(Event event, TicketTypeInfo... ticketTypeInfos) {
-        for (TicketTypeInfo info : ticketTypeInfos) {
-            TicketType ticketType = TicketType.builder()
-                    .name(info.name)
-                    .price(info.price)
-                    .description(info.description)
-                    .totalAvailable(info.totalAvailable)
-                    .event(event)
-                    .build();
-            event.getTicketTypes().add(ticketType);
-        }
+    if (event.getImageUpdatedAt() == null) {
+      imageService.store(event.getId(), photo(demo.photo()));
     }
+    return outcome;
+  }
 
-    private record TicketTypeInfo(String name, double price, String description, int totalAvailable) {}
+  /** Writes the demo's Indian details onto [event], keeping anything a buyer already depends on. */
+  private static void apply(Demo demo, Event event, LocalDateTime now, boolean fresh) {
+    event.setName(demo.name());
+    event.setVenue(demo.venue());
+    // ponytail: a rewritten demo event whose dates have passed is moved into the future so the catalogue looks
+    // alive; a real organizer's event is never rewritten.
+    boolean over = event.getEnd() != null && event.getEnd().isBefore(now);
+    if (fresh || over || event.getStart() == null) {
+      event.setStart(now.plusDays(demo.startDay()).withHour(demo.startHour()).withMinute(demo.startMinute()).withSecond(0).withNano(0));
+      event.setEnd(now.plusDays(demo.endDay()).withHour(demo.endHour()).withMinute(demo.endMinute()).withSecond(0).withNano(0));
+      event.setSalesStart(now.plusDays(demo.salesStartDay()).withSecond(0).withNano(0));
+      event.setSalesEnd(event.getStart().minusHours(1));
+      event.setStatus(EventStatusEnum.PUBLISHED);
+    }
+    for (Tier tier : demo.tiers()) {
+      TicketType type = event.getTicketTypes().stream()
+          .filter(t -> t.getName().equals(tier.legacyName()) || t.getName().equals(tier.name()))
+          .findFirst()
+          .orElseGet(() -> {
+            TicketType added = new TicketType();
+            added.setEvent(event);
+            event.getTicketTypes().add(added);
+            return added;
+          });
+      type.setName(tier.name());
+      type.setPrice(tier.price());
+      type.setDescription(tier.description());
+      // Never below what an earlier capacity allowed: tickets may already be sold against it.
+      type.setTotalAvailable(Math.max(tier.total(), type.getTotalAvailable() == null ? 0 : type.getTotalAvailable()));
+    }
+  }
+
+  private static byte[] photo(String file) {
+    try (InputStream in = new ClassPathResource("demo-events/" + file + ".jpg").getInputStream()) {
+      return in.readAllBytes();
+    } catch (IOException e) {
+      throw new IllegalStateException("Demo photo missing: " + file, e);
+    }
+  }
+
+  /** Day offsets are from the first start; times are wall clock (ADR-003). */
+  private record Demo(String name, String legacyName, String venue, String legacyVenue, String photo,
+      int startDay, int startHour, int startMinute, int endDay, int endHour, int endMinute, int salesStartDay,
+      List<Tier> tiers) {}
+
+  /** [legacyName] is the US demo tier this one replaces, so a rewrite updates it instead of adding another. */
+  private record Tier(String legacyName, String name, double price, String description, int total) {}
+
+  static final List<Demo> DEMOS = List.of(
+      new Demo("Bengaluru AI & Innovation Summit", "TechCon 2025 - AI & Innovation Summit",
+          "Bangalore International Exhibition Centre, Bengaluru", "Silicon Valley Convention Center, San Francisco, CA",
+          "ai-summit", 30, 9, 30, 32, 18, 0, -30, List.of(
+          new Tier("Early Bird", "Early Bird", 2499, "Limited early-bird pricing, every session included", 100),
+          new Tier("General Admission", "General Admission", 4999, "All talks, workshops and the expo floor", 500),
+          new Tier("VIP Pass", "VIP Pass", 9999, "Front seating, the founders' dinner and a swag kit", 50))),
+      new Demo("Monsoon Beats Music Festival", "Summer Vibes Music Festival",
+          "Mahalaxmi Racecourse, Mumbai", "Central Park Amphitheater, New York, NY",
+          "music-festival", 45, 16, 0, 45, 23, 0, -15, List.of(
+          new Tier("General Admission", "General Admission", 1499, "Standing access to the main arena", 2000),
+          new Tier("Premium", "Gold", 2999, "Raised viewing deck close to the stage", 500),
+          new Tier("VIP Experience", "Fan Pit", 5999, "Front-of-stage pit, express entry and a drinks counter", 100))),
+      new Demo("Stand-Up Comedy Night: Mumbai Open", "Stand-Up Comedy Night with Top Comedians",
+          "The Habitat, Khar West, Mumbai", "The Laugh Factory, Los Angeles, CA",
+          "comedy", 14, 20, 0, 14, 22, 30, -7, List.of(
+          new Tier("Standard Seat", "Standard Seat", 599, "Good seats for a night of laughs", 200),
+          new Tier("Front Row", "Front Row", 999, "Best seats in the house; expect to become part of the set", 30))),
+      new Demo("Contemporary Indian Art Showcase", "Modern Art Gala - Contemporary Masters",
+          "India Habitat Centre, Lodhi Road, New Delhi", "Metropolitan Art Gallery, Chicago, IL",
+          "art", 21, 11, 0, 21, 19, 0, -14, List.of(
+          new Tier("General Entry", "General Entry", 300, "Access to every gallery in the show", 300),
+          new Tier("Guided Tour", "Guided Walkthrough", 600, "An hour-long walk through the show with the curator", 50),
+          new Tier("Patron Package", "Patron Evening", 2500, "Private viewing, high tea and a meet with the artists", 25))),
+      new Demo("Kabaddi League Finals", "Championship Finals - Basketball Showdown",
+          "Thyagaraj Sports Complex, New Delhi", "Madison Square Garden, New York, NY",
+          "kabaddi", 60, 19, 30, 60, 22, 30, 0, List.of(
+          new Tier("Upper Level", "General Stand", 399, "A full view of the mat", 1000),
+          new Tier("Lower Level", "Premium Stand", 999, "Closer to the raids and tackles", 500),
+          new Tier("Courtside", "Mat Side", 2999, "Seats right at the edge of the mat", 50))),
+      new Demo("Goa Food & Music Carnival", "Gourmet Food & Wine Festival",
+          "Campal Grounds, Panaji, Goa", "Napa Valley Vineyards, California",
+          "food-carnival", 25, 12, 0, 25, 22, 0, -20, List.of(
+          new Tier("Tasting Pass", "Tasting Pass", 799, "Ten tasting coupons and a souvenir mug", 400),
+          new Tier("Connoisseur", "Food Lover", 1499, "Unlimited tastings, chef demos and a recipe booklet", 150),
+          new Tier("Grand Cru", "Chef's Table", 3999, "All access plus a seated Goan dinner with the chefs", 40))),
+      new Demo("Startup Pitch Night: Founders & Funders", "Startup Pitch Night - Shark Tank Style",
+          "Innovation Hub, Koramangala, Bengaluru", "Innovation Hub, Austin, TX",
+          "startup", 10, 18, 30, 10, 21, 30, -5, List.of(
+          new Tier("Observer", "Observer", 299, "Watch the pitches and stay for the networking", 200),
+          new Tier("Investor Circle", "Investor Circle", 1999, "Front seating and the after-mixer with the founders", 50))),
+      new Demo("Sunrise Yoga Retreat on the Ganga", "Sunrise Yoga & Wellness Retreat",
+          "Ganga Ghat, Rishikesh, Uttarakhand", "Serenity Gardens, Sedona, AZ",
+          "yoga", 35, 6, 0, 37, 12, 0, -10, List.of(
+          new Tier("Day Pass", "Day Pass", 999, "One day of riverside sessions", 100),
+          new Tier("Full Retreat", "Full Retreat", 7499, "Three days with sattvic meals and a riverside stay", 50),
+          new Tier("Private Sessions", "Private Sessions", 11999, "The full retreat plus one-on-one sessions with the teachers", 15))),
+      new Demo("Campus Esports Championship Finals", "eSports Championship - League Finals",
+          "NSCI Dome, Worli, Mumbai", "Esports Arena, Las Vegas, NV",
+          "esports", 40, 12, 0, 40, 22, 0, 0, List.of(
+          new Tier("Spectator", "Spectator", 499, "Watch the finals live in the arena", 800),
+          new Tier("Gamer Lounge", "Gamer Lounge", 999, "Play stations, freeplay and a merch pack", 200),
+          new Tier("All-Access", "All-Access", 2499, "Backstage tour, player signings and exclusive merch", 75))),
+      new Demo("Jazz Nights at Bandra Fort", "Jazz Under the Stars",
+          "Bandra Fort Amphitheatre, Mumbai", "Blue Note Jazz Club, New Orleans, LA",
+          "jazz", 7, 19, 30, 7, 22, 30, -14, List.of(
+          new Tier("Standing", "Standing", 699, "Open lawn with bar access", 150),
+          new Tier("Table Seating", "Table for Two", 1999, "A reserved table for two near the stage", 40),
+          new Tier("VIP Booth", "Lounge Booth", 4999, "Private booth for four with dinner included", 10))),
+      new Demo("Street Photography Walk: Old Delhi", "Master Photography Workshop",
+          "Chandni Chowk, Old Delhi", "Creative Studios, Seattle, WA",
+          "old-delhi", 18, 7, 0, 18, 12, 0, -7, List.of(
+          new Tier("Workshop Ticket", "Walk & Workshop", 1499, "A guided walk, a review session and chai", 30))),
+      new Demo("Meet the Author: Reading & Book Signing", "Bestselling Author Book Signing & Talk",
+          "Bahrisons Booksellers, Khan Market, New Delhi", "Barnes & Noble Union Square, New York, NY",
+          "books", 5, 18, 0, 5, 20, 0, -10, List.of(
+          new Tier("Free Entry", "Free Entry", 0, "Free to attend; buying a book is up to you", 100),
+          new Tier("Book Bundle", "Signed Copy Bundle", 599, "A signed copy of the new book, set aside for you", 75))));
 }

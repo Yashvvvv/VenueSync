@@ -48,6 +48,9 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
   Optional<Event> findByIdAndStatus(UUID id, EventStatusEnum status);
 
+  /** The demo catalogue finds its own events by name and venue together, which no organizer's event shares. */
+  Optional<Event> findFirstByNameAndVenue(String name, String venue);
+
   // Count events by status for organizer (for stats)
   long countByOrganizerIdAndStatus(UUID organizerId, EventStatusEnum status);
 
@@ -64,7 +67,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
    * Records that the photo changed. A bulk update on purpose: it leaves the event's version alone (a new photo isn't
    * an edit, and bumping it would make an organizer's open form refuse to save).
    */
-  @Modifying(clearAutomatically = true)
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query("UPDATE Event e SET e.imageUpdatedAt = :at WHERE e.id = :id")
   int setImageUpdatedAt(@Param("id") UUID id, @Param("at") LocalDateTime at);
 
