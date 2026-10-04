@@ -66,4 +66,6 @@ data class PageResponse<T>(
 data class ErrorDto(
     val code: String? = null,
     val error: String? = null,
+    /** The request field an error is about (400s), when the server names one. */
+    val field: String? = null,
 )

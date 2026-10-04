@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.R
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.Event
+import com.venuesync.app.core.model.Refusal
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.components.ErrorState
@@ -341,6 +342,14 @@ internal fun ApiError.message(): String = when (this) {
     ApiError.SoldOut -> "Sold out."
     ApiError.NotOnSale -> "Tickets aren't on sale right now."
     ApiError.RateLimited -> "Too many requests. Wait a moment and try again."
+    // Forms mark the field themselves; this is the line for anywhere without one.
+    is ApiError.Invalid -> "Some details aren't right. Check the highlighted field."
+    is ApiError.Refused -> when (reason) {
+        Refusal.TicketTypeHasSales -> "This ticket type has tickets sold, so it can't be removed. Lower its capacity instead."
+        Refusal.EventHasSales -> "This event has tickets sold, so it can't be deleted. Cancel it instead."
+        Refusal.CapacityBelowSold -> "Capacity can't be lower than the tickets already sold."
+        Refusal.StatusChange -> "This event can't change to that status."
+    }
     ApiError.InvalidResponse -> "We couldn't load this. Try again later."
     is ApiError.Server -> "Server error. Try again later."
     is ApiError.Unknown -> "Something went wrong."
