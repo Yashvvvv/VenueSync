@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,11 +49,13 @@ public class EventController {
   @PostMapping
   public ResponseEntity<CreateEventResponseDto> createEvent(
       @AuthenticationPrincipal Jwt jwt,
-      @Valid @RequestBody CreateEventRequestDto createEventRequestDto) {
+      @Valid @RequestBody CreateEventRequestDto createEventRequestDto,
+      // Optional so the web keeps working; with it, a retried create returns the first event, never a second.
+      @RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey) {
     CreateEventRequest createEventRequest = eventMapper.fromDto(createEventRequestDto);
     UUID userId = parseUserId(jwt);
 
-    Event createdEvent = eventService.createEvent(userId, createEventRequest);
+    Event createdEvent = eventService.createEvent(userId, createEventRequest, idempotencyKey);
     CreateEventResponseDto createEventResponseDto = eventMapper.toDto(createdEvent);
     return new ResponseEntity<>(createEventResponseDto, HttpStatus.CREATED);
   }

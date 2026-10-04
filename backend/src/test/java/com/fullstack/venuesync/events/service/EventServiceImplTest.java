@@ -122,6 +122,36 @@ class EventServiceImplTest {
     }
 
     @Test
+    @DisplayName("a retried create with the same key returns the first event, never a second")
+    void replaysACreateWithTheSameKey() {
+      UUID key = UUID.randomUUID();
+      Event first = new Event();
+      first.setId(UUID.randomUUID());
+      when(eventRepository.findByOrganizerIdAndIdempotencyKey(organizerId, key)).thenReturn(Optional.of(first));
+
+      Event result = eventService.createEvent(organizerId, new CreateEventRequest(), key);
+
+      assertSame(first, result);
+      verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("a first create stores its key")
+    void storesTheKeyOnAFirstCreate() {
+      UUID key = UUID.randomUUID();
+      CreateEventRequest request = new CreateEventRequest();
+      request.setName("New Event");
+      request.setVenue("Hall");
+      request.setStatus(EventStatusEnum.DRAFT);
+      request.setTicketTypes(List.of(new CreateTicketTypeRequest("GA", 10.0, null, null)));
+      when(eventRepository.findByOrganizerIdAndIdempotencyKey(organizerId, key)).thenReturn(Optional.empty());
+      when(userRepository.findById(organizerId)).thenReturn(Optional.of(organizer));
+      when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+
+      assertEquals(key, eventService.createEvent(organizerId, request, key).getIdempotencyKey());
+    }
+
+    @Test
     @DisplayName("should throw UserNotFoundException when organizer not found")
     void shouldThrowUserNotFoundExceptionWhenOrganizerNotFound() {
       CreateEventRequest request = new CreateEventRequest();

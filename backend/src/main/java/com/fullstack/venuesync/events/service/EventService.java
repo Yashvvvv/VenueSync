@@ -20,7 +20,12 @@ public interface  EventService {
    * @return the newly created Event entity
    * @throws com.fullstack.venuesync.shared.exceptions.UserNotFoundException if the organizer is not found
    */
-  Event createEvent(UUID organizerId, CreateEventRequest event);
+  Event createEvent(UUID organizerId, CreateEventRequest event, UUID idempotencyKey);
+
+  /** A create with no idempotency key (older clients): every call makes a new event. */
+  default Event createEvent(UUID organizerId, CreateEventRequest event) {
+    return createEvent(organizerId, event, null);
+  }
 
   /**
    * Lists all events belonging to the specified organizer with pagination.

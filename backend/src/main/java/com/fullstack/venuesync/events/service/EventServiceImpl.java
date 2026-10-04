@@ -44,7 +44,15 @@ public class EventServiceImpl implements EventService {
 
   @Override
   @Transactional
-  public Event createEvent(UUID organizerId, CreateEventRequest event) {
+  public Event createEvent(UUID organizerId, CreateEventRequest event, UUID idempotencyKey) {
+    // Replay first: a retry after a timeout (or a double tap) returns the event the first attempt made.
+    if (idempotencyKey != null) {
+      Optional<Event> previous = eventRepository.findByOrganizerIdAndIdempotencyKey(organizerId, idempotencyKey);
+      if (previous.isPresent()) {
+        return previous.get();
+      }
+    }
+
     User organizer = userRepository.findById(Objects.requireNonNull(organizerId))
         .orElseThrow(() -> new UserNotFoundException(
             String.format("User with ID '%s' not found", organizerId))
@@ -71,6 +79,7 @@ public class EventServiceImpl implements EventService {
     eventToCreate.setSalesEnd(event.getSalesEnd());
     eventToCreate.setStatus(event.getStatus());
     eventToCreate.setOrganizer(organizer);
+    eventToCreate.setIdempotencyKey(idempotencyKey);
     eventToCreate.setTicketTypes(ticketTypesToCreate);
 
     return eventRepository.save(eventToCreate);

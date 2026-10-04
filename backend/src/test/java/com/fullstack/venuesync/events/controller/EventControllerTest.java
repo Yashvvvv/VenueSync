@@ -119,7 +119,7 @@ class EventControllerTest {
 
       when(eventMapper.fromDto(any(CreateEventRequestDto.class)))
           .thenReturn(new CreateEventRequest());
-      when(eventService.createEvent(any(UUID.class), any(CreateEventRequest.class)))
+      when(eventService.createEvent(any(UUID.class), any(CreateEventRequest.class), any()))
           .thenReturn(event);
       when(eventMapper.toDto(any(Event.class))).thenReturn(responseDto);
 

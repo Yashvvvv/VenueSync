@@ -159,6 +159,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return respond(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex);
   }
 
+  /**
+   * A unique constraint fired: two requests raced to create the same thing (e.g. a double-submitted create with one
+   * idempotency key). The first one won; this one is a conflict, not a server error.
+   */
+  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorDto> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+    return respond(HttpStatus.CONFLICT, "CONFLICT", "This was changed by another request. Refresh and try again", ex);
+  }
+
   /** Every other Spring MVC exception: keep Spring's status, return our body. */
   @Override
   protected ResponseEntity<Object> handleExceptionInternal(
