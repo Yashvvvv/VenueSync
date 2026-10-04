@@ -58,6 +58,9 @@ class EventServiceImplTest {
   @Mock
   private TicketRepository ticketRepository; // default: an empty list, i.e. no tickets issued
 
+  @Mock
+  private com.fullstack.venuesync.events.repository.EventImageRepository imageRepository;
+
   @InjectMocks
   private EventServiceImpl eventService;
 

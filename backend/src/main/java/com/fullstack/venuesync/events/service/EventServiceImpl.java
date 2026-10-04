@@ -26,6 +26,7 @@ import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
+import com.fullstack.venuesync.events.repository.EventImageRepository;
 import com.fullstack.venuesync.events.repository.EventRepository;
 import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
@@ -46,6 +47,7 @@ public class EventServiceImpl implements EventService {
   private final EventRepository eventRepository;
   private final StaffInviteRepository staffInviteRepository;
   private final TicketRepository ticketRepository;
+  private final EventImageRepository imageRepository;
 
   @Override
   @Transactional
@@ -233,6 +235,10 @@ public class EventServiceImpl implements EventService {
       // Door staff links (user_staffing_events, owned by User) and staff invites point at the event but are not in
       // its cascade, so the database refused the delete (500) once an event had staff. Clear them first.
       staffInviteRepository.deleteByEventId(event.getId());
+      // The photo has no foreign key to the event (it's looked up by id), so it goes explicitly.
+      if (imageRepository.existsById(event.getId())) {
+        imageRepository.deleteById(event.getId());
+      }
       event.getStaff().forEach(user -> user.getStaffingEvents().removeIf(e -> e.getId().equals(event.getId())));
       eventRepository.delete(event);
     });

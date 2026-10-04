@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventChangedException;
+import com.fullstack.venuesync.events.exception.EventImageInvalidException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
@@ -126,6 +127,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ErrorDto> handleEventChanged(Exception ex) {
     return respond(HttpStatus.CONFLICT, "EVENT_CHANGED",
         "This event was changed somewhere else since you opened it. Reload it, then make your change again", ex);
+  }
+
+  /** The client chose the file, so it's told which rule it broke: the format, or the size. */
+  @ExceptionHandler(EventImageInvalidException.class)
+  public ResponseEntity<ErrorDto> handleEventImageInvalid(EventImageInvalidException ex) {
+    return ex.isTooLarge()
+        ? respond(HttpStatus.PAYLOAD_TOO_LARGE, "IMAGE_TOO_LARGE", ex.getMessage(), ex)
+        : respond(HttpStatus.BAD_REQUEST, "IMAGE_INVALID", ex.getMessage(), ex);
   }
 
   @ExceptionHandler(StatusChangeInvalidException.class)

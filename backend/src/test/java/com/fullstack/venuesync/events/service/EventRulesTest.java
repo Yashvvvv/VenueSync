@@ -45,6 +45,7 @@ class EventRulesTest {
   @Mock private EventRepository eventRepository;
   @Mock private StaffInviteRepository staffInviteRepository;
   @Mock private TicketRepository ticketRepository;
+  @Mock private com.fullstack.venuesync.events.repository.EventImageRepository imageRepository;
   @InjectMocks private EventServiceImpl service;
 
   private final UUID organizerId = UUID.randomUUID();
