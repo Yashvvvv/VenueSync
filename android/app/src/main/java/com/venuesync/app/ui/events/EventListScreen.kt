@@ -88,6 +88,7 @@ fun EventListScreen(
     onMyTicketsClick: () -> Unit,
     onScanClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onManageEventsClick: (() -> Unit)? = null,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -99,6 +100,7 @@ fun EventListScreen(
                         onSignInClick = onSignInClick,
                         onMyTicketsClick = onMyTicketsClick,
                         onScanClick = onScanClick,
+                        onManageEventsClick = onManageEventsClick,
                     )
                 },
             )

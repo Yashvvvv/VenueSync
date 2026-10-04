@@ -13,6 +13,9 @@ const val ROLES_CLAIM = "https://venuesync.app/roles"
 /** Required by the backend to buy tickets and see your own. */
 const val ROLE_ATTENDEE = "ROLE_ATTENDEE"
 
+/** Creates and runs events (granted by the self-upgrade, on top of ATTENDEE). */
+const val ROLE_ORGANIZER = "ROLE_ORGANIZER"
+
 @Serializable
 data class AuthTokens(
     val accessToken: String,

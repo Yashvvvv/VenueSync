@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.R
 import com.venuesync.app.core.auth.Session
+import com.venuesync.app.core.auth.ROLE_ORGANIZER
 import com.venuesync.app.ui.experience.ExperienceMenuItems
 
 /**
@@ -31,6 +32,8 @@ fun AccountAction(
     onSignInClick: () -> Unit,
     onMyTicketsClick: () -> Unit,
     onScanClick: () -> Unit,
+    // Null where there's nowhere to go (the organizer area isn't reachable from that screen).
+    onManageEventsClick: (() -> Unit)? = null,
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -49,6 +52,11 @@ fun AccountAction(
                     // Anyone signed in: the next screen lists only events they can scan (organized or staffed via an
                     // invite), and the server checks every scan. No Auth0 role decides this.
                     DropdownMenuItem(text = { Text("Scan tickets") }, onClick = { close(); onScanClick() })
+                    // Organizers only: the server checks the role on every call, this just keeps the menu honest.
+                    val roles = (session as Session.SignedIn).roles
+                    if (onManageEventsClick != null && ROLE_ORGANIZER in roles) {
+                        DropdownMenuItem(text = { Text("Manage events") }, onClick = { close(); onManageEventsClick() })
+                    }
                     HorizontalDivider()
                 }
                 ExperienceMenuItems(onPicked = close)

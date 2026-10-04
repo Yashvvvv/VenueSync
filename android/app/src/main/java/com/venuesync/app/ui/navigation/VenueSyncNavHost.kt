@@ -33,6 +33,7 @@ import com.venuesync.app.ui.feed.FeedScreen
 import com.venuesync.app.ui.feed.HypeTab
 import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
+import com.venuesync.app.ui.organizer.OrganizerEventsScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
 import com.venuesync.app.ui.scanner.ScanEventPickerScreen
 import com.venuesync.app.ui.scanner.ScannerScreen
@@ -53,6 +54,7 @@ object Routes {
     const val SCAN_EVENTS = "scan"
     const val SCANNER = "scan/{${ScannerViewModel.EVENT_ID_ARG}}"
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
+    const val ORGANIZER_EVENTS = "organizer/events"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
@@ -155,6 +157,7 @@ private fun NavGraphBuilder.screens(
             onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
             onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
             onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+            onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
         )
     }
     composable(Routes.EVENT_DETAIL) {
@@ -180,6 +183,7 @@ private fun NavGraphBuilder.screens(
                         onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
                         onMyTicketsClick = {},
                         onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+                        onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
                     )
                 }
             },
@@ -211,6 +215,13 @@ private fun NavGraphBuilder.screens(
                     }
                 }
             },
+        )
+    }
+    composable(Routes.ORGANIZER_EVENTS) {
+        OrganizerEventsScreen(
+            onBack = { navController.navigateUp() },
+            onEventClick = {}, // the event overview arrives in 9.3
+            onNewEvent = {}, // the form arrives in 9.4
         )
     }
     composable(Routes.LOGIN) {
