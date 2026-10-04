@@ -35,6 +35,7 @@ import com.fullstack.venuesync.events.dto.UpdateEventRequestDto;
 import com.fullstack.venuesync.events.dto.UpdateEventResponseDto;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.mapper.EventMapper;
 import com.fullstack.venuesync.events.service.EventService;
 
@@ -88,7 +89,12 @@ public class EventController {
     Page<Event> events;
     
     if (status != null && !status.isEmpty()) {
-      EventStatusEnum statusEnum = EventStatusEnum.valueOf(status.toUpperCase());
+      EventStatusEnum statusEnum;
+      try {
+        statusEnum = EventStatusEnum.valueOf(status.trim().toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new EventInvalidException("status", "Unknown event status: " + status); // a 400, not a 500
+      }
       events = eventService.listEventsForOrganizerByStatus(userId, statusEnum, pageable);
     } else {
       events = eventService.listEventsForOrganizer(userId, pageable);

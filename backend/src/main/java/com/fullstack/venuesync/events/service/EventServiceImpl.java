@@ -1,6 +1,7 @@
 package com.fullstack.venuesync.events.service;
 
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,6 +21,8 @@ import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
+import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.repository.EventRepository;
@@ -52,6 +55,13 @@ public class EventServiceImpl implements EventService {
         return previous.get();
       }
     }
+
+    // (A missing status never gets here: the DTO requires it.)
+    if (event.getStatus() != null
+        && event.getStatus() != EventStatusEnum.DRAFT && event.getStatus() != EventStatusEnum.PUBLISHED) {
+      throw new EventInvalidException("status", "A new event starts as a draft or published");
+    }
+    checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
 
     User organizer = userRepository.findById(Objects.requireNonNull(organizerId))
         .orElseThrow(() -> new UserNotFoundException(
@@ -140,6 +150,9 @@ public class EventServiceImpl implements EventService {
       throw new TicketTypeHasSalesException(
           String.format("Ticket types with tickets issued cannot be removed: %s", removedWithTickets));
     }
+    checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
+    checkStatusChange(existingEvent.getStatus(), event.getStatus(), !issued.isEmpty());
+
     // Capacity can't drop below what's already issued: those tickets exist whatever the number says.
     for (UpdateTicketTypeRequest requested : event.getTicketTypes()) {
       long already = requested.getId() == null ? 0 : issued.getOrDefault(requested.getId(), 0L);
@@ -233,6 +246,39 @@ public class EventServiceImpl implements EventService {
     }
     return ticketRepository.countSoldByTicketTypeForEvents(eventIds).stream()
         .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+  }
+
+  /** The dates have to make sense together; [field] names the one to fix. Absent dates are allowed (a draft). */
+  private static void checkSchedule(
+      LocalDateTime start, LocalDateTime end, LocalDateTime salesStart, LocalDateTime salesEnd) {
+    if (start != null && end != null && !end.isAfter(start)) {
+      throw new EventInvalidException("end", "The event has to end after it starts");
+    }
+    if (salesStart != null && salesEnd != null && !salesEnd.isAfter(salesStart)) {
+      throw new EventInvalidException("salesEnd", "Sales have to end after they start");
+    }
+    if (salesEnd != null && end != null && salesEnd.isAfter(end)) {
+      throw new EventInvalidException("salesEnd", "Sales can't end after the event does");
+    }
+  }
+
+  /**
+   * The moves an organizer can make. Cancelled and completed are final (the scheduler completes events); a published
+   * event goes back to draft only while nobody holds a ticket, or sold events would vanish from the catalogue.
+   */
+  private static void checkStatusChange(EventStatusEnum from, EventStatusEnum to, boolean hasTickets) {
+    if (from == to) {
+      return;
+    }
+    boolean allowed = switch (from) {
+      case DRAFT -> to == EventStatusEnum.PUBLISHED || to == EventStatusEnum.CANCELLED;
+      case PUBLISHED -> to == EventStatusEnum.CANCELLED || (to == EventStatusEnum.DRAFT && !hasTickets);
+      case CANCELLED, COMPLETED -> false;
+    };
+    if (!allowed) {
+      throw new StatusChangeInvalidException(String.format("An event can't go from %s to %s%s", from, to,
+          from == EventStatusEnum.PUBLISHED && to == EventStatusEnum.DRAFT ? " once tickets are issued" : ""));
+    }
   }
 
   /** Tickets ever issued per ticket type of the event (every status: a used or cancelled ticket was still sold). */

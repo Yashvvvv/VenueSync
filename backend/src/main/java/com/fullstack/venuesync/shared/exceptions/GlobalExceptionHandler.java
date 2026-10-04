@@ -19,6 +19,8 @@ import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
+import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
@@ -108,6 +110,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return respond(HttpStatus.NOT_FOUND, "TICKET_TYPE_NOT_FOUND", "Ticket type not found", ex);
   }
 
+  /** Dates that don't fit together, an unknown status: the field says which input to fix. */
+  @ExceptionHandler(EventInvalidException.class)
+  public ResponseEntity<ErrorDto> handleEventInvalid(EventInvalidException ex) {
+    return respond(HttpStatus.BAD_REQUEST, "EVENT_INVALID", ex.getMessage(), ex.getField(), ex);
+  }
+
+  @ExceptionHandler(StatusChangeInvalidException.class)
+  public ResponseEntity<ErrorDto> handleStatusChangeInvalid(StatusChangeInvalidException ex) {
+    return respond(HttpStatus.CONFLICT, "STATUS_CHANGE_INVALID", ex.getMessage(), ex);
+  }
+
   /** Removing a ticket type someone bought would delete their ticket. */
   @ExceptionHandler(TicketTypeHasSalesException.class)
   public ResponseEntity<ErrorDto> handleTicketTypeHasSales(TicketTypeHasSalesException ex) {
@@ -143,11 +156,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
       MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-    String message = ex.getBindingResult().getFieldErrors().stream()
-        .findFirst()
+    var first = ex.getBindingResult().getFieldErrors().stream().findFirst();
+    String message = first
         .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
         .orElse("Validation error occurred");
-    return new ResponseEntity<>(errorBody(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex), headers, HttpStatus.BAD_REQUEST);
+    ErrorDto body = errorBody(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex);
+    body.setField(first.map(org.springframework.validation.FieldError::getField).orElse(null));
+    return new ResponseEntity<>(body, headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
@@ -191,6 +206,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   private ResponseEntity<ErrorDto> respond(HttpStatus status, String code, String message, Exception ex) {
     return new ResponseEntity<>(errorBody(status, code, message, ex), status);
+  }
+
+  private ResponseEntity<ErrorDto> respond(HttpStatus status, String code, String message, String field, Exception ex) {
+    ErrorDto body = errorBody(status, code, message, ex);
+    body.setField(field);
+    return new ResponseEntity<>(body, status);
   }
 
   /** 5xx are our bugs: log with stack trace. 4xx are the client's: one warn line is enough. */

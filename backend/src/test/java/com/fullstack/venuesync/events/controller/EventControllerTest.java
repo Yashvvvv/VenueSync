@@ -308,6 +308,22 @@ class EventControllerTest {
   }
 
   @Nested
+  @DisplayName("errors name the field")
+  class FieldErrors {
+
+    @Test
+    @DisplayName("an unknown status filter is a 400 on the status field, not a 500")
+    void unknownStatusIsBadRequest() throws Exception {
+      mockMvc.perform(get("/api/v1/events").param("status", "nonsense")
+              .with(jwt().jwt(createJwt()).authorities(
+                  new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ORGANIZER"))))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("EVENT_INVALID"))
+          .andExpect(jsonPath("$.field").value("status"));
+    }
+  }
+
+  @Nested
   @DisplayName("DELETE refused")
   class DeleteRefused {
 
