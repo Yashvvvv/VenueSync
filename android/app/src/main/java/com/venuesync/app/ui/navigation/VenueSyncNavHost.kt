@@ -33,6 +33,7 @@ import com.venuesync.app.ui.feed.FeedScreen
 import com.venuesync.app.ui.feed.HypeTab
 import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
+import com.venuesync.app.ui.organizer.BecomeOrganizerScreen
 import com.venuesync.app.ui.organizer.EventFormScreen
 import com.venuesync.app.ui.organizer.OrganizerEventScreen
 import com.venuesync.app.ui.organizer.OrganizerEventViewModel
@@ -61,6 +62,7 @@ object Routes {
     const val ORGANIZER_EVENTS = "organizer/events"
     const val ORGANIZER_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}"
     const val NEW_EVENT = "organizer/new-event"
+    const val BECOME_ORGANIZER = "organizer/become"
     const val EDIT_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/edit"
     const val EVENT_STAFF = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/staff"
 
@@ -169,6 +171,7 @@ private fun NavGraphBuilder.screens(
             onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
             onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
             onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
+            onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
         )
     }
     composable(Routes.EVENT_DETAIL) {
@@ -195,6 +198,7 @@ private fun NavGraphBuilder.screens(
                         onMyTicketsClick = {},
                         onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
                         onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
+                        onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
                     )
                 }
             },
@@ -244,6 +248,15 @@ private fun NavGraphBuilder.screens(
     }
     composable(Routes.EVENT_STAFF) {
         OrganizerStaffScreen(onBack = { navController.navigateUp() })
+    }
+    composable(Routes.BECOME_ORGANIZER) {
+        BecomeOrganizerScreen(
+            onBack = { navController.navigateUp() },
+            // The organizer tools replace this screen: Back from them returns to where the menu was opened.
+            onDone = {
+                navController.navigate(Routes.ORGANIZER_EVENTS) { popUpTo(Routes.BECOME_ORGANIZER) { inclusive = true } }
+            },
+        )
     }
     composable(Routes.NEW_EVENT) {
         EventFormScreen(

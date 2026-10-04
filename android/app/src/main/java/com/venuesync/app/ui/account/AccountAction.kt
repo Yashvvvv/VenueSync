@@ -34,6 +34,7 @@ fun AccountAction(
     onScanClick: () -> Unit,
     // Null where there's nowhere to go (the organizer area isn't reachable from that screen).
     onManageEventsClick: (() -> Unit)? = null,
+    onBecomeOrganizerClick: (() -> Unit)? = null,
     viewModel: SessionViewModel = hiltViewModel(),
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -56,6 +57,8 @@ fun AccountAction(
                     val roles = (session as Session.SignedIn).roles
                     if (onManageEventsClick != null && ROLE_ORGANIZER in roles) {
                         DropdownMenuItem(text = { Text("Manage events") }, onClick = { close(); onManageEventsClick() })
+                    } else if (onBecomeOrganizerClick != null && ROLE_ORGANIZER !in roles) {
+                        DropdownMenuItem(text = { Text("Become an organizer") }, onClick = { close(); onBecomeOrganizerClick() })
                     }
                     HorizontalDivider()
                 }

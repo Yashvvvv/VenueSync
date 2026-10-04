@@ -23,9 +23,18 @@ class SessionViewModel @Inject constructor(
     val session: StateFlow<Session> = sessionManager.session
 
     init {
-        // Launch (or sign-in) with signal: save upcoming tickets, including ones bought on the web, for the venue.
+        // Launch (or sign-in) with signal: pick up roles granted elsewhere (organizer on the website), then save
+        // upcoming tickets, including ones bought on the web, for the venue.
         viewModelScope.launch {
             session.filterIsInstance<Session.SignedIn>().first()
+            try {
+                sessionManager.renewOncePerRun()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Storage write failed: the old token keeps working until it expires.
+                Log.w("SessionViewModel", "Token renewal failed (${e.javaClass.simpleName})")
+            }
             tickets.syncOffline()
         }
     }

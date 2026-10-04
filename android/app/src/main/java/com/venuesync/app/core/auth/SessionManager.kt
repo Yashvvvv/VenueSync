@@ -1,5 +1,6 @@
 package com.venuesync.app.core.auth
 
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,7 @@ class SessionManager(
         .stateIn(scope, SharingStarted.Eagerly, Session.Unknown)
 
     private val mutex = Mutex()
+    private val renewedThisRun = AtomicBoolean(false)
 
     suspend fun currentTokens(): AuthTokens? = store.tokens.first()
 
@@ -49,6 +51,21 @@ class SessionManager(
             rt
         }
         refreshToken?.let { api.revoke(it) }
+    }
+
+    /**
+     * A new access token now, so roles changed on the server show at once (an upgrade made here or on the website).
+     * The same single-refresh rules as [refresh]. Null when signed out, or when Auth0 can't be reached (then the
+     * session stays as it was).
+     */
+    suspend fun renew(): AuthTokens? {
+        val current = currentTokens()?.accessToken ?: return null
+        return refresh(current)
+    }
+
+    /** [renew] once per process: a token lasts hours, and a role granted meanwhile shouldn't wait for it to expire. */
+    suspend fun renewOncePerRun() {
+        if (renewedThisRun.compareAndSet(false, true)) renew()
     }
 
     /**
