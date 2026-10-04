@@ -141,10 +141,17 @@ Auth0 does not put custom roles on the token by default. Add a **Post-Login Acti
 ```js
 exports.onExecutePostLogin = async (event, api) => {
   const namespace = 'https://venuesync.app';
-  const roles = event.authorization?.roles || [];
-  api.accessToken.setCustomClaim(`${namespace}/roles`, roles);
+  // Every account is an attendee; other roles add to that, never replace it.
+  const roles = new Set(event.authorization?.roles || []);
+  roles.add('ROLE_ATTENDEE');
+  api.accessToken.setCustomClaim(`${namespace}/roles`, [...roles]);
 };
 ```
+
+`ROLE_ATTENDEE` is the baseline for every account, so it is added whatever else is
+assigned. Defaulting it only when an account has *no* roles takes it away the moment
+any real role (e.g. `ROLE_ORGANIZER`) is assigned. The organizer upgrade also assigns
+both roles explicitly, so the directory itself stays correct.
 
 The namespace and claim name (`https://venuesync.app/roles`) must match
 `Auth0Claims.ROLES` in the backend and `ROLES_CLAIM` in the frontend's

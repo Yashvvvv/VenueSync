@@ -31,8 +31,14 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
+            // Roles add capabilities, they never replace them: an organizer still buys and holds tickets. ATTENDEE is
+            // assigned explicitly because the Post-Login Action's default only applies to an account with no roles at
+            // all, so assigning ORGANIZER alone silently took ATTENDEE away. ATTENDEE goes first: if the second call
+            // fails, the account is still a working attendee. Auth0 treats re-assigning a held role as a no-op.
+            // ponytail: two Management API tokens per upgrade (one per call); one batched call if upgrades get common.
+            keycloakAdminService.assignRoleToUser(userId, "ROLE_ATTENDEE");
             keycloakAdminService.assignRoleToUser(userId, "ROLE_ORGANIZER");
-            log.info("Upgrade Successful | User: {} | Email: {} | Upgraded from ATTENDEE to ORGANIZER", userId, email);
+            log.info("Upgrade Successful | User: {} | Email: {} | Now ATTENDEE and ORGANIZER", userId, email);
         } catch (VenueSyncException e) {
             throw e;
         } catch (Exception e) {
