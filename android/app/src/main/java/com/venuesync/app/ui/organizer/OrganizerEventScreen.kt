@@ -74,6 +74,7 @@ import java.time.LocalDateTime
 fun OrganizerEventScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
+    onStaff: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OrganizerEventViewModel = hiltViewModel(),
 ) {
@@ -109,6 +110,7 @@ fun OrganizerEventScreen(
                     event = s.data,
                     action = action,
                     onEdit = { onEdit(s.data.id) },
+                    onStaff = { onStaff(s.data.id) },
                     onAction = viewModel::perform,
                     onDismissError = viewModel::dismissError,
                 )
@@ -122,6 +124,7 @@ private fun EventOverview(
     event: OrganizerEvent,
     action: ActionState,
     onEdit: () -> Unit,
+    onStaff: () -> Unit,
     onAction: (EventAction) -> Unit,
     onDismissError: () -> Unit,
 ) {
@@ -178,7 +181,10 @@ private fun EventOverview(
                     enabled = !busy && !undated,
                 )
             }
-            if (event.editable()) StubButton("Edit", onEdit, FullWidth, enabled = !busy, outlined = true, icon = R.drawable.ph_pencil_simple)
+            if (event.editable()) {
+                StubButton("Edit", onEdit, FullWidth, enabled = !busy, outlined = true, icon = R.drawable.ph_pencil_simple)
+                StubButton("Door staff", onStaff, FullWidth, outlined = true, icon = R.drawable.ph_users_three)
+            }
             if (EventAction.Unpublish in actions) {
                 StubButton("Take off sale", { confirming = EventAction.Unpublish }, FullWidth, enabled = !busy, outlined = true)
             }

@@ -37,6 +37,7 @@ import com.venuesync.app.ui.organizer.EventFormScreen
 import com.venuesync.app.ui.organizer.OrganizerEventScreen
 import com.venuesync.app.ui.organizer.OrganizerEventViewModel
 import com.venuesync.app.ui.organizer.OrganizerEventsScreen
+import com.venuesync.app.ui.organizer.OrganizerStaffScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
 import com.venuesync.app.ui.scanner.ScanEventPickerScreen
 import com.venuesync.app.ui.scanner.ScannerScreen
@@ -61,6 +62,7 @@ object Routes {
     const val ORGANIZER_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}"
     const val NEW_EVENT = "organizer/new-event"
     const val EDIT_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/edit"
+    const val EVENT_STAFF = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/staff"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
@@ -68,6 +70,7 @@ object Routes {
     fun scanner(eventId: String) = "scan/$eventId"
     fun organizerEvent(eventId: String) = "organizer/events/$eventId"
     fun editEvent(eventId: String) = "organizer/events/$eventId/edit"
+    fun eventStaff(eventId: String) = "organizer/events/$eventId/staff"
 }
 
 /** The web's feed asks for 8: one screen per event, so a page is 8 screens. */
@@ -236,7 +239,11 @@ private fun NavGraphBuilder.screens(
         OrganizerEventScreen(
             onBack = { navController.navigateUp() },
             onEdit = { navController.navigateOnce(entry, Routes.editEvent(it)) },
+            onStaff = { navController.navigateOnce(entry, Routes.eventStaff(it)) },
         )
+    }
+    composable(Routes.EVENT_STAFF) {
+        OrganizerStaffScreen(onBack = { navController.navigateUp() })
     }
     composable(Routes.NEW_EVENT) {
         EventFormScreen(

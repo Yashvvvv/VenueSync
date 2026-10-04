@@ -18,6 +18,11 @@ open class FakeOrganizerRepository : OrganizerRepository {
     var update: ((String, EventDraft) -> Result<OrganizerEvent>)? = null
     var create: ((EventDraft, String) -> Result<OrganizerEvent>)? = null
     var delete: Result<Unit>? = null
+    var staff: Result<List<StaffMember>>? = null
+    var invite: Result<StaffInvite>? = null
+    var removeStaff: Result<Unit>? = null
+    var becomeOrganizer: Result<Unit>? = null
+    val removed = mutableListOf<String>()
 
     val updates = mutableListOf<Pair<String, EventDraft>>()
     val creates = mutableListOf<Pair<EventDraft, String>>()
@@ -38,10 +43,13 @@ open class FakeOrganizerRepository : OrganizerRepository {
         return (update ?: error("update not set up"))(id, draft)
     }
     override suspend fun delete(id: String): Result<Unit> = delete ?: error("delete not set up")
-    override suspend fun staff(eventId: String): Result<List<StaffMember>> = error("not used")
-    override suspend fun createInvite(eventId: String): Result<StaffInvite> = error("not used")
-    override suspend fun removeStaff(eventId: String, userId: String): Result<Unit> = error("not used")
-    override suspend fun becomeOrganizer(): Result<Unit> = error("not used")
+    override suspend fun staff(eventId: String): Result<List<StaffMember>> = staff ?: error("staff not set up")
+    override suspend fun createInvite(eventId: String): Result<StaffInvite> = invite ?: error("invite not set up")
+    override suspend fun removeStaff(eventId: String, userId: String): Result<Unit> {
+        removed += userId
+        return removeStaff ?: error("removeStaff not set up")
+    }
+    override suspend fun becomeOrganizer(): Result<Unit> = becomeOrganizer ?: error("becomeOrganizer not set up")
 }
 
 const val EVENT_ID = "6dd8477a-c595-42ae-975a-940a56e2cf09"
