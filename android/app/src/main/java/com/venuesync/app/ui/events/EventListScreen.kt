@@ -59,6 +59,7 @@ import com.venuesync.app.core.model.Event
 import com.venuesync.app.core.model.Refusal
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.components.Clock
 import com.venuesync.app.ui.components.ErrorState
 import com.venuesync.app.ui.components.EventStubCard
 import com.venuesync.app.ui.components.EventStubSkeleton
@@ -75,7 +76,6 @@ import com.venuesync.app.ui.theme.enter
 import com.venuesync.app.ui.theme.rememberEntrance
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -285,7 +285,7 @@ internal fun StubRow(
     }
 }
 
-/** OCT / 12 / 7:30 PM in mono, the way a printed stub carries its date. */
+/** OCT / 12 / 19:30 in mono, the way a printed stub carries its date. */
 @Composable
 private fun DateStub(start: LocalDateTime?, spent: Boolean, modifier: Modifier) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -304,14 +304,13 @@ private fun DateStub(start: LocalDateTime?, spent: Boolean, modifier: Modifier) 
                 fontFamily = Mono,
                 color = if (spent) muted else MaterialTheme.colorScheme.primary,
             )
-            Text(start.format(TimeFormat), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = muted)
+            Text(start.format(Clock), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = muted)
         }
     }
 }
 
 private val Counterfoil = 80.dp
 private val MonthFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM")
-private val TimeFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
 /** Fires [onEndReached] when the last item scrolls into view. */
 @Composable
@@ -330,8 +329,6 @@ internal fun Centered(content: @Composable () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
     }
 }
-
-internal val DateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
 
 /** User-facing copy only. Raw server/exception text never reaches the screen. */
 internal fun ApiError.message(): String = when (this) {

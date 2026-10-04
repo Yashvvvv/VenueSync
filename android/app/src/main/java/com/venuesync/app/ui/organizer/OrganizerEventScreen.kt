@@ -48,7 +48,6 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.OrganizerEvent
 import com.venuesync.app.core.model.OrganizerTicketType
 import com.venuesync.app.ui.common.UiState
-import com.venuesync.app.ui.components.Clock
 import com.venuesync.app.ui.components.DisplayText
 import com.venuesync.app.ui.components.ErrorState
 import com.venuesync.app.ui.components.EventStatusChip
@@ -59,6 +58,7 @@ import com.venuesync.app.ui.components.StubButton
 import com.venuesync.app.ui.components.TicketStubSkeleton
 import com.venuesync.app.ui.components.TicketWhen
 import com.venuesync.app.ui.components.money
+import com.venuesync.app.ui.components.whenLine
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.theme.LocalExperience
 import com.venuesync.app.ui.theme.Num
@@ -312,17 +312,6 @@ internal fun confirmCopy(action: EventAction, event: OrganizerEvent): ConfirmCop
         "It's removed for good. Nobody else has seen it.",
         "Delete",
     )
-}
-
-/** "Fri 14 Mar 2026 · 19:00 to 23:00", across days in full; null without a start. */
-internal fun whenLine(start: LocalDateTime?, end: LocalDateTime?): String? {
-    start ?: return null
-    val until = end?.takeIf { it.isAfter(start) } ?: return start.format(TicketWhen)
-    return if (until.toLocalDate() == start.toLocalDate()) {
-        "${start.format(TicketWhen)} to ${until.format(Clock)}"
-    } else {
-        "${start.format(TicketWhen)} to ${until.format(TicketWhen)}"
-    }
 }
 
 /** The server's rule (Event.salesStatusAt): no start = on sale once published, no end = until the event ends. */

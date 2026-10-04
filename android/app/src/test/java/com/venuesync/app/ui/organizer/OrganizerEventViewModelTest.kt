@@ -6,6 +6,7 @@ import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.EventStatus
 import com.venuesync.app.core.model.Refusal
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.components.whenLine
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

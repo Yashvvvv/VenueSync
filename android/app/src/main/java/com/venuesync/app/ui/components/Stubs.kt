@@ -102,6 +102,17 @@ internal fun cardDay(start: LocalDateTime, end: LocalDateTime?): String {
     return if (multiDay) "${start.format(CardDay)} to ${end!!.format(ShortDay)}" else start.format(CardDay)
 }
 
+/** "Fri 14 Mar 2026 · 19:00 to 23:00", across days in full; null without a start. */
+internal fun whenLine(start: LocalDateTime?, end: LocalDateTime?): String? {
+    start ?: return null
+    val until = end?.takeIf { it.isAfter(start) } ?: return start.format(TicketWhen)
+    return if (until.toLocalDate() == start.toLocalDate()) {
+        "${start.format(TicketWhen)} to ${until.format(Clock)}"
+    } else {
+        "${start.format(TicketWhen)} to ${until.format(TicketWhen)}"
+    }
+}
+
 /**
  * The web's event card: a photo counterfoil on top, a perforation punched at both edges, then the printed detail
  * (name, date in the accent with the time muted, venue). The photo is the web's stand-in for this event id.
