@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
+import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
@@ -112,6 +113,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ErrorDto> handleTicketTypeHasSales(TicketTypeHasSalesException ex) {
     return respond(HttpStatus.CONFLICT, "TICKET_TYPE_HAS_SALES",
         "This ticket type has tickets issued, so it can't be removed", ex);
+  }
+
+  /** A capacity below what's issued would make the event "oversold" on paper. */
+  @ExceptionHandler(CapacityBelowSoldException.class)
+  public ResponseEntity<ErrorDto> handleCapacityBelowSold(CapacityBelowSoldException ex) {
+    return respond(HttpStatus.CONFLICT, "CAPACITY_BELOW_SOLD",
+        "Capacity can't be lower than the tickets already issued", ex);
   }
 
   /** Deleting an event with tickets would delete them: it has to be cancelled instead. */

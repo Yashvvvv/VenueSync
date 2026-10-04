@@ -18,6 +18,7 @@ import com.fullstack.venuesync.events.domain.CreateEventRequest;
 import com.fullstack.venuesync.events.domain.UpdateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
@@ -129,6 +130,14 @@ public class EventServiceImpl implements EventService {
     if (!removedWithTickets.isEmpty()) {
       throw new TicketTypeHasSalesException(
           String.format("Ticket types with tickets issued cannot be removed: %s", removedWithTickets));
+    }
+    // Capacity can't drop below what's already issued: those tickets exist whatever the number says.
+    for (UpdateTicketTypeRequest requested : event.getTicketTypes()) {
+      long already = requested.getId() == null ? 0 : issued.getOrDefault(requested.getId(), 0L);
+      if (requested.getTotalAvailable() != null && requested.getTotalAvailable() < already) {
+        throw new CapacityBelowSoldException(String.format(
+            "'%s' has %d tickets issued; capacity can't be %d", requested.getName(), already, requested.getTotalAvailable()));
+      }
     }
 
     existingEvent.setName(event.getName());

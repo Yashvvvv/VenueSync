@@ -38,6 +38,7 @@ import com.fullstack.venuesync.tickets.domain.CreateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
 import com.fullstack.venuesync.tickets.repository.TicketRepository;
@@ -309,6 +310,40 @@ class EventServiceImplTest {
       assertThrows(TicketTypeHasSalesException.class,
           () -> eventService.updateEventForOrganizer(organizerId, eventId, request));
       assertEquals(1, event.getTicketTypes().size());
+      verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("refuses a capacity below the tickets already issued")
+    void refusesCapacityBelowIssued() {
+      UUID typeId = UUID.randomUUID();
+      TicketType type = new TicketType();
+      type.setId(typeId);
+      type.setName("General");
+      type.setPrice(20.0);
+      type.setTotalAvailable(100);
+      type.setEvent(event);
+      event.setTicketTypes(new ArrayList<>(List.of(type)));
+
+      UpdateTicketTypeRequest shrink = new UpdateTicketTypeRequest();
+      shrink.setId(typeId);
+      shrink.setName("General");
+      shrink.setPrice(20.0);
+      shrink.setTotalAvailable(5);
+      UpdateEventRequest request = new UpdateEventRequest();
+      request.setId(eventId);
+      request.setName("Event");
+      request.setVenue("Venue");
+      request.setStatus(EventStatusEnum.PUBLISHED);
+      request.setTicketTypes(List.of(shrink));
+
+      when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+      when(ticketRepository.countSoldByTicketTypeForEvent(eventId))
+          .thenReturn(List.<Object[]>of(new Object[] {typeId, 8L}));
+
+      assertThrows(CapacityBelowSoldException.class,
+          () -> eventService.updateEventForOrganizer(organizerId, eventId, request));
+      assertEquals(100, type.getTotalAvailable());
       verify(eventRepository, never()).save(any());
     }
 
