@@ -91,6 +91,7 @@ class OrganizerEventViewModelTest {
     fun `cancel says what happens to issued tickets`() {
         assertTrue("12 tickets" in confirmCopy(EventAction.Cancel, organizerEvent(EventStatus.Published, sold = 12)).body)
         assertTrue("tickets" !in confirmCopy(EventAction.Cancel, organizerEvent(EventStatus.Published)).body)
+        assertTrue("The ticket issued is cancelled" in confirmCopy(EventAction.Cancel, organizerEvent(EventStatus.Published, sold = 1)).body)
     }
 
     @Test

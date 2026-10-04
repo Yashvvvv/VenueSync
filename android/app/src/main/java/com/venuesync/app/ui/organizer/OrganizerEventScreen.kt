@@ -309,7 +309,11 @@ internal fun confirmCopy(action: EventAction, event: OrganizerEvent): ConfirmCop
     EventAction.Cancel -> ConfirmCopy(
         "Cancel this event?",
         "It leaves the catalogue and can't be sold or published again. " +
-            (if (event.sold > 0) "The ${event.sold} tickets issued are cancelled, apart from any already used at the door, and won't get anyone in. " else "") +
+            when (event.sold) {
+                0L -> ""
+                1L -> "The ticket issued is cancelled, unless it was already used at the door, and won't get anyone in. "
+                else -> "The ${event.sold} tickets issued are cancelled, apart from any already used at the door, and won't get anyone in. "
+            } +
             "This can't be undone.",
         "Cancel event",
         keep = "Keep it",
