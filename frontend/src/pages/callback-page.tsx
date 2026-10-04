@@ -26,16 +26,18 @@ const CallbackPage: React.FC = () => {
       return
     }
 
+    // Replace, never push: /callback is a one-time step. Left in the history,
+    // Back landed on it and it forwarded the reader somewhere they had just left.
     if (isAuthenticated) {
       const redirectPath = localStorage.getItem("redirectPath")
       if (redirectPath) {
         localStorage.removeItem("redirectPath")
-        navigate(redirectPath)
+        navigate(redirectPath, { replace: true })
       } else {
-        navigate("/")
+        navigate("/", { replace: true })
       }
     } else {
-      navigate("/login")
+      navigate("/login", { replace: true })
     }
   }, [isLoading, isAuthenticated, error, navigate])
 
