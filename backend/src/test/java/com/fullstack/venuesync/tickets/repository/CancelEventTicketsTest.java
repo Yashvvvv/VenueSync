@@ -62,4 +62,14 @@ class CancelEventTicketsTest {
     assertEquals(TicketStatusEnum.USED, statusOf(used));
     assertEquals(TicketStatusEnum.PURCHASED, statusOf(elsewhere));
   }
+
+  @Test
+  @DisplayName("an event starts at version 0 and every change bumps it")
+  void versionCountsChanges() {
+    Event event = persistEvent();
+    assertEquals(0L, event.getVersion());
+    event.setName("Show, moved");
+    entityManager.flush();
+    assertEquals(1L, event.getVersion());
+  }
 }

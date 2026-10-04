@@ -43,6 +43,9 @@ public class UpdateEventRequestDto {
   @NotNull(message = "Event status must be provided")
   private EventStatusEnum status;
 
+  /** The version this update was made from. Optional: without it the update isn't checked for staleness. */
+  private Long version;
+
   @NotEmpty(message = "At least one ticket type is required")
   @Valid
   private List<UpdateTicketTypeRequestDto> ticketTypes;

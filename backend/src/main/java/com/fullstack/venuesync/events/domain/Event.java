@@ -18,6 +18,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,15 @@ public class Event {
   /** Client-generated per create attempt; a retry with the same key returns this event instead of a second one. */
   @Column(name = "idempotency_key")
   private UUID idempotencyKey;
+
+  /**
+   * Bumped on every change. A client sends back the version it read, and an update made from an older copy is
+   * refused (EVENT_CHANGED) instead of silently overwriting someone else's edit. The column default gives rows from
+   * before this column a starting version.
+   */
+  @Version
+  @Column(name = "version", nullable = false, columnDefinition = "bigint not null default 0")
+  private Long version;
 
   @ManyToMany(mappedBy = "attendingEvents")
   @Builder.Default

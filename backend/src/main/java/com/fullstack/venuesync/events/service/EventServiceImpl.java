@@ -20,6 +20,7 @@ import com.fullstack.venuesync.events.domain.UpdateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
+import com.fullstack.venuesync.events.exception.EventChangedException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
@@ -133,6 +134,13 @@ public class EventServiceImpl implements EventService {
         .orElseThrow(() -> new EventNotFoundException(
             String.format("Event with ID '%s' does not exist", id))
         );
+
+    // Made from an older copy: someone (the website, another phone) changed the event since this client read it.
+    // Refused rather than letting the later write silently undo theirs. No version sent = not checked (old clients).
+    if (event.getVersion() != null && !event.getVersion().equals(existingEvent.getVersion())) {
+      throw new EventChangedException(String.format(
+          "Event '%s' changed since version %d was read", id, event.getVersion()));
+    }
 
     Set<UUID> requestTicketTypeIds = event.getTicketTypes()
         .stream()

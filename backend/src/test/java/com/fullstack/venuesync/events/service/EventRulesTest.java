@@ -13,6 +13,7 @@ import com.fullstack.venuesync.events.domain.CreateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.domain.UpdateEventRequest;
+import com.fullstack.venuesync.events.exception.EventChangedException;
 import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.repository.EventRepository;
@@ -156,6 +157,29 @@ class EventRulesTest {
     EventInvalidException ex = assertThrows(EventInvalidException.class,
         () -> service.createEvent(organizerId, request));
     assertEquals("start", ex.getField());
+  }
+
+  @Test
+  void anUpdateFromAnOlderCopyIsRefused() {
+    event.setStatus(EventStatusEnum.DRAFT);
+    when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+    event.setVersion(4L);
+    UpdateEventRequest stale = update(EventStatusEnum.DRAFT, null, null, null, null);
+    stale.setVersion(3L);
+    assertThrows(EventChangedException.class, () -> service.updateEventForOrganizer(organizerId, eventId, stale));
+    verify(eventRepository, never()).save(any());
+  }
+
+  @Test
+  void anUpdateFromTheCurrentCopyOrWithoutAVersionGoesThrough() {
+    given(EventStatusEnum.DRAFT, 0);
+    event.setVersion(4L);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    UpdateEventRequest current = update(EventStatusEnum.DRAFT, null, null, null, null);
+    current.setVersion(4L);
+    assertDoesNotThrow(() -> service.updateEventForOrganizer(organizerId, eventId, current));
+    assertDoesNotThrow(() -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.DRAFT, null, null, null, null)));
   }
 
   @Test
