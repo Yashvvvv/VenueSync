@@ -30,6 +30,7 @@ import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.shared.exceptions.UserNotFoundException;
 import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
+import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
@@ -168,6 +169,11 @@ public class EventServiceImpl implements EventService {
     existingEvent.setVenue(event.getVenue());
     existingEvent.setSalesStart(event.getSalesStart());
     existingEvent.setSalesEnd(event.getSalesEnd());
+    // Cancelling voids every ticket nobody has used yet, in the same transaction: a cancelled event's tickets show as
+    // cancelled to their holders and never get anyone in. Used tickets stay used (they're a record of who came).
+    if (existingEvent.getStatus() != EventStatusEnum.CANCELLED && event.getStatus() == EventStatusEnum.CANCELLED) {
+      ticketRepository.moveStatusForEvent(id, TicketStatusEnum.PURCHASED, TicketStatusEnum.CANCELLED);
+    }
     existingEvent.setStatus(event.getStatus());
 
     existingEvent.getTicketTypes().removeIf(existingTicketType ->

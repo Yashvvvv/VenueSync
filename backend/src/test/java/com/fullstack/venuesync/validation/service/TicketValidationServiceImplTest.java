@@ -200,6 +200,21 @@ class TicketValidationServiceImplTest {
     }
   }
 
+  @Test
+  @DisplayName("should return INVALID for a ticket to a cancelled event and never admit it")
+  void shouldReturnInvalidWhenEventCancelled() {
+    event.setStatus(EventStatusEnum.CANCELLED); // the ticket itself still says PURCHASED (bought in the same instant)
+    when(qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE))
+        .thenReturn(Optional.of(qrCode));
+    when(ticketValidationRepository.save(any(TicketValidation.class)))
+        .thenAnswer(i -> i.getArgument(0));
+
+    TicketValidation result = ticketValidationService.validateTicketByQrCode(qrCodeId, userId, null, null);
+
+    assertEquals(TicketValidationStatusEnum.INVALID, result.getStatus());
+    verify(ticketRepository, never()).markUsed(any(), any(), any(), any());
+  }
+
   @Nested
   @DisplayName("Idempotency-Key")
   class IdempotencyTests {

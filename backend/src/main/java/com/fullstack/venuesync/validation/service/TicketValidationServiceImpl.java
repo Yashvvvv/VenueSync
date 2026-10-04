@@ -19,6 +19,7 @@ import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.validation.domain.TicketValidation;
 import com.fullstack.venuesync.validation.domain.TicketValidationMethod;
 import com.fullstack.venuesync.validation.domain.TicketValidationStatusEnum;
+import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.staff.service.EventStaffService;
 import com.fullstack.venuesync.validation.repository.QrCodeRepository;
 import com.fullstack.venuesync.tickets.repository.TicketRepository;
@@ -126,6 +127,13 @@ public class TicketValidationServiceImpl implements TicketValidationService {
     // A scanner that names no event (the web dashboard before it picks one) must still work THIS ticket's door.
     if (eventId == null) {
       eventStaffService.requireCanScan(userId, ticket.getTicketType().getEvent().getId());
+    }
+
+    // A cancelled event admits nobody. Its tickets are cancelled when it is, but one bought in the same instant could
+    // slip past that; the event's own status is the last word.
+    if (EventStatusEnum.CANCELLED.equals(ticket.getTicketType().getEvent().getStatus())) {
+      ticketValidation.setStatus(TicketValidationStatusEnum.INVALID);
+      return ticketValidation;
     }
 
     // Check if ticket is already expired

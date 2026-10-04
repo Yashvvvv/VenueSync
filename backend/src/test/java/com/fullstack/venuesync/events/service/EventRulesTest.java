@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
 import com.fullstack.venuesync.tickets.domain.CreateTicketTypeRequest;
+import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.repository.TicketRepository;
@@ -130,6 +132,22 @@ class EventRulesTest {
     event.setStatus(EventStatusEnum.COMPLETED);
     assertThrows(StatusChangeInvalidException.class, () -> service.updateEventForOrganizer(
         organizerId, eventId, update(EventStatusEnum.PUBLISHED, null, null, null, null)));
+  }
+
+  @Test
+  void cancellingVoidsTheTicketsNobodyHasUsed() {
+    given(EventStatusEnum.PUBLISHED, 3);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    service.updateEventForOrganizer(organizerId, eventId, update(EventStatusEnum.CANCELLED, at, at.plusHours(4), null, null));
+    verify(ticketRepository).moveStatusForEvent(eq(eventId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.CANCELLED));
+  }
+
+  @Test
+  void editingAnEventThatIsAlreadyCancelledMovesNoTickets() {
+    given(EventStatusEnum.CANCELLED, 3);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    service.updateEventForOrganizer(organizerId, eventId, update(EventStatusEnum.CANCELLED, null, null, null, null));
+    verify(ticketRepository, never()).moveStatusForEvent(any(), any(), any());
   }
 
   @Test

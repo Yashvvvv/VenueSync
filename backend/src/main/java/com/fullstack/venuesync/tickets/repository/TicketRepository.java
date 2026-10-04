@@ -91,6 +91,16 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
    *
    * @return 1 if this call admitted the ticket, 0 if it was not PURCHASED (anymore)
    */
+  /** Moves every ticket of the event in status [from] to [to], in one statement. Returns how many moved. */
+  @Modifying
+  @Query("UPDATE Ticket t SET t.status = :to WHERE t.status = :from "
+      + "AND t.ticketType.id IN (SELECT tt.id FROM TicketType tt WHERE tt.event.id = :eventId)")
+  int moveStatusForEvent(
+      @Param("eventId") UUID eventId,
+      @Param("from") TicketStatusEnum from,
+      @Param("to") TicketStatusEnum to
+  );
+
   @Modifying
   @Query("UPDATE Ticket t SET t.status = :used, t.updatedAt = :now WHERE t.id = :id AND t.status = :purchased")
   int markUsed(
