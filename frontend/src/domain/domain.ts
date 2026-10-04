@@ -57,6 +57,8 @@ export interface UpdateEventRequest {
   salesEnd?: string;
   status: EventStatusEnum;
   ticketTypes: UpdateTicketTypeRequest[];
+  /** The version this edit was made from: the server refuses it (409 EVENT_CHANGED) if the event moved on. */
+  version?: number;
 }
 
 export interface TicketTypeSummary {
@@ -107,6 +109,7 @@ export interface EventDetails {
   ticketTypes: TicketTypeDetails[];
   createdAt: string;
   updatedAt: string;
+  version?: number;
 }
 
 export interface SpringBootPagination<T> {
