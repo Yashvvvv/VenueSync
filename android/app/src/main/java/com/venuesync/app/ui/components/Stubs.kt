@@ -176,17 +176,16 @@ fun TicketStubRow(ticket: TicketSummary, now: LocalDateTime, onClick: () -> Unit
             }
             Perforation(vertical = true, modifier = Modifier.fillMaxHeight().width(LocalExperience.current.border))
             Row(Modifier.weight(1f).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                // The status gets its own line: sharing one with the name cut most names to a few words on a phone.
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            ticket.eventName,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        StatusChip(status)
-                    }
+                    StatusChip(status)
+                    Text(
+                        ticket.eventName,
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
                     Text(ticket.ticketTypeName, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     ticket.eventStart?.let { MetaText(it.format(TicketWhen), Modifier.padding(top = 2.dp)) }
                 }

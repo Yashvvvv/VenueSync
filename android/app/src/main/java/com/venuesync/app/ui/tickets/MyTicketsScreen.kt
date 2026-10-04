@@ -23,6 +23,11 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.Dp
+import com.venuesync.app.ui.theme.LocalExperience
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -77,7 +82,8 @@ fun MyTicketsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { DisplayText("My tickets", MaterialTheme.typography.titleLarge) },
+                // headlineSmall is the experience's display face: Anton caps in Hype, Archivo in Classic.
+                title = { DisplayText("My tickets", MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
@@ -90,12 +96,23 @@ fun MyTicketsScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            PrimaryTabRow(selectedTabIndex = filter.ordinal) {
+            val style = LocalExperience.current
+            PrimaryTabRow(
+                selectedTabIndex = filter.ordinal,
+                indicator = {
+                    // Hype prints a square rule under the tab; Classic keeps M3's rounded one.
+                    TabRowDefaults.PrimaryIndicator(
+                        Modifier.tabIndicatorOffset(filter.ordinal, matchContentSize = true),
+                        width = Dp.Unspecified,
+                        shape = if (style.hardShadow) RectangleShape else RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp),
+                    )
+                },
+            ) {
                 TicketFilter.entries.forEach { tab ->
                     Tab(
                         selected = tab == filter,
                         onClick = { viewModel.select(tab) },
-                        text = { Text(tab.label()) },
+                        text = { Text(if (style.uppercaseCta) tab.label().uppercase() else tab.label()) },
                         // M3 paints the unselected tab in the selected colour; muted makes the choice readable.
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -140,7 +157,7 @@ private fun TicketList(tickets: List<TicketSummary>, onTicketClick: (String) -> 
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(if (LocalExperience.current.hardShadow) 20.dp else 12.dp),
     ) {
         itemsIndexed(tickets, key = { _, ticket -> ticket.id }) { index, ticket ->
             TicketStubRow(ticket, now, onClick = { onTicketClick(ticket.id) }, modifier = Modifier.enter(entrance, index))
