@@ -4,6 +4,12 @@ import { useEffect, useRef } from "react"
 import { useAuth } from "react-oidc-context"
 import { PageLoader } from "@/components/common/loading-skeleton"
 
+// "replace", not the default "assign": this page exists only to bounce to the
+// IDP, so it must not stay in the history. Otherwise Back from the IDP lands
+// here, which redirects to the IDP again, and the reader needs two Backs to
+// get out (and sees the site flash in between).
+const replace = { redirectMethod: "replace" } as const
+
 const LoginPage: React.FC = () => {
   const { isLoading, isAuthenticated, signinRedirect, error, activeNavigator } =
     useAuth()
@@ -23,7 +29,7 @@ const LoginPage: React.FC = () => {
       return
     }
     attempted.current = true
-    signinRedirect()
+    signinRedirect(replace)
   }, [isLoading, isAuthenticated, error, activeNavigator, signinRedirect])
 
   if (error) {
@@ -44,7 +50,7 @@ const LoginPage: React.FC = () => {
             className="underline text-primary"
             onClick={() => {
               attempted.current = false
-              signinRedirect()
+              signinRedirect(replace)
             }}
           >
             Try again

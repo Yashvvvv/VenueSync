@@ -2,14 +2,13 @@
 
 import type React from "react"
 import { Link, useLocation } from "react-router"
-import { House, MagnifyingGlass, SquaresFour, Ticket } from "@/components/icons"
+import { House, MagnifyingGlass, Ticket } from "@/components/icons"
 
 interface HypeTabBarProps {
   /**
-   * Supplied only by the feed, which owns an inline search sheet. Without
-   * it the middle tab becomes a link to the full listing instead, so the
-   * bar keeps three destinations everywhere and never shows a control that
-   * does nothing on the current page.
+   * Supplied only by the feed, which owns the inline search sheet. Elsewhere
+   * the same Search tab goes to the feed and opens the sheet there, so the
+   * bar never changes under the reader (it used to turn into "Browse").
    */
   onSearch?: () => void
   searchOpen?: boolean
@@ -61,13 +60,9 @@ export const HypeTabBar: React.FC<HypeTabBarProps> = ({ onSearch, searchOpen = f
             Search
           </button>
         ) : (
-          <Link
-            to="/events"
-            className={`${item} ${pathname === "/events" ? on : off}`}
-            aria-current={pathname === "/events" ? "page" : undefined}
-          >
-            <SquaresFour weight={pathname === "/events" ? "fill" : "regular"} size={20} />
-            Browse
+          <Link to="/" state={{ openSearch: true }} className={`${item} ${off}`}>
+            <MagnifyingGlass weight="regular" size={20} />
+            Search
           </Link>
         )}
 
