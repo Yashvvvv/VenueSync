@@ -131,10 +131,17 @@ fun MyTicketsScreen(
                 } else {
                     StubEmptyState(R.drawable.ph_ticket, "No past tickets", "Tickets for events that have ended show up here.")
                 }
-                is UiState.Error -> if (s.error == ApiError.Unauthorized) {
-                    ErrorState(s.error, onSignInClick, actionLabel = "Sign in")
-                } else {
-                    ErrorState(s.error, viewModel::retry)
+                is UiState.Error -> when (s.error) {
+                    ApiError.Unauthorized -> ErrorState(s.error, onSignInClick, actionLabel = "Sign in")
+                    // An organizer-only account: tickets need the attendee role, so retrying can never work. Say so,
+                    // and point at what this account can do.
+                    ApiError.Forbidden -> StubEmptyState(
+                        R.drawable.ph_ticket,
+                        "No tickets on an organizer account",
+                        "Buying and holding tickets needs an attendee account. You can still scan tickets at your " +
+                            "events from the account menu.",
+                    )
+                    else -> ErrorState(s.error, viewModel::retry)
                 }
                 is UiState.Success -> {
                     savedAt?.let { OfflineBanner(it, onRetry = viewModel::retry) }
