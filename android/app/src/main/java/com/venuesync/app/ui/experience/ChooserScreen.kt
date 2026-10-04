@@ -59,8 +59,8 @@ fun ChooserScreen(onChoose: (Experience) -> Unit, modifier: Modifier = Modifier)
         modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .safeDrawingPadding() // outside the scroll, so content never slides under the status bar
             .verticalScroll(rememberScrollState())
-            .safeDrawingPadding()
             .padding(horizontal = 20.dp, vertical = 24.dp),
     ) {
         Lockup()
@@ -168,7 +168,8 @@ private fun HypePreview() {
             Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
                 Text(
                     "NOCTURNE\nLATE SET",
-                    style = TextStyle(fontFamily = style.displayFamily, fontSize = 19.dp.fixed(), lineHeight = 16.dp.fixed()),
+                    // Anton's caps are 0.859em tall: any line height under that overlaps the lines (the web's 0.86 only touches).
+                    style = TextStyle(fontFamily = style.displayFamily, fontSize = 19.dp.fixed(), lineHeight = 17.5.dp.fixed()),
                     color = colors.onSurface,
                 )
                 Text(

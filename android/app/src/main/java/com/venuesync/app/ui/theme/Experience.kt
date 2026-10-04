@@ -31,7 +31,7 @@ data class ExperienceStyle(
     val displayWeight: FontWeight,
     val displayScale: Float,
     val displayTracking: TextUnit,
-    /** Multiplier on font size. Hype's 0.9 is only safe because caps have no descenders. */
+    /** Multiplier on font size. Hype's 0.9 is only safe because caps have no descenders, and must stay above Anton's cap height (0.859em) or the lines overlap. */
     val displayLineHeight: Float,
     val uppercaseDisplay: Boolean,
     val uppercaseCta: Boolean,

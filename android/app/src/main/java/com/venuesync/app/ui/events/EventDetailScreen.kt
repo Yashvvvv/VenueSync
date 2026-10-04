@@ -17,6 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
+import com.venuesync.app.ui.theme.Easings
+import com.venuesync.app.ui.theme.scaled
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -126,6 +134,8 @@ fun EventDetailScreen(
     // While the request is in flight nothing may leave the screen: dismissPurchase ignores Purchasing.
     BackHandler(enabled = confirming) { viewModel.dismissPurchase() }
 
+    // Hoisted: the confirm screen replaces the content, and coming back must not lose the reader's place.
+    val listState = rememberLazyListState()
     Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (confirming) {
             ConfirmContent(
@@ -141,8 +151,9 @@ fun EventDetailScreen(
                 // A single event has no "empty" case: a missing one is Error(NotFound).
                 UiState.Empty -> Unit
                 is UiState.Error -> ErrorState(s.error, viewModel::retry, Modifier.align(Alignment.Center))
-                is UiState.Success -> EventDetailContent(s.data, buyer, onBuy = viewModel::buy)
+                is UiState.Success -> EventDetailContent(s.data, buyer, listState, onBuy = viewModel::buy)
             }
+            StatusBarGround(listState)
             BackButton(onBack, Modifier.statusBarsPadding().padding(8.dp))
         }
     }
@@ -155,10 +166,24 @@ private fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     IconButton(
         onClick,
         modifier.clip(if (LocalExperience.current.experience == Experience.Hype) RectangleShape else CircleShape)
-            .background(colors.background.copy(alpha = 0.7f)),
+            .background(colors.background.copy(alpha = 0.85f)),
     ) {
         Icon(painterResource(R.drawable.ph_arrow_left), contentDescription = "Back", tint = colors.onSurface)
     }
+}
+
+/** Once the photo starts to scroll away, the status bar and back button get the page's ground: text never runs under the clock or the arrow. */
+@Composable
+private fun StatusBarGround(listState: LazyListState) {
+    val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
+    val alpha by animateFloatAsState(if (scrolled) 1f else 0f, tween(scaled(200), easing = Easings.Soft), label = "statusGround")
+    Box(
+        // Status bar + the back button's row: a bar that appears once the hero has scrolled away.
+        Modifier.fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = alpha))
+            .statusBarsPadding()
+            .height(64.dp),
+    )
 }
 
 @Composable
@@ -186,11 +211,11 @@ private fun HeroSkeleton() {
 }
 
 @Composable
-private fun EventDetailContent(event: EventDetail, buyer: Buyer, onBuy: (TicketType) -> Unit) {
+private fun EventDetailContent(event: EventDetail, buyer: Buyer, listState: LazyListState, onBuy: (TicketType) -> Unit) {
     val context = LocalContext.current
     val style = LocalExperience.current
     val colors = MaterialTheme.colorScheme
-    LazyColumn {
+    LazyColumn(state = listState) {
         item {
             HeroPhoto(event.id)
             Column(Modifier.pullUp(96.dp).padding(horizontal = 20.dp)) {

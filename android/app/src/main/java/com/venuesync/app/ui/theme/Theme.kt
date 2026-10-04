@@ -3,6 +3,7 @@ package com.venuesync.app.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -94,7 +95,9 @@ fun VenueSyncTheme(
             colorScheme = colors,
             typography = remember(style) { typographyFor(style) },
             shapes = shapes,
-            content = content,
-        )
+        ) {
+            // Text outside a Surface takes LocalContentColor, which defaults to black: invisible on the dark grounds.
+            CompositionLocalProvider(LocalContentColor provides colors.onSurface, content = content)
+        }
     }
 }
