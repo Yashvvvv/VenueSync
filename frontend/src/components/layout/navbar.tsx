@@ -61,6 +61,8 @@ const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
+  // Controlled, so the account menu can open it too (hype hides the header button).
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const location = useLocation()
   const { audience } = useAudience()
 
@@ -119,6 +121,9 @@ const Navbar: React.FC = () => {
   ]
 
   const visibleLinks = navLinks.filter((l) => l.public || isAuthenticated)
+  // Hype's account menu: the links the tab bar doesn't already have.
+  const menuLinks = visibleLinks.filter(({ to }) => to !== "/" && to !== "/dashboard/tickets")
+  const canHost = isAttendee && !isOrganizer
 
   return (
     <>
@@ -170,7 +175,7 @@ const Navbar: React.FC = () => {
               {isAuthenticated ? (
                 <>
                   {isAttendee && !isOrganizer && (
-                    <AlertDialog>
+                    <AlertDialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="ghost"
@@ -225,6 +230,32 @@ const Navbar: React.FC = () => {
                         </p>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      {/* Hype hides the header links (the tab bar is the nav, and it only has Feed, Search and
+                          Tickets), so the rest lives here, as in the app's account menu. Without it an organizer
+                          on hype had no way to their events or the scanner. */}
+                      {isHype && (
+                        <>
+                          {menuLinks.map(({ to, label, Icon }) => (
+                              <DropdownMenuItem key={to} asChild className="cursor-pointer gap-2.5 rounded-sm p-2.5">
+                                <Link to={to}>
+                                  <Icon size={15} />
+                                  {label}
+                                </Link>
+                              </DropdownMenuItem>
+                            ))}
+                          {canHost && (
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2.5 rounded-sm p-2.5"
+                              disabled={isUpgrading}
+                              onSelect={() => setIsUpgradeOpen(true)}
+                            >
+                              <CalendarDots size={15} />
+                              Host an event
+                            </DropdownMenuItem>
+                          )}
+                          {(menuLinks.length > 0 || canHost) && <DropdownMenuSeparator />}
+                        </>
+                      )}
                       <DropdownMenuItem
                         className="cursor-pointer gap-2.5 rounded-sm p-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive"
                         onClick={() =>
