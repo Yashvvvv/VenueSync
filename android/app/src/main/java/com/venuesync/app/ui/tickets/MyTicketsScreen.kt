@@ -5,16 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,36 +23,55 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.unit.Dp
+import com.venuesync.app.ui.theme.LocalExperience
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.venuesync.app.R
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.TicketFilter
 import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.core.model.TicketSummary
 import com.venuesync.app.ui.common.UiState
-import com.venuesync.app.ui.events.Centered
+import com.venuesync.app.ui.components.DisplayText
+import com.venuesync.app.ui.components.ErrorState
+import com.venuesync.app.ui.components.SkeletonList
+import com.venuesync.app.ui.components.StubEmptyState
+import com.venuesync.app.ui.components.TicketStubRow
+import com.venuesync.app.ui.components.TicketStubSkeleton
 import com.venuesync.app.ui.events.LoadMoreOnEnd
-import com.venuesync.app.ui.events.StubRow
-import com.venuesync.app.ui.events.message
-import com.venuesync.app.ui.theme.Mono
+import com.venuesync.app.ui.theme.enter
+import com.venuesync.app.ui.theme.rememberEntrance
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
+/**
+ * The attendee's tickets, as printed stubs. [onBack] is null where this is a root (Hype's Tickets tab); [actions]
+ * carries the account menu there, since Hype has no other top bar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyTicketsScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTicketClick: (String) -> Unit,
     onSignInClick: () -> Unit,
+    onBrowse: () -> Unit,
     modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
     viewModel: MyTicketsViewModel = hiltViewModel(),
 ) {
     val filter by viewModel.filter.collectAsStateWithLifecycle()
@@ -66,43 +82,66 @@ fun MyTicketsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("My tickets") },
+                // headlineSmall is the experience's display face: Anton caps in Hype, Archivo in Classic.
+                title = { DisplayText("My tickets", MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(painterResource(R.drawable.ph_arrow_left), contentDescription = "Back")
+                        }
                     }
                 },
+                actions = actions,
             )
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            PrimaryTabRow(selectedTabIndex = filter.ordinal) {
+            val style = LocalExperience.current
+            PrimaryTabRow(
+                selectedTabIndex = filter.ordinal,
+                indicator = {
+                    // Hype prints a square rule under the tab; Classic keeps M3's rounded one.
+                    TabRowDefaults.PrimaryIndicator(
+                        Modifier.tabIndicatorOffset(filter.ordinal, matchContentSize = true),
+                        width = Dp.Unspecified,
+                        shape = if (style.hardShadow) RectangleShape else RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp),
+                    )
+                },
+            ) {
                 TicketFilter.entries.forEach { tab ->
                     Tab(
                         selected = tab == filter,
                         onClick = { viewModel.select(tab) },
-                        text = { Text(tab.label()) },
+                        text = { Text(if (style.uppercaseCta) tab.label().uppercase() else tab.label()) },
                         // M3 paints the unselected tab in the selected colour; muted makes the choice readable.
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             when (val s = state) {
-                UiState.Loading -> Centered { CircularProgressIndicator() }
-                UiState.Empty -> Centered {
-                    Text(
-                        if (filter == TicketFilter.Active) "No upcoming tickets. Tickets you buy show up here." else "No past tickets.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(horizontal = 24.dp),
+                UiState.Loading -> SkeletonList(4, "Loading tickets") { TicketStubSkeleton() }
+                UiState.Empty -> if (filter == TicketFilter.Active) {
+                    StubEmptyState(
+                        R.drawable.ph_ticket,
+                        "No tickets yet",
+                        "Tickets you buy show up here, with the code you scan at the door.",
+                        actionLabel = "Browse events",
+                        onAction = onBrowse,
                     )
+                } else {
+                    StubEmptyState(R.drawable.ph_ticket, "No past tickets", "Tickets for events that have ended show up here.")
                 }
-                is UiState.Error -> Centered {
-                    Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                    if (s.error == ApiError.Unauthorized) {
-                        Button(shape = MaterialTheme.shapes.small, onClick = onSignInClick, modifier = Modifier.padding(top = 12.dp)) { Text("Sign in") }
-                    } else {
-                        Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
-                    }
+                is UiState.Error -> when (s.error) {
+                    ApiError.Unauthorized -> ErrorState(s.error, onSignInClick, actionLabel = "Sign in")
+                    // An organizer-only account: tickets need the attendee role, so retrying can never work. Say so,
+                    // and point at what this account can do.
+                    ApiError.Forbidden -> StubEmptyState(
+                        R.drawable.ph_ticket,
+                        "No tickets on an organizer account",
+                        "Buying and holding tickets needs an attendee account. You can still scan tickets at your " +
+                            "events from the account menu.",
+                    )
+                    else -> ErrorState(s.error, viewModel::retry)
                 }
                 is UiState.Success -> {
                     savedAt?.let { OfflineBanner(it, onRetry = viewModel::retry) }
@@ -113,31 +152,22 @@ fun MyTicketsScreen(
     }
 }
 
+/** Events are wall-clock India time (ADR-003), so "has it ended" is judged on that clock, not the phone's zone. */
+private val EventZone = ZoneId.of("Asia/Kolkata")
+
 @Composable
 private fun TicketList(tickets: List<TicketSummary>, onTicketClick: (String) -> Unit, onEndReached: () -> Unit) {
     val listState = rememberLazyListState()
+    val entrance = rememberEntrance()
+    val now = remember(tickets) { LocalDateTime.now(EventZone) }
     LoadMoreOnEnd(listState, tickets.size, onEndReached)
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(if (LocalExperience.current.hardShadow) 20.dp else 12.dp),
     ) {
-        items(tickets, key = TicketSummary::id) { ticket -> TicketRow(ticket, onClick = { onTicketClick(ticket.id) }) }
-    }
-}
-
-@Composable
-private fun TicketRow(ticket: TicketSummary, onClick: () -> Unit) {
-    val spent = ticket.status != TicketStatus.Purchased && ticket.status != TicketStatus.Unknown
-    StubRow(start = ticket.eventStart, onClick = onClick, spent = spent) {
-        Text(ticket.eventName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(
-            "1 × ${ticket.ticketTypeName}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        statusLabel(ticket.status)?.let {
-            Text(it.uppercase(), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, modifier = Modifier.padding(top = 4.dp))
+        itemsIndexed(tickets, key = { _, ticket -> ticket.id }) { index, ticket ->
+            TicketStubRow(ticket, now, onClick = { onTicketClick(ticket.id) }, modifier = Modifier.enter(entrance, index))
         }
     }
 }

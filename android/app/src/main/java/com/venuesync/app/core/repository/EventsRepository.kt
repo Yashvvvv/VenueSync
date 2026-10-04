@@ -4,7 +4,6 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.core.model.EventDetail
-import com.venuesync.app.core.model.toDomain
 import com.venuesync.app.core.model.toDomainOrNull
 import com.venuesync.app.core.network.EventsApi
 import javax.inject.Inject
@@ -12,8 +11,12 @@ import javax.inject.Inject
 /** A page of domain events plus whether the server has more. */
 data class EventPage(val events: List<Event>, val isLast: Boolean)
 
+const val DEFAULT_PAGE_SIZE = 20
+/** The server caps pages anyway; a bad caller must not ask for thousands. */
+private const val MAX_PAGE_SIZE = 50
+
 interface EventsRepository {
-    suspend fun getPublishedEvents(query: String? = null, page: Int = 0): Result<EventPage>
+    suspend fun getPublishedEvents(query: String? = null, page: Int = 0, size: Int = DEFAULT_PAGE_SIZE): Result<EventPage>
     suspend fun getPublishedEvent(id: String): Result<EventDetail>
 }
 
@@ -26,9 +29,9 @@ class EventsRepositoryImpl @Inject constructor(
     private val api: EventsApi,
 ) : EventsRepository {
 
-    override suspend fun getPublishedEvents(query: String?, page: Int): Result<EventPage> = apiCall {
-        val response = api.getPublishedEvents(query = query, page = page)
-        EventPage(events = response.content.map { it.toDomain() }, isLast = response.last)
+    override suspend fun getPublishedEvents(query: String?, page: Int, size: Int): Result<EventPage> = apiCall {
+        val response = api.getPublishedEvents(query = query, page = page, size = size.coerceIn(1, MAX_PAGE_SIZE))
+        EventPage(events = response.content.mapNotNull { it.toDomainOrNull() }, isLast = response.last)
     }
 
     override suspend fun getPublishedEvent(id: String): Result<EventDetail> {

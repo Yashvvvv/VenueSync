@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.venuesync.app.core.auth.ROLE_ATTENDEE
+import com.venuesync.app.core.auth.Session
 import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.auth.roles
 import com.venuesync.app.core.model.ApiError
@@ -19,8 +20,14 @@ import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** Signed in without the attendee role (an organizer): the selector says so instead of offering a button. */
+enum class Buyer { Unknown, SignedOut, Attendee, NotAttendee }
 
 /**
  * Purchase rules:
@@ -46,6 +53,17 @@ class EventDetailViewModel @Inject constructor(
 
     private val _purchase = MutableStateFlow<PurchaseState>(PurchaseState.Idle)
     val purchase: StateFlow<PurchaseState> = _purchase.asStateFlow()
+
+    /** Who's looking: picks the selector's button label, or the note for an account that can't buy. */
+    val buyer: StateFlow<Buyer> = session.session
+        .map {
+            when (it) {
+                Session.Unknown -> Buyer.Unknown
+                Session.SignedOut -> Buyer.SignedOut
+                is Session.SignedIn -> if (ROLE_ATTENDEE in it.roles) Buyer.Attendee else Buyer.NotAttendee
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Buyer.Unknown)
 
     private var job: Job? = null
 
@@ -173,7 +191,7 @@ class EventDetailViewModel @Inject constructor(
         if (_purchase.value == PurchaseState.Idle) {
             _purchase.value = PurchaseState.Retryable(
                 type,
-                "We couldn't confirm your last purchase. Try again: you won't get a second ticket.",
+                "Your last attempt wasn't confirmed. Getting the ticket now finishes that attempt, so you won't get two.",
             )
         }
     }

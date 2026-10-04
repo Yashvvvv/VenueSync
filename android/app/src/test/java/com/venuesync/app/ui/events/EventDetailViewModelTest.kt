@@ -31,7 +31,7 @@ class EventDetailViewModelTest {
 
     private class FakeRepo(private val results: ArrayDeque<Result<EventDetail>>) : EventsRepository {
         val requestedIds = mutableListOf<String>()
-        override suspend fun getPublishedEvents(query: String?, page: Int) = error("not used")
+        override suspend fun getPublishedEvents(query: String?, page: Int, size: Int) = error("not used")
         override suspend fun getPublishedEvent(id: String): Result<EventDetail> {
             requestedIds += id
             return results.removeFirst()

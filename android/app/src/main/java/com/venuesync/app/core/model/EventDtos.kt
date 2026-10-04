@@ -9,11 +9,11 @@ import kotlinx.serialization.Serializable
  * here, formatting is a UI concern (M1).
  */
 
-/** GET /published-events — Page<ListPublishedEventResponseDto> */
+/** GET /published-events — Page<ListPublishedEventResponseDto>. Optional on the wire: a bad row is dropped, not fatal. */
 @Serializable
 data class ListPublishedEventResponseDto(
-    val id: String,
-    val name: String,
+    val id: String? = null,
+    val name: String? = null,
     val start: String? = null,
     val end: String? = null,
     val venue: String? = null,

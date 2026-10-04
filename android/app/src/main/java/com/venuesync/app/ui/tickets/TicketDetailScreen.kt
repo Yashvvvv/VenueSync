@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,11 +58,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.venuesync.app.core.model.Ticket
 import com.venuesync.app.core.model.TicketStatus
+import com.venuesync.app.R
+import androidx.compose.ui.res.painterResource
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.components.ErrorState
+import com.venuesync.app.ui.components.StatusChip
+import com.venuesync.app.core.model.displayStatus
+import java.time.LocalDateTime
+import java.time.ZoneId
 import com.venuesync.app.ui.events.Centered
 import com.venuesync.app.ui.events.DateFormat
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.events.priceLabel
+import com.venuesync.app.ui.theme.LocalExperience
 import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
@@ -87,7 +93,7 @@ fun TicketDetailScreen(
                 title = { Text("Ticket") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(painterResource(R.drawable.ph_arrow_left), contentDescription = "Back")
                     }
                 },
             )
@@ -97,10 +103,7 @@ fun TicketDetailScreen(
             when (val s = ticket) {
                 UiState.Loading -> Centered { CircularProgressIndicator() }
                 UiState.Empty -> Centered { Text("Not found.") }
-                is UiState.Error -> Centered {
-                    Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                    Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retryTicket, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
-                }
+                is UiState.Error -> ErrorState(s.error, viewModel::retryTicket, Modifier.align(Alignment.Center))
                 is UiState.Success -> Column {
                     s.data.savedAt?.let { OfflineBanner(it, onRetry = viewModel::retryTicket) }
                     TicketContent(s.data, qr, onRetryQr = viewModel::retryQr)
@@ -118,7 +121,7 @@ private fun TicketContent(ticket: Ticket, qr: QrState, onRetryQr: () -> Unit) {
     val density = LocalDensity.current
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         StubCard(
-            shape = perforationAt?.let { TicketShape(it, vertical = false) } ?: MaterialTheme.shapes.medium,
+            shape = perforationAt?.let { TicketShape(it, vertical = false, LocalExperience.current.radius) } ?: MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth(),
         ) {
             EventBlock(ticket)
@@ -141,6 +144,7 @@ private fun EventBlock(ticket: Ticket) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        StatusChip(displayStatus(ticket.status, ticket.eventEnd, LocalDateTime.now(ZoneId.of("Asia/Kolkata"))), Modifier.padding(bottom = 4.dp))
         Text(
             ticket.eventName,
             style = MaterialTheme.typography.headlineSmall,

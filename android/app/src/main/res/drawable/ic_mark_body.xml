@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The VenueSync mark's stock (frontend/src/components/icons VenueSyncMark, 40x29): a stub with a half-circle
+     punched out of each side. Tinted with the theme's primary; ic_mark_detail sits on top in onPrimary. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="29dp" android:viewportWidth="40" android:viewportHeight="29">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M4.5,0 H35.5 A4.5,4.5 0 0 1 40,4.5 V9.9 A4.6,4.6 0 0 0 40,19.1 V24.5 A4.5,4.5 0 0 1 35.5,29 H4.5 A4.5,4.5 0 0 1 0,24.5 V19.1 A4.6,4.6 0 0 0 0,9.9 V4.5 A4.5,4.5 0 0 1 4.5,0 Z" />
+</vector>

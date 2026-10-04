@@ -7,42 +7,58 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.venuesync.app.R
+import com.venuesync.app.ui.components.ConfettiOnce
+import com.venuesync.app.ui.components.DisplayText
+import com.venuesync.app.ui.components.StubButton
+import com.venuesync.app.ui.theme.StubCard
+import com.venuesync.app.ui.theme.Success
 
-/** Shown once a purchase succeeded. [onViewTicket] is null when the route carries no usable ticket id. */
+/**
+ * Shown once a purchase succeeded. No auto-redirect: the web's old page bounced away mid-read. [onViewTicket] is null
+ * when the route carries no usable ticket id; [onDone] goes back to the event.
+ */
 @Composable
 fun PurchaseResultScreen(onDone: () -> Unit, onViewTicket: (() -> Unit)?, modifier: Modifier = Modifier) {
-    Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // A short ember rule: the single accent, marking the moment.
-            Box(Modifier.size(width = 32.dp, height = 3.dp).background(MaterialTheme.colorScheme.primary))
-            Text(
-                "You're in!",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text("Your ticket is booked.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (onViewTicket != null) {
-                Button(shape = MaterialTheme.shapes.small, onClick = onViewTicket, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("View ticket") }
-                TextButton(onClick = onDone) { Text("Done") }
-            } else {
-                Button(shape = MaterialTheme.shapes.small, onClick = onDone, modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) { Text("Done") }
+    Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        StubCard(Modifier.align(Alignment.Center).safeDrawingPadding().padding(20.dp).fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(painterResource(R.drawable.ph_check_circle_fill), null, Modifier.size(30.dp), tint = Success)
+                DisplayText(
+                    "That is yours",
+                    MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    Modifier.padding(top = 12.dp).semantics { heading() },
+                )
+                Text(
+                    "The ticket is on your account with the code you scan at the door.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Column(Modifier.padding(top = 20.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (onViewTicket != null) StubButton("View my ticket", onViewTicket, Modifier.fillMaxWidth())
+                    StubButton("Back to event", onDone, Modifier.fillMaxWidth(), outlined = onViewTicket != null)
+                }
             }
         }
+        ConfettiOnce(Modifier.fillMaxSize())
     }
 }

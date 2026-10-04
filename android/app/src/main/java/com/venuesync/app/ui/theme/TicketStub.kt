@@ -6,7 +6,17 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -26,15 +36,15 @@ import androidx.compose.ui.unit.dp
 // The web's ticket motif (.perf + .notch in index.css): a dashed tear line with a punched hole at each end.
 
 /**
- * A 6dp card with a half-circle cut out of both edges where the perforation runs: [at] from the start edge when
+ * A card with [corner] radius and a half-circle cut out of both edges where the perforation runs: [at] from the start edge when
  * [vertical], from the top otherwise. A real cut, so the border follows the hole and the page shows through.
  */
-data class TicketShape(val at: Dp, val vertical: Boolean) : Shape {
+data class TicketShape(val at: Dp, val vertical: Boolean, val corner: Dp) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val radius = with(density) { NotchRadius.toPx() }
         val offset = with(density) { at.toPx() }
         val card = Path().apply {
-            addRoundRect(RoundRect(Rect(Offset.Zero, size), CornerRadius(with(density) { 6.dp.toPx() })))
+            addRoundRect(RoundRect(Rect(Offset.Zero, size), CornerRadius(with(density) { corner.toPx() })))
         }
         val holes = Path().apply {
             if (vertical) {
@@ -52,10 +62,11 @@ data class TicketShape(val at: Dp, val vertical: Boolean) : Shape {
 
 private val NotchRadius = 10.dp
 
-/** The dashed tear line, centred in its bounds. Give it 1dp across and the full length of the card. */
+/** The dashed tear line, centred in its bounds. Give it the border width across and the full length of the card. */
 @Composable
 fun Perforation(vertical: Boolean, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.outlineVariant
+    val width = LocalExperience.current.border // Hype prints its tear line at 2dp, like every other rule
     Canvas(modifier) {
         val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))
         val (start, end) = if (vertical) {
@@ -63,11 +74,14 @@ fun Perforation(vertical: Boolean, modifier: Modifier = Modifier) {
         } else {
             Offset(0f, size.height / 2) to Offset(size.width, size.height / 2)
         }
-        drawLine(color, start, end, strokeWidth = 1.dp.toPx(), pathEffect = dash)
+        drawLine(color, start, end, strokeWidth = width.toPx(), pathEffect = dash)
     }
 }
 
-/** Card stock: the web's `bg-card border`. Clickable when [onClick] is given. */
+/**
+ * Card stock: the web's `bg-card border`. Clickable when [onClick] is given, with the 1dp press nudge. Hype prints a
+ * hard offset shadow instead of elevation: 5dp in the rule colour, 7dp in the plate while pressed.
+ */
 @Composable
 fun StubCard(
     modifier: Modifier = Modifier,
@@ -75,11 +89,35 @@ fun StubCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    if (onClick != null) {
-        OutlinedCard(onClick, modifier, shape = shape, colors = colors, border = border, content = content)
+    val style = LocalExperience.current
+    val scheme = MaterialTheme.colorScheme
+    val colors = CardDefaults.outlinedCardColors(containerColor = scheme.surfaceContainerLow)
+    val border = BorderStroke(style.border, scheme.outlineVariant)
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val shadow = if (style.hardShadow) {
+        Modifier.hardShadow(shape, if (pressed) 7.dp else 5.dp, if (pressed) scheme.primary else scheme.outlineVariant)
     } else {
-        OutlinedCard(modifier, shape = shape, colors = colors, border = border, content = content)
+        Modifier
+    }
+    if (onClick != null) {
+        OutlinedCard(
+            onClick, modifier.pressNudge(interaction).then(shadow),
+            shape = shape, colors = colors, border = border, interactionSource = interaction, content = content,
+        )
+    } else {
+        OutlinedCard(modifier.then(shadow), shape = shape, colors = colors, border = border, content = content)
+    }
+}
+
+/**
+ * Painted only outside the card's whole rectangle: a punched notch shows the page, never the shadow (clipping to the
+ * notched outline instead lets the offset shadow fill the holes).
+ */
+private fun Modifier.hardShadow(shape: Shape, offset: Dp, color: Color) = drawBehind {
+    val px = offset.toPx()
+    val card = Path().apply { addOutline(shape.createOutline(size, layoutDirection, this@drawBehind)) }
+    clipRect(0f, 0f, size.width, size.height, ClipOp.Difference) {
+        translate(px, px) { drawPath(card, color) }
     }
 }

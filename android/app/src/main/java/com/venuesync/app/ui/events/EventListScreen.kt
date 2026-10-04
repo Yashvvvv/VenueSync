@@ -1,5 +1,11 @@
 package com.venuesync.app.ui.events
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,52 +18,67 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.venuesync.app.R
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.common.UiState
+import com.venuesync.app.ui.components.ErrorState
+import com.venuesync.app.ui.components.EventStubCard
+import com.venuesync.app.ui.components.EventStubSkeleton
+import com.venuesync.app.ui.components.SkeletonList
+import com.venuesync.app.ui.components.StubEmptyState
+import com.venuesync.app.ui.components.eventsEmptyCopy
+import com.venuesync.app.ui.theme.LocalExperience
+import com.venuesync.app.ui.theme.Lockup
 import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.theme.TicketShape
+import com.venuesync.app.ui.theme.enter
+import com.venuesync.app.ui.theme.rememberEntrance
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
+/** Classic's home (the web's attendee landing, minus the marketing): search, categories, the photo stub list. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventListScreen(
@@ -71,7 +92,7 @@ fun EventListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Wordmark() },
+                title = { Lockup() },
                 actions = {
                     AccountAction(
                         onSignInClick = onSignInClick,
@@ -86,7 +107,17 @@ fun EventListScreen(
     }
 }
 
-/** Search + paged list of published events. */
+/** The web's category row. No category field exists in the API, so each one is a search term, as on the web. */
+private val Categories = listOf(
+    "Music" to R.drawable.ph_music_notes_fill,
+    "Sports" to R.drawable.ph_barbell_fill,
+    "Arts" to R.drawable.ph_paint_brush_fill,
+    "Tech" to R.drawable.ph_terminal_fill,
+    "Food" to R.drawable.ph_fork_knife_fill,
+    "Comedy" to R.drawable.ph_confetti_fill,
+)
+
+/** Search + categories + paged list of published events. */
 @Composable
 internal fun EventBrowser(
     onEventClick: (String) -> Unit,
@@ -97,36 +128,117 @@ internal fun EventBrowser(
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = viewModel::onQueryChanged,
-            placeholder = { Text("Search events") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        SearchField(query, viewModel::onQueryChanged, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        CategoryChips(query, viewModel::onQueryChanged)
         when (val s = state) {
-            UiState.Loading -> Centered { CircularProgressIndicator() }
-            UiState.Empty -> Centered { Text("No events found") }
-            is UiState.Error -> Centered {
-                Text(s.error.message(), style = MaterialTheme.typography.bodyLarge)
-                Button(shape = MaterialTheme.shapes.small, onClick = viewModel::retry, modifier = Modifier.padding(top = 12.dp)) { Text("Retry") }
+            UiState.Loading -> SkeletonList(3, "Loading events") { EventStubSkeleton() }
+            UiState.Empty -> {
+                val copy = eventsEmptyCopy(query)
+                StubEmptyState(
+                    icon = if (query.isBlank()) R.drawable.ph_calendar_dots else R.drawable.ph_magnifying_glass,
+                    title = copy.title,
+                    body = copy.body,
+                    actionLabel = copy.action,
+                    onAction = { viewModel.onQueryChanged("") },
+                )
             }
-            is UiState.Success -> EventList(s.data, onEventClick, onEndReached = viewModel::loadMore)
+            is UiState.Error -> ErrorState(s.error, viewModel::retry)
+            is UiState.Success -> EventList(
+                s.data,
+                header = if (query.isBlank()) "On sale now" else "Search results",
+                onEventClick = onEventClick,
+                onEndReached = viewModel::loadMore,
+            )
+        }
+    }
+}
+
+/**
+ * One bordered field. The magnifier and the border take the accent on focus (no glow); the clear button scales in.
+ */
+@Composable
+private fun SearchField(query: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val focus = LocalFocusManager.current
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        placeholder = { Text("Search events, venues or artists") },
+        leadingIcon = { Icon(painterResource(R.drawable.ph_magnifying_glass), contentDescription = null, Modifier.size(20.dp)) },
+        trailingIcon = {
+            AnimatedVisibility(query.isNotEmpty(), enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+                IconButton(onClick = { onChange("") }) {
+                    Icon(painterResource(R.drawable.ph_x), contentDescription = "Clear search", Modifier.size(18.dp))
+                }
+            }
+        },
+        singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = colors.primary,
+            unfocusedBorderColor = colors.outline,
+            focusedLeadingIconColor = colors.primary,
+            unfocusedLeadingIconColor = colors.onSurfaceVariant,
+        ),
+        modifier = modifier.fillMaxWidth(),
+    )
+}
+
+/** Active chip = accent fill with ink; tapping it again clears the search. */
+@Composable
+private fun CategoryChips(query: String, onChange: (String) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val border = LocalExperience.current.border
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Categories.forEach { (name, icon) ->
+            val active = query.trim().equals(name, ignoreCase = true)
+            FilterChip(
+                selected = active,
+                onClick = { onChange(if (active) "" else name) },
+                label = { Text(name) },
+                leadingIcon = { Icon(painterResource(icon), contentDescription = null, Modifier.size(16.dp)) },
+                shape = MaterialTheme.shapes.small,
+                colors = FilterChipDefaults.filterChipColors(
+                    labelColor = colors.onSurface,
+                    iconColor = colors.onSurfaceVariant,
+                    selectedContainerColor = colors.primary,
+                    selectedLabelColor = colors.onPrimary,
+                    selectedLeadingIconColor = colors.onPrimary,
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = active,
+                    borderColor = colors.outlineVariant,
+                    selectedBorderColor = colors.primary,
+                    borderWidth = border,
+                    selectedBorderWidth = border,
+                ),
+            )
         }
     }
 }
 
 @Composable
-private fun EventList(events: List<Event>, onEventClick: (String) -> Unit, onEndReached: () -> Unit) {
+private fun EventList(events: List<Event>, header: String, onEventClick: (String) -> Unit, onEndReached: () -> Unit) {
     val listState = rememberLazyListState()
-    LoadMoreOnEnd(listState, events.size, onEndReached)
+    val entrance = rememberEntrance()
+    LoadMoreOnEnd(listState, events.size + 1, onEndReached) // + the header item
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        items(events, key = Event::id) { event -> EventCard(event, onClick = { onEventClick(event.id) }) }
+        item(key = "header") {
+            Text(header, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+        }
+        itemsIndexed(events, key = { _, event -> event.id }) { index, event ->
+            EventStubCard(event, onClick = { onEventClick(event.id) }, modifier = Modifier.enter(entrance, index))
+        }
     }
 }
 
@@ -157,7 +269,7 @@ internal fun StubRow(
     spent: Boolean = false,
     body: @Composable ColumnScope.() -> Unit,
 ) {
-    StubCard(shape = TicketShape(Counterfoil, vertical = true), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    StubCard(shape = TicketShape(Counterfoil, vertical = true, LocalExperience.current.radius), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             DateStub(start, spent, Modifier.width(Counterfoil).padding(vertical = 16.dp))
             Perforation(vertical = true, modifier = Modifier.fillMaxHeight().width(1.dp))
@@ -214,19 +326,6 @@ internal fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
     }
-}
-
-/** "VenueSync" set like the web's logotype: Archivo SemiBold, tight, "Sync" in ember. */
-@Composable
-internal fun Wordmark(modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.titleLarge) {
-    Text(
-        buildAnnotatedString {
-            append("Venue")
-            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Sync") }
-        },
-        style = style.copy(letterSpacing = (-0.02).em),
-        modifier = modifier,
-    )
 }
 
 internal val DateFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)

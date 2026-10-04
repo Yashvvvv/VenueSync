@@ -6,7 +6,6 @@ import com.venuesync.app.core.model.Event
 import com.venuesync.app.core.model.Guest
 import com.venuesync.app.core.model.JoinedEvent
 import com.venuesync.app.core.model.normalizeInviteCode
-import com.venuesync.app.core.model.toDomain
 import com.venuesync.app.core.model.toDomainOrNull
 import com.venuesync.app.core.network.StaffApi
 import javax.inject.Inject
@@ -27,7 +26,7 @@ class StaffRepositoryImpl @Inject constructor(
 ) : StaffRepository {
 
     override suspend fun staffingEvents(): Result<List<Event>> = apiCall {
-        api.staffingEvents().map { it.toDomain() }.distinctBy { it.id }
+        api.staffingEvents().mapNotNull { it.toDomainOrNull() }.distinctBy { it.id }
     }
 
     override suspend fun acceptInvite(code: String): Result<JoinedEvent> {

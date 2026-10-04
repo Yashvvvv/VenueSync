@@ -48,7 +48,7 @@ class ScannerViewModelTest {
     }
 
     private class FakeEvents : EventsRepository {
-        override suspend fun getPublishedEvents(query: String?, page: Int) = error("not used")
+        override suspend fun getPublishedEvents(query: String?, page: Int, size: Int) = error("not used")
         override suspend fun getPublishedEvent(id: String) =
             Result.success(EventDetail(id, "Summer Vibes", null, null, null, emptyList(), SalesStatus.OnSale, null, null))
     }
