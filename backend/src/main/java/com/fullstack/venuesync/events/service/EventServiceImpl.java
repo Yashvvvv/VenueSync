@@ -63,6 +63,7 @@ public class EventServiceImpl implements EventService {
       throw new EventInvalidException("status", "A new event starts as a draft or published");
     }
     checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
+    checkPublishable(event.getStatus(), event.getStart(), event.getEnd());
 
     User organizer = userRepository.findById(Objects.requireNonNull(organizerId))
         .orElseThrow(() -> new UserNotFoundException(
@@ -153,6 +154,7 @@ public class EventServiceImpl implements EventService {
     }
     checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
     checkStatusChange(existingEvent.getStatus(), event.getStatus(), !issued.isEmpty());
+    checkPublishable(event.getStatus(), event.getStart(), event.getEnd());
 
     // Capacity can't drop below what's already issued: those tickets exist whatever the number says.
     for (UpdateTicketTypeRequest requested : event.getTicketTypes()) {
@@ -265,6 +267,19 @@ public class EventServiceImpl implements EventService {
     }
     if (salesEnd != null && end != null && salesEnd.isAfter(end)) {
       throw new EventInvalidException("salesEnd", "Sales can't end after the event does");
+    }
+  }
+
+  /** On sale means people plan around it: a published event needs a start and an end. Drafts can be vague. */
+  private static void checkPublishable(EventStatusEnum status, LocalDateTime start, LocalDateTime end) {
+    if (status != EventStatusEnum.PUBLISHED) {
+      return;
+    }
+    if (start == null) {
+      throw new EventInvalidException("start", "A published event needs a start time");
+    }
+    if (end == null) {
+      throw new EventInvalidException("end", "A published event needs an end time");
     }
   }
 

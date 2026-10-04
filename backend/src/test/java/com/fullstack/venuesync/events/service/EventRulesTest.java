@@ -135,6 +135,30 @@ class EventRulesTest {
   }
 
   @Test
+  void publishingNeedsAStartAndAnEnd() {
+    given(EventStatusEnum.DRAFT, 0);
+    EventInvalidException noStart = assertThrows(EventInvalidException.class, () -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.PUBLISHED, null, at, null, null)));
+    assertEquals("start", noStart.getField());
+    EventInvalidException noEnd = assertThrows(EventInvalidException.class, () -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.PUBLISHED, at, null, null, null)));
+    assertEquals("end", noEnd.getField());
+    verify(eventRepository, never()).save(any());
+  }
+
+  @Test
+  void aNewPublishedEventNeedsDatesToo() {
+    CreateEventRequest request = new CreateEventRequest();
+    request.setName("Show");
+    request.setVenue("Hall");
+    request.setStatus(EventStatusEnum.PUBLISHED);
+    request.setTicketTypes(List.of(new CreateTicketTypeRequest("GA", 10.0, null, null)));
+    EventInvalidException ex = assertThrows(EventInvalidException.class,
+        () -> service.createEvent(organizerId, request));
+    assertEquals("start", ex.getField());
+  }
+
+  @Test
   void cancellingVoidsTheTicketsNobodyHasUsed() {
     given(EventStatusEnum.PUBLISHED, 3);
     when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));

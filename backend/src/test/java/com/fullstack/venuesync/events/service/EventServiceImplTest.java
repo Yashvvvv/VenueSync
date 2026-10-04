@@ -263,6 +263,8 @@ class EventServiceImplTest {
       request.setName("Updated Event");
       request.setVenue("Updated Venue");
       request.setStatus(EventStatusEnum.PUBLISHED);
+      request.setStart(LocalDateTime.of(2026, 11, 20, 19, 0));
+      request.setEnd(LocalDateTime.of(2026, 11, 20, 23, 0));
       request.setTicketTypes(List.of(updateTT));
 
       when(eventRepository.findByIdAndOrganizerId(eventId, organizerId))
@@ -364,7 +366,7 @@ class EventServiceImplTest {
       request.setId(eventId);
       request.setName("Event");
       request.setVenue("Venue");
-      request.setStatus(EventStatusEnum.PUBLISHED);
+      request.setStatus(EventStatusEnum.DRAFT);
       request.setTicketTypes(List.of(shrink));
 
       when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
