@@ -33,6 +33,8 @@ import com.venuesync.app.ui.feed.FeedScreen
 import com.venuesync.app.ui.feed.HypeTab
 import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
+import com.venuesync.app.ui.organizer.OrganizerEventScreen
+import com.venuesync.app.ui.organizer.OrganizerEventViewModel
 import com.venuesync.app.ui.organizer.OrganizerEventsScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
 import com.venuesync.app.ui.scanner.ScanEventPickerScreen
@@ -55,11 +57,13 @@ object Routes {
     const val SCANNER = "scan/{${ScannerViewModel.EVENT_ID_ARG}}"
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
     const val ORGANIZER_EVENTS = "organizer/events"
+    const val ORGANIZER_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
     fun ticketDetail(ticketId: String) = "tickets/$ticketId"
     fun scanner(eventId: String) = "scan/$eventId"
+    fun organizerEvent(eventId: String) = "organizer/events/$eventId"
 }
 
 /** The web's feed asks for 8: one screen per event, so a page is 8 screens. */
@@ -217,11 +221,17 @@ private fun NavGraphBuilder.screens(
             },
         )
     }
-    composable(Routes.ORGANIZER_EVENTS) {
+    composable(Routes.ORGANIZER_EVENTS) { entry ->
         OrganizerEventsScreen(
             onBack = { navController.navigateUp() },
-            onEventClick = {}, // the event overview arrives in 9.3
+            onEventClick = { navController.navigateOnce(entry, Routes.organizerEvent(it)) },
             onNewEvent = {}, // the form arrives in 9.4
+        )
+    }
+    composable(Routes.ORGANIZER_EVENT) {
+        OrganizerEventScreen(
+            onBack = { navController.navigateUp() },
+            onEdit = {}, // the form arrives in 9.4
         )
     }
     composable(Routes.LOGIN) {
