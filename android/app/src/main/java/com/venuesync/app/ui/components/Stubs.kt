@@ -274,7 +274,7 @@ fun ErrorState(
 
 /** 1.6s breathing between the two highest surfaces; still when animations are off. */
 @Composable
-private fun shimmer(): Color {
+internal fun shimmer(): Color {
     val colors = MaterialTheme.colorScheme
     if (!animationsOn()) return colors.surfaceContainerHigh
     val color by rememberInfiniteTransition(label = "shimmer").animateColor(

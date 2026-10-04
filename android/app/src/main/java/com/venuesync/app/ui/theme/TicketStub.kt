@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.addOutline
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -110,11 +110,14 @@ fun StubCard(
     }
 }
 
-/** Painted only outside the card, so a punched notch still shows the page, never the shadow behind it. */
+/**
+ * Painted only outside the card's whole rectangle: a punched notch shows the page, never the shadow (clipping to the
+ * notched outline instead lets the offset shadow fill the holes).
+ */
 private fun Modifier.hardShadow(shape: Shape, offset: Dp, color: Color) = drawBehind {
     val px = offset.toPx()
     val card = Path().apply { addOutline(shape.createOutline(size, layoutDirection, this@drawBehind)) }
-    clipPath(card, ClipOp.Difference) {
+    clipRect(0f, 0f, size.width, size.height, ClipOp.Difference) {
         translate(px, px) { drawPath(card, color) }
     }
 }

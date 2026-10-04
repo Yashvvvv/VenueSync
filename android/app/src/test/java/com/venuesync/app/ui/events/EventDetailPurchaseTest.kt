@@ -44,7 +44,7 @@ class EventDetailPurchaseTest {
 
     private class Events(private val detail: EventDetail) : EventsRepository {
         var loads = 0
-        override suspend fun getPublishedEvents(query: String?, page: Int) = error("not used")
+        override suspend fun getPublishedEvents(query: String?, page: Int, size: Int) = error("not used")
         override suspend fun getPublishedEvent(id: String): Result<EventDetail> {
             loads++
             return Result.success(detail)

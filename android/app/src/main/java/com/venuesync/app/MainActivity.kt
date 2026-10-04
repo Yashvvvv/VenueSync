@@ -24,6 +24,10 @@ import com.venuesync.app.ui.experience.ExperienceStore
 import com.venuesync.app.ui.experience.LocalChooseExperience
 import com.venuesync.app.ui.navigation.VenueSyncNavHost
 import com.venuesync.app.ui.theme.Experience
+import com.venuesync.app.ui.theme.LocalExperience
+import com.venuesync.app.ui.theme.halftone
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Modifier
 import com.venuesync.app.ui.theme.VenueSyncTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -56,7 +60,11 @@ class MainActivity : ComponentActivity() {
                     } else {
                         // A switch starts the other experience at its home, like the web going to "/". Same key
                         // after process death, so the back stack is restored.
-                        key(choice.experience) { VenueSyncNavHost() }
+                        key(choice.experience) {
+                            // Hype's halftone screen sits over the whole tree, like the web's fixed overlay.
+                            val texture = if (LocalExperience.current.halftone) Modifier.halftone() else Modifier
+                            Box(texture) { VenueSyncNavHost(choice.experience) }
+                        }
                     }
                 }
             }

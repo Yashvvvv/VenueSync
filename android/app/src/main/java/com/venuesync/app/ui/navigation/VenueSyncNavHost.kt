@@ -1,32 +1,52 @@
 package com.venuesync.app.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.venuesync.app.ui.account.AccountAction
 import com.venuesync.app.ui.events.EventDetailScreen
 import com.venuesync.app.ui.events.EventDetailViewModel
 import com.venuesync.app.ui.events.EventListScreen
+import com.venuesync.app.ui.events.EventsViewModel
+import com.venuesync.app.ui.feed.FeedScreen
+import com.venuesync.app.ui.feed.HypeTab
+import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
 import com.venuesync.app.ui.scanner.ScanEventPickerScreen
 import com.venuesync.app.ui.scanner.ScannerScreen
 import com.venuesync.app.ui.scanner.ScannerViewModel
+import com.venuesync.app.ui.theme.Experience
 import com.venuesync.app.ui.tickets.MyTicketsScreen
 import com.venuesync.app.ui.tickets.TicketDetailScreen
 import com.venuesync.app.ui.tickets.TicketDetailViewModel
 
-/*
- * Route names for the 6 frozen screens (architecture.md). Destinations get added
- * milestone by milestone — not before.
- */
 object Routes {
     const val LOGIN = "login"
     const val EVENT_LIST = "events"
+    /** Hype's home: one event per screen. Declares the feed's page size as a route argument. */
+    const val FEED = "feed?${EventsViewModel.PAGE_SIZE_ARG}={${EventsViewModel.PAGE_SIZE_ARG}}"
     const val EVENT_DETAIL = "events/{${EventDetailViewModel.EVENT_ID_ARG}}"
     const val PURCHASE_RESULT = "purchase-result/{${TicketDetailViewModel.TICKET_ID_ARG}}"
     const val MY_TICKETS = "my-tickets"
@@ -40,70 +60,164 @@ object Routes {
     fun scanner(eventId: String) = "scan/$eventId"
 }
 
+/** The web's feed asks for 8: one screen per event, so a page is 8 screens. */
+private const val FeedPageSize = 8
+
+/**
+ * Two experiences, two navigation models over one set of screens. Classic: a top bar and a back stack from the event
+ * list. Hype: the feed at the root and a bottom tab bar as the whole nav (the web's HypeTabBar).
+ */
 @Composable
-fun VenueSyncNavHost() {
+fun VenueSyncNavHost(experience: Experience) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Routes.EVENT_LIST) {
-        composable(Routes.EVENT_LIST) { entry ->
-            EventListScreen(
-                onEventClick = { eventId -> navController.navigateOnce(entry, Routes.eventDetail(eventId)) },
-                onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
-                onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
-                onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
-            )
+    when (experience) {
+        Experience.Classic -> NavHost(navController, startDestination = Routes.EVENT_LIST) {
+            screens(navController, Experience.Classic, sheet = null)
         }
-        composable(Routes.EVENT_DETAIL) {
-            EventDetailScreen(
-                // navigateUp, not popBackStack: a double-tapped back can't pop the start screen and leave a blank host.
-                onBack = { navController.navigateUp() },
-                // Plain navigate, no RESUMED guard: these come from VM one-shot states, single by construction,
-                // and a guard that drops one would mean the result screen never shows.
-                onSignInRequired = { navController.navigate(Routes.LOGIN) },
-                onPurchased = { ticketId -> navController.navigate(Routes.purchaseResult(ticketId)) },
-            )
-        }
-        composable(Routes.MY_TICKETS) { entry ->
-            MyTicketsScreen(
-                onBack = { navController.navigateUp() },
-                onTicketClick = { navController.navigateOnce(entry, Routes.ticketDetail(it)) },
-                onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
-                onBrowse = { navController.navigateUp() },
-            )
-        }
-        composable(Routes.SCAN_EVENTS) { entry ->
-            ScanEventPickerScreen(
-                onBack = { navController.navigateUp() },
-                onEventClick = { navController.navigateOnce(entry, Routes.scanner(it)) },
-                onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
-            )
-        }
-        composable(Routes.SCANNER) {
-            ScannerScreen(onBack = { navController.navigateUp() })
-        }
-        composable(Routes.TICKET_DETAIL) {
-            TicketDetailScreen(onBack = { navController.navigateUp() })
-        }
-        composable(Routes.PURCHASE_RESULT) { entry ->
-            val ticketId = entry.arguments?.getString(TicketDetailViewModel.TICKET_ID_ARG)
-            PurchaseResultScreen(
-                // Same idempotent pop as login: a double-tapped Done can't pop the detail screen too.
-                onDone = { navController.popBackStack(Routes.PURCHASE_RESULT, inclusive = true) },
-                // Replaces the result screen, so back from the ticket returns to the event.
-                onViewTicket = ticketId?.let { id ->
-                    {
-                        navController.navigateOnce(entry, Routes.ticketDetail(id)) {
-                            popUpTo(Routes.PURCHASE_RESULT) { inclusive = true }
+        Experience.Hype -> HypeShell(navController)
+    }
+}
+
+@Composable
+private fun HypeShell(navController: NavHostController) {
+    // A state object, not a value: NavHost builds its graph once, so a captured Boolean would never change there.
+    val sheet = rememberSaveable { mutableStateOf(false) }
+    var searchOpen by sheet
+    val route = navController.currentBackStackEntryAsState().value?.destination?.route
+    // The sheet belongs to the feed: leaving the feed closes it.
+    LaunchedEffect(route) { if (route != Routes.FEED) searchOpen = false }
+    val active = when (route) {
+        Routes.FEED -> if (searchOpen) HypeTab.Search else HypeTab.Feed
+        Routes.MY_TICKETS -> HypeTab.Tickets
+        else -> null
+    }
+    Scaffold(
+        contentWindowInsets = WindowInsets(0), // screens draw their own top insets (the event photo runs under the clock)
+        bottomBar = {
+            // The door scanner keeps its full-screen colours; sign-in stays a focused, single task.
+            if (route != Routes.SCANNER && route != Routes.LOGIN) {
+                HypeTabBar(active, onSelect = { tab ->
+                    when (tab) {
+                        HypeTab.Feed -> {
+                            searchOpen = false
+                            navController.toTab(Routes.FEED)
                         }
+                        HypeTab.Search -> if (route == Routes.FEED) {
+                            searchOpen = !searchOpen
+                        } else {
+                            navController.toTab(Routes.FEED)
+                            searchOpen = true
+                        }
+                        HypeTab.Tickets -> navController.toTab(Routes.MY_TICKETS)
                     }
-                },
-            )
+                })
+            }
+        },
+    ) { padding ->
+        // consumeWindowInsets: the tab bar already covers the navigation bar, so screens below don't pad for it twice.
+        NavHost(
+            navController,
+            startDestination = Routes.FEED,
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+        ) {
+            screens(navController, Experience.Hype, sheet)
         }
-        composable(Routes.LOGIN) {
-            // Pops exactly the login entry and is a no-op if it's already gone, so a double
-            // trigger (back tap + sign-in finishing) can never pop the screen underneath.
-            val leave: () -> Unit = { navController.popBackStack(Routes.LOGIN, inclusive = true) }
-            LoginScreen(onBack = leave, onSignedIn = leave)
-        }
+    }
+}
+
+/** A tab switch: back to the feed's entry (kept alive), one copy of each tab, each tab's state restored. */
+private fun NavController.toTab(route: String) = navigate(if (route == Routes.FEED) "feed" else route) {
+    popUpTo(Routes.FEED) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}
+
+private fun NavGraphBuilder.screens(
+    navController: NavHostController,
+    experience: Experience,
+    sheet: MutableState<Boolean>?, // Hype's search sheet; null in Classic, which has no feed
+) {
+    val hype = experience == Experience.Hype
+    composable(
+        Routes.FEED,
+        arguments = listOf(navArgument(EventsViewModel.PAGE_SIZE_ARG) { type = NavType.IntType; defaultValue = FeedPageSize }),
+    ) { entry ->
+        FeedScreen(
+            onEventClick = { navController.navigateOnce(entry, Routes.eventDetail(it)) },
+            onBrowseAll = { navController.navigateOnce(entry, Routes.EVENT_LIST) },
+            searchOpen = sheet?.value == true,
+            onSearchOpenChange = { sheet?.value = it },
+        )
+    }
+    composable(Routes.EVENT_LIST) { entry ->
+        EventListScreen(
+            onEventClick = { eventId -> navController.navigateOnce(entry, Routes.eventDetail(eventId)) },
+            onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+            onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
+            onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+        )
+    }
+    composable(Routes.EVENT_DETAIL) {
+        EventDetailScreen(
+            // navigateUp, not popBackStack: a double-tapped back can't pop the start screen and leave a blank host.
+            onBack = { navController.navigateUp() },
+            // Plain navigate, no RESUMED guard: these come from VM one-shot states, single by construction,
+            // and a guard that drops one would mean the result screen never shows.
+            onSignInRequired = { navController.navigate(Routes.LOGIN) },
+            onPurchased = { ticketId -> navController.navigate(Routes.purchaseResult(ticketId)) },
+        )
+    }
+    composable(Routes.MY_TICKETS) { entry ->
+        MyTicketsScreen(
+            // In Hype this is a tab, a root: no back arrow, and the account menu lives here (Hype has no top nav).
+            onBack = if (hype) null else ({ navController.navigateUp() }),
+            onTicketClick = { navController.navigateOnce(entry, Routes.ticketDetail(it)) },
+            onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+            onBrowse = { if (hype) navController.toTab(Routes.FEED) else navController.navigateUp() },
+            actions = {
+                if (hype) {
+                    AccountAction(
+                        onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+                        onMyTicketsClick = {},
+                        onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+                    )
+                }
+            },
+        )
+    }
+    composable(Routes.SCAN_EVENTS) { entry ->
+        ScanEventPickerScreen(
+            onBack = { navController.navigateUp() },
+            onEventClick = { navController.navigateOnce(entry, Routes.scanner(it)) },
+            onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
+        )
+    }
+    composable(Routes.SCANNER) {
+        ScannerScreen(onBack = { navController.navigateUp() })
+    }
+    composable(Routes.TICKET_DETAIL) {
+        TicketDetailScreen(onBack = { navController.navigateUp() })
+    }
+    composable(Routes.PURCHASE_RESULT) { entry ->
+        val ticketId = entry.arguments?.getString(TicketDetailViewModel.TICKET_ID_ARG)
+        PurchaseResultScreen(
+            // Same idempotent pop as login: a double-tapped Done can't pop the detail screen too.
+            onDone = { navController.popBackStack(Routes.PURCHASE_RESULT, inclusive = true) },
+            // Replaces the result screen, so back from the ticket returns to the event.
+            onViewTicket = ticketId?.let { id ->
+                {
+                    navController.navigateOnce(entry, Routes.ticketDetail(id)) {
+                        popUpTo(Routes.PURCHASE_RESULT) { inclusive = true }
+                    }
+                }
+            },
+        )
+    }
+    composable(Routes.LOGIN) {
+        // Pops exactly the login entry and is a no-op if it's already gone, so a double
+        // trigger (back tap + sign-in finishing) can never pop the screen underneath.
+        val leave: () -> Unit = { navController.popBackStack(Routes.LOGIN, inclusive = true) }
+        LoginScreen(onBack = leave, onSignedIn = leave)
     }
 }
 
