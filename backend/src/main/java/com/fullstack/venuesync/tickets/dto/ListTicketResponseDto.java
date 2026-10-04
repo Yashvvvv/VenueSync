@@ -18,6 +18,8 @@ public class ListTicketResponseDto {
   private String ticketCode;
   private TicketStatusEnum status;
   private ListTicketTicketTypeResponseDto ticketType;
+  /** What the buyer paid. ticketType.price is the type's current price, which can change after the sale. */
+  private Double price;
   private String eventName;
   private LocalDateTime eventStart;
   private LocalDateTime eventEnd;

@@ -24,6 +24,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
   Optional<Event> findByIdAndOrganizerId(UUID id, UUID organizerId);
 
+  Optional<Event> findByOrganizerIdAndIdempotencyKey(UUID organizerId, UUID idempotencyKey);
+
   boolean existsByIdAndOrganizerId(UUID id, UUID organizerId);
 
   /** Events whose door this user may work: the ones they organize plus the ones they staff. */

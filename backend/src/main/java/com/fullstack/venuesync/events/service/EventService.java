@@ -20,7 +20,12 @@ public interface  EventService {
    * @return the newly created Event entity
    * @throws com.fullstack.venuesync.shared.exceptions.UserNotFoundException if the organizer is not found
    */
-  Event createEvent(UUID organizerId, CreateEventRequest event);
+  Event createEvent(UUID organizerId, CreateEventRequest event, UUID idempotencyKey);
+
+  /** A create with no idempotency key (older clients): every call makes a new event. */
+  default Event createEvent(UUID organizerId, CreateEventRequest event) {
+    return createEvent(organizerId, event, null);
+  }
 
   /**
    * Lists all events belonging to the specified organizer with pagination.
@@ -49,6 +54,12 @@ public interface  EventService {
    * @return the count of events with the specified status
    */
   long countEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status);
+
+  /**
+   * Tickets issued per ticket type (every status: a used or cancelled ticket was still sold), across the given events.
+   * Ticket types with none are absent.
+   */
+  java.util.Map<UUID, Long> ticketsIssuedByTicketType(java.util.Collection<UUID> eventIds);
 
   /**
    * Retrieves a specific event belonging to an organizer.

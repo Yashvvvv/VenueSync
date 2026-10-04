@@ -17,6 +17,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
+import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
+import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
+import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
+import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
@@ -105,6 +110,38 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return respond(HttpStatus.NOT_FOUND, "TICKET_TYPE_NOT_FOUND", "Ticket type not found", ex);
   }
 
+  /** Dates that don't fit together, an unknown status: the field says which input to fix. */
+  @ExceptionHandler(EventInvalidException.class)
+  public ResponseEntity<ErrorDto> handleEventInvalid(EventInvalidException ex) {
+    return respond(HttpStatus.BAD_REQUEST, "EVENT_INVALID", ex.getMessage(), ex.getField(), ex);
+  }
+
+  @ExceptionHandler(StatusChangeInvalidException.class)
+  public ResponseEntity<ErrorDto> handleStatusChangeInvalid(StatusChangeInvalidException ex) {
+    return respond(HttpStatus.CONFLICT, "STATUS_CHANGE_INVALID", ex.getMessage(), ex);
+  }
+
+  /** Removing a ticket type someone bought would delete their ticket. */
+  @ExceptionHandler(TicketTypeHasSalesException.class)
+  public ResponseEntity<ErrorDto> handleTicketTypeHasSales(TicketTypeHasSalesException ex) {
+    return respond(HttpStatus.CONFLICT, "TICKET_TYPE_HAS_SALES",
+        "This ticket type has tickets issued, so it can't be removed", ex);
+  }
+
+  /** A capacity below what's issued would make the event "oversold" on paper. */
+  @ExceptionHandler(CapacityBelowSoldException.class)
+  public ResponseEntity<ErrorDto> handleCapacityBelowSold(CapacityBelowSoldException ex) {
+    return respond(HttpStatus.CONFLICT, "CAPACITY_BELOW_SOLD",
+        "Capacity can't be lower than the tickets already issued", ex);
+  }
+
+  /** Deleting an event with tickets would delete them: it has to be cancelled instead. */
+  @ExceptionHandler(EventHasSalesException.class)
+  public ResponseEntity<ErrorDto> handleEventHasSales(EventHasSalesException ex) {
+    return respond(HttpStatus.CONFLICT, "EVENT_HAS_SALES",
+        "This event has tickets issued, so it can't be deleted. Cancel it instead", ex);
+  }
+
   @ExceptionHandler(EventNotFoundException.class)
   public ResponseEntity<ErrorDto> handleEventNotFoundException(EventNotFoundException ex) {
     return respond(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "Event not found", ex);
@@ -119,11 +156,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
       MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-    String message = ex.getBindingResult().getFieldErrors().stream()
-        .findFirst()
+    var first = ex.getBindingResult().getFieldErrors().stream().findFirst();
+    String message = first
         .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
         .orElse("Validation error occurred");
-    return new ResponseEntity<>(errorBody(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex), headers, HttpStatus.BAD_REQUEST);
+    ErrorDto body = errorBody(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex);
+    body.setField(first.map(org.springframework.validation.FieldError::getField).orElse(null));
+    return new ResponseEntity<>(body, headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
@@ -133,6 +172,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
         .orElse("Constraint violation occurred");
     return respond(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, ex);
+  }
+
+  /**
+   * A unique constraint fired: two requests raced to create the same thing (e.g. a double-submitted create with one
+   * idempotency key). The first one won; this one is a conflict, not a server error.
+   */
+  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorDto> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+    return respond(HttpStatus.CONFLICT, "CONFLICT", "This was changed by another request. Refresh and try again", ex);
   }
 
   /** Every other Spring MVC exception: keep Spring's status, return our body. */
@@ -158,6 +206,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   private ResponseEntity<ErrorDto> respond(HttpStatus status, String code, String message, Exception ex) {
     return new ResponseEntity<>(errorBody(status, code, message, ex), status);
+  }
+
+  private ResponseEntity<ErrorDto> respond(HttpStatus status, String code, String message, String field, Exception ex) {
+    ErrorDto body = errorBody(status, code, message, ex);
+    body.setField(field);
+    return new ResponseEntity<>(body, status);
   }
 
   /** 5xx are our bugs: log with stack trace. 4xx are the client's: one warn line is enough. */

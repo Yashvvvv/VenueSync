@@ -27,6 +27,11 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
          "WHERE t.ticketType.event.id = :eventId GROUP BY t.ticketType.id")
   List<Object[]> countSoldByTicketTypeForEvent(@Param("eventId") UUID eventId);
 
+  /** Rows of [ticketTypeId, ticketsIssued] across several events at once: one query for a page of an organizer's events. */
+  @Query("SELECT t.ticketType.id, COUNT(t) FROM Ticket t " +
+         "WHERE t.ticketType.event.id IN :eventIds GROUP BY t.ticketType.id")
+  List<Object[]> countSoldByTicketTypeForEvents(@Param("eventIds") java.util.Collection<UUID> eventIds);
+
   Page<Ticket> findByPurchaserId(UUID purchaserId, Pageable pageable);
 
   Optional<Ticket> findByIdAndPurchaserId(UUID id, UUID purchaserId);

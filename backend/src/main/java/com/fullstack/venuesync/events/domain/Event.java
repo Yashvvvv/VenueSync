@@ -17,6 +17,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,10 @@ import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 
 @Entity
-@Table(name = "events")
+// Unique per organizer: a retried create with the same key can only ever make one event. NULL keys (the web, older
+// clients) never collide.
+@Table(name = "events", uniqueConstraints = @UniqueConstraint(
+    name = "uk_events_organizer_idempotency_key", columnNames = {"organizer_id", "idempotency_key"}))
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
@@ -74,6 +78,10 @@ public class Event {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "organizer_id")
   private User organizer;
+
+  /** Client-generated per create attempt; a retry with the same key returns this event instead of a second one. */
+  @Column(name = "idempotency_key")
+  private UUID idempotencyKey;
 
   @ManyToMany(mappedBy = "attendingEvents")
   @Builder.Default

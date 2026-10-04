@@ -64,6 +64,13 @@ public class Ticket {
   @JoinColumn(name = "purchaser_id")
   private User purchaser;
 
+  /**
+   * What the buyer paid, fixed at purchase, so editing the ticket type's price later never rewrites past sales. Null
+   * for tickets bought before this column existed: those show their type's current price, as they always did.
+   */
+  @Column(name = "price_paid")
+  private Double pricePaid;
+
   /** Client-generated per purchase attempt; a retry with the same key returns this ticket instead of a new one. */
   @Column(name = "idempotency_key")
   private UUID idempotencyKey;

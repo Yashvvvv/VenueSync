@@ -73,6 +73,7 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     ticket.setStatus(TicketStatusEnum.PURCHASED);
     ticket.setTicketType(ticketType);
     ticket.setPurchaser(user);
+    ticket.setPricePaid(ticketType.getPrice());
     ticket.setIdempotencyKey(idempotencyKey);
 
     Ticket savedTicket = ticketRepository.save(ticket);

@@ -1,6 +1,7 @@
 package com.fullstack.venuesync.events.service;
 
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -18,6 +19,10 @@ import com.fullstack.venuesync.events.domain.CreateEventRequest;
 import com.fullstack.venuesync.events.domain.UpdateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
+import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
+import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.repository.EventRepository;
@@ -28,6 +33,8 @@ import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
+import com.fullstack.venuesync.tickets.repository.TicketRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -36,10 +43,26 @@ public class EventServiceImpl implements EventService {
   private final UserRepository userRepository;
   private final EventRepository eventRepository;
   private final StaffInviteRepository staffInviteRepository;
+  private final TicketRepository ticketRepository;
 
   @Override
   @Transactional
-  public Event createEvent(UUID organizerId, CreateEventRequest event) {
+  public Event createEvent(UUID organizerId, CreateEventRequest event, UUID idempotencyKey) {
+    // Replay first: a retry after a timeout (or a double tap) returns the event the first attempt made.
+    if (idempotencyKey != null) {
+      Optional<Event> previous = eventRepository.findByOrganizerIdAndIdempotencyKey(organizerId, idempotencyKey);
+      if (previous.isPresent()) {
+        return previous.get();
+      }
+    }
+
+    // (A missing status never gets here: the DTO requires it.)
+    if (event.getStatus() != null
+        && event.getStatus() != EventStatusEnum.DRAFT && event.getStatus() != EventStatusEnum.PUBLISHED) {
+      throw new EventInvalidException("status", "A new event starts as a draft or published");
+    }
+    checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
+
     User organizer = userRepository.findById(Objects.requireNonNull(organizerId))
         .orElseThrow(() -> new UserNotFoundException(
             String.format("User with ID '%s' not found", organizerId))
@@ -66,6 +89,7 @@ public class EventServiceImpl implements EventService {
     eventToCreate.setSalesEnd(event.getSalesEnd());
     eventToCreate.setStatus(event.getStatus());
     eventToCreate.setOrganizer(organizer);
+    eventToCreate.setIdempotencyKey(idempotencyKey);
     eventToCreate.setTicketTypes(ticketTypesToCreate);
 
     return eventRepository.save(eventToCreate);
@@ -108,6 +132,36 @@ public class EventServiceImpl implements EventService {
             String.format("Event with ID '%s' does not exist", id))
         );
 
+    Set<UUID> requestTicketTypeIds = event.getTicketTypes()
+        .stream()
+        .map(UpdateTicketTypeRequest::getId)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+
+    // Checked before anything changes. A ticket type left out of the request is removed, and the database cascade
+    // would take every ticket bought for it with it. Removing a type that has issued tickets is refused instead: the
+    // buyers keep their tickets.
+    Map<UUID, Long> issued = issuedByTicketType(id);
+    List<String> removedWithTickets = existingEvent.getTicketTypes().stream()
+        .filter(type -> !requestTicketTypeIds.contains(type.getId()) && issued.getOrDefault(type.getId(), 0L) > 0)
+        .map(TicketType::getName)
+        .toList();
+    if (!removedWithTickets.isEmpty()) {
+      throw new TicketTypeHasSalesException(
+          String.format("Ticket types with tickets issued cannot be removed: %s", removedWithTickets));
+    }
+    checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
+    checkStatusChange(existingEvent.getStatus(), event.getStatus(), !issued.isEmpty());
+
+    // Capacity can't drop below what's already issued: those tickets exist whatever the number says.
+    for (UpdateTicketTypeRequest requested : event.getTicketTypes()) {
+      long already = requested.getId() == null ? 0 : issued.getOrDefault(requested.getId(), 0L);
+      if (requested.getTotalAvailable() != null && requested.getTotalAvailable() < already) {
+        throw new CapacityBelowSoldException(String.format(
+            "'%s' has %d tickets issued; capacity can't be %d", requested.getName(), already, requested.getTotalAvailable()));
+      }
+    }
+
     existingEvent.setName(event.getName());
     existingEvent.setStart(event.getStart());
     existingEvent.setEnd(event.getEnd());
@@ -115,12 +169,6 @@ public class EventServiceImpl implements EventService {
     existingEvent.setSalesStart(event.getSalesStart());
     existingEvent.setSalesEnd(event.getSalesEnd());
     existingEvent.setStatus(event.getStatus());
-
-    Set<UUID> requestTicketTypeIds = event.getTicketTypes()
-        .stream()
-        .map(UpdateTicketTypeRequest::getId)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
 
     existingEvent.getTicketTypes().removeIf(existingTicketType ->
         !requestTicketTypeIds.contains(existingTicketType.getId())
@@ -161,6 +209,11 @@ public class EventServiceImpl implements EventService {
   @Transactional
   public void deleteEventForOrganizer(UUID organizerId, UUID id) {
     getEventForOrganizer(organizerId, id).ifPresent(event -> {
+      // Deleting cascades to every ticket bought for it. An event that has issued tickets is cancelled, never deleted.
+      if (!issuedByTicketType(event.getId()).isEmpty()) {
+        throw new EventHasSalesException(
+            String.format("Event '%s' has tickets issued; cancel it instead of deleting it", event.getId()));
+      }
       // Door staff links (user_staffing_events, owned by User) and staff invites point at the event but are not in
       // its cascade, so the database refused the delete (500) once an event had staff. Clear them first.
       staffInviteRepository.deleteByEventId(event.getId());
@@ -185,4 +238,52 @@ public class EventServiceImpl implements EventService {
   }
 
 
+
+  @Override
+  public Map<UUID, Long> ticketsIssuedByTicketType(java.util.Collection<UUID> eventIds) {
+    if (eventIds.isEmpty()) {
+      return Map.of();
+    }
+    return ticketRepository.countSoldByTicketTypeForEvents(eventIds).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+  }
+
+  /** The dates have to make sense together; [field] names the one to fix. Absent dates are allowed (a draft). */
+  private static void checkSchedule(
+      LocalDateTime start, LocalDateTime end, LocalDateTime salesStart, LocalDateTime salesEnd) {
+    if (start != null && end != null && !end.isAfter(start)) {
+      throw new EventInvalidException("end", "The event has to end after it starts");
+    }
+    if (salesStart != null && salesEnd != null && !salesEnd.isAfter(salesStart)) {
+      throw new EventInvalidException("salesEnd", "Sales have to end after they start");
+    }
+    if (salesEnd != null && end != null && salesEnd.isAfter(end)) {
+      throw new EventInvalidException("salesEnd", "Sales can't end after the event does");
+    }
+  }
+
+  /**
+   * The moves an organizer can make. Cancelled and completed are final (the scheduler completes events); a published
+   * event goes back to draft only while nobody holds a ticket, or sold events would vanish from the catalogue.
+   */
+  private static void checkStatusChange(EventStatusEnum from, EventStatusEnum to, boolean hasTickets) {
+    if (from == to) {
+      return;
+    }
+    boolean allowed = switch (from) {
+      case DRAFT -> to == EventStatusEnum.PUBLISHED || to == EventStatusEnum.CANCELLED;
+      case PUBLISHED -> to == EventStatusEnum.CANCELLED || (to == EventStatusEnum.DRAFT && !hasTickets);
+      case CANCELLED, COMPLETED -> false;
+    };
+    if (!allowed) {
+      throw new StatusChangeInvalidException(String.format("An event can't go from %s to %s%s", from, to,
+          from == EventStatusEnum.PUBLISHED && to == EventStatusEnum.DRAFT ? " once tickets are issued" : ""));
+    }
+  }
+
+  /** Tickets ever issued per ticket type of the event (every status: a used or cancelled ticket was still sold). */
+  private Map<UUID, Long> issuedByTicketType(UUID eventId) {
+    return ticketRepository.countSoldByTicketTypeForEvent(eventId).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+  }
 }

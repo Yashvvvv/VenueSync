@@ -130,6 +130,7 @@ class TicketTypeServiceImplTest {
       assertEquals(user, result.getPurchaser());
       assertEquals(ticketType, result.getTicketType());
       assertEquals(key, result.getIdempotencyKey());
+      assertEquals(50.0, result.getPricePaid()); // fixed at purchase, whatever the type costs later
       verify(qrCodeService).generateQrCode(any(Ticket.class));
     }
 

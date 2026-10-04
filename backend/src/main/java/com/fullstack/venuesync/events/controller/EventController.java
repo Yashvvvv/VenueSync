@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 
 import static com.fullstack.venuesync.shared.security.JwtUtil.parseUserId;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +35,7 @@ import com.fullstack.venuesync.events.dto.UpdateEventRequestDto;
 import com.fullstack.venuesync.events.dto.UpdateEventResponseDto;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.mapper.EventMapper;
 import com.fullstack.venuesync.events.service.EventService;
 
@@ -47,11 +50,13 @@ public class EventController {
   @PostMapping
   public ResponseEntity<CreateEventResponseDto> createEvent(
       @AuthenticationPrincipal Jwt jwt,
-      @Valid @RequestBody CreateEventRequestDto createEventRequestDto) {
+      @Valid @RequestBody CreateEventRequestDto createEventRequestDto,
+      // Optional so the web keeps working; with it, a retried create returns the first event, never a second.
+      @RequestHeader(value = "Idempotency-Key", required = false) UUID idempotencyKey) {
     CreateEventRequest createEventRequest = eventMapper.fromDto(createEventRequestDto);
     UUID userId = parseUserId(jwt);
 
-    Event createdEvent = eventService.createEvent(userId, createEventRequest);
+    Event createdEvent = eventService.createEvent(userId, createEventRequest, idempotencyKey);
     CreateEventResponseDto createEventResponseDto = eventMapper.toDto(createdEvent);
     return new ResponseEntity<>(createEventResponseDto, HttpStatus.CREATED);
   }
@@ -84,15 +89,25 @@ public class EventController {
     Page<Event> events;
     
     if (status != null && !status.isEmpty()) {
-      EventStatusEnum statusEnum = EventStatusEnum.valueOf(status.toUpperCase());
+      EventStatusEnum statusEnum;
+      try {
+        statusEnum = EventStatusEnum.valueOf(status.trim().toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new EventInvalidException("status", "Unknown event status: " + status); // a 400, not a 500
+      }
       events = eventService.listEventsForOrganizerByStatus(userId, statusEnum, pageable);
     } else {
       events = eventService.listEventsForOrganizer(userId, pageable);
     }
     
-    return ResponseEntity.ok(
-        events.map(eventMapper::toListEventResponseDto)
-    );
+    // One count query for the whole page, not one per event.
+    java.util.Map<UUID, Long> issued = eventService.ticketsIssuedByTicketType(
+        events.getContent().stream().map(Event::getId).toList());
+    return ResponseEntity.ok(events.map(event -> {
+      ListEventResponseDto dto = eventMapper.toListEventResponseDto(event);
+      dto.getTicketTypes().forEach(type -> type.setSold(issued.getOrDefault(type.getId(), 0L)));
+      return dto;
+    }));
   }
 
   @GetMapping(path = "/counts")
@@ -116,7 +131,12 @@ public class EventController {
   ) {
     UUID userId = parseUserId(jwt);
     return eventService.getEventForOrganizer(userId, eventId)
-        .map(eventMapper::toGetEventDetailsResponseDto)
+        .map(event -> {
+          GetEventDetailsResponseDto dto = eventMapper.toGetEventDetailsResponseDto(event);
+          java.util.Map<UUID, Long> issued = eventService.ticketsIssuedByTicketType(List.of(event.getId()));
+          dto.getTicketTypes().forEach(type -> type.setSold(issued.getOrDefault(type.getId(), 0L)));
+          return dto;
+        })
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }

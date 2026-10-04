@@ -15,5 +15,7 @@ public class ListEventTicketTypeResponseDto {
   private Double price;
   private String description;
   private Integer totalAvailable;
+  /** Tickets issued so far (every status). Filled by the controller from one count query, not by the mapper. */
+  private Long sold;
 
 }
