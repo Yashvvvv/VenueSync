@@ -238,7 +238,7 @@ internal fun OrganizerEvent.toForm() = EventForm(
             key = it.id,
             id = it.id,
             name = it.name,
-            price = it.price.stripTrailingZeros().toPlainString(),
+            price = priceText(it.price),
             description = it.description.orEmpty(),
             capacity = it.capacity?.toString().orEmpty(),
             sold = it.sold,
@@ -246,6 +246,11 @@ internal fun OrganizerEvent.toForm() = EventForm(
     },
     version = version,
 )
+
+/** "25" for whole amounts, "12.50" (never "12.5") for cents: how a price is written. */
+internal fun priceText(price: BigDecimal): String = price.stripTrailingZeros().let {
+    if (it.scale() <= 0) it.toPlainString() else price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
+}
 
 internal fun String?.toWallClock(): LocalDateTime? = this?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
 

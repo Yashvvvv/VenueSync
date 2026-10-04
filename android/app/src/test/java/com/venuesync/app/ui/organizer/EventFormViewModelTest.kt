@@ -149,6 +149,14 @@ class EventFormViewModelTest {
     }
 
     @Test
+    fun `prices are written the way people write them`() {
+        assertEquals("25", priceText(BigDecimal("25.00")))
+        assertEquals("12.50", priceText(BigDecimal.valueOf(12.5)))
+        assertEquals("0", priceText(BigDecimal.ZERO))
+        assertEquals("1000", priceText(BigDecimal("1E+3")))
+    }
+
+    @Test
     fun `the sales window message names the rule that broke`() {
         val form = EventForm(salesStart = "2026-11-10T10:00", salesEnd = "2026-11-09T10:00")
         assertEquals("Sales have to close after they open.", fieldMessage("salesEnd", form))
