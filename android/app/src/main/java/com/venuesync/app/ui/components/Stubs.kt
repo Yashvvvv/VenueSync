@@ -88,6 +88,14 @@ internal val TicketWhen: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d 
 internal fun money(price: BigDecimal): String =
     NumberFormat.getCurrencyInstance().apply { currency = Currency.getInstance("USD") }.format(price)
 
+/** The fade at a photo's lower edge: clear for half its height, then easing into the card, never quite solid. */
+internal fun PhotoEdge(card: Color) = Brush.verticalGradient(
+    0f to Color.Transparent,
+    0.5f to card.copy(alpha = 0.12f),
+    0.8f to card.copy(alpha = 0.45f),
+    1f to card.copy(alpha = 0.85f),
+)
+
 /** "Fri 14 Mar", "Fri 14 Mar to 16 Mar" when it runs over several days. */
 internal fun cardDay(start: LocalDateTime, end: LocalDateTime?): String {
     val multiDay = end != null && end.toLocalDate().isAfter(start.toLocalDate())
@@ -106,10 +114,11 @@ fun EventStubCard(event: Event, onClick: () -> Unit, modifier: Modifier = Modifi
         StubCard(shape = TicketShape(photo, vertical = false, LocalExperience.current.radius), onClick = onClick) {
             Box(Modifier.fillMaxWidth().height(photo).background(colors.surfaceContainerHigh)) {
                 AsyncImage(eventImageFor(event.id), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                // Weighs the photo down so the stub below reads as the same object.
+                // Weighs the photo down so the stub below reads as the same object. Sized to the photo (a fixed 96dp
+                // fogged nearly half of it) and eased, so on paper it settles the edge instead of washing the picture out.
                 Box(
-                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(96.dp)
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, colors.surfaceContainerLow))),
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(photo * 0.3f)
+                        .background(PhotoEdge(colors.surfaceContainerLow)),
                 )
             }
             Perforation(vertical = false, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(LocalExperience.current.border))

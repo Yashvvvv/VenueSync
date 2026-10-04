@@ -201,7 +201,19 @@ private fun HeroPhoto(eventId: String?) {
     val bg = MaterialTheme.colorScheme.background
     Box(Modifier.fillMaxWidth().height(heroHeight()).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
         eventId?.let { AsyncImage(eventImageFor(it), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to bg.copy(alpha = 0.1f), 0.5f to bg.copy(alpha = 0.55f), 1f to bg)))
+        // A light band under the status bar so the clock reads; the photo clear through its middle; then solid only
+        // where the title overlaps it (the bottom 96dp, about the last quarter). A full-height wash fogged it on paper.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to bg.copy(alpha = 0.3f),
+                    0.16f to bg.copy(alpha = 0f),
+                    0.48f to bg.copy(alpha = 0f),
+                    0.74f to bg.copy(alpha = 0.85f),
+                    1f to bg,
+                ),
+            ),
+        )
     }
 }
 
