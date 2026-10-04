@@ -51,6 +51,12 @@ public interface  EventService {
   long countEventsForOrganizerByStatus(UUID organizerId, EventStatusEnum status);
 
   /**
+   * Tickets issued per ticket type (every status: a used or cancelled ticket was still sold), across the given events.
+   * Ticket types with none are absent.
+   */
+  java.util.Map<UUID, Long> ticketsIssuedByTicketType(java.util.Collection<UUID> eventIds);
+
+  /**
    * Retrieves a specific event belonging to an organizer.
    *
    * @param organizerId the UUID of the organizer

@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 
 import static com.fullstack.venuesync.shared.security.JwtUtil.parseUserId;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -90,9 +91,14 @@ public class EventController {
       events = eventService.listEventsForOrganizer(userId, pageable);
     }
     
-    return ResponseEntity.ok(
-        events.map(eventMapper::toListEventResponseDto)
-    );
+    // One count query for the whole page, not one per event.
+    java.util.Map<UUID, Long> issued = eventService.ticketsIssuedByTicketType(
+        events.getContent().stream().map(Event::getId).toList());
+    return ResponseEntity.ok(events.map(event -> {
+      ListEventResponseDto dto = eventMapper.toListEventResponseDto(event);
+      dto.getTicketTypes().forEach(type -> type.setSold(issued.getOrDefault(type.getId(), 0L)));
+      return dto;
+    }));
   }
 
   @GetMapping(path = "/counts")
@@ -116,7 +122,12 @@ public class EventController {
   ) {
     UUID userId = parseUserId(jwt);
     return eventService.getEventForOrganizer(userId, eventId)
-        .map(eventMapper::toGetEventDetailsResponseDto)
+        .map(event -> {
+          GetEventDetailsResponseDto dto = eventMapper.toGetEventDetailsResponseDto(event);
+          java.util.Map<UUID, Long> issued = eventService.ticketsIssuedByTicketType(List.of(event.getId()));
+          dto.getTicketTypes().forEach(type -> type.setSold(issued.getOrDefault(type.getId(), 0L)));
+          return dto;
+        })
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }

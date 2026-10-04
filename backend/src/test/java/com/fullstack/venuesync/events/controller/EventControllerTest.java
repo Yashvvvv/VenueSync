@@ -258,6 +258,27 @@ class EventControllerTest {
     }
 
     @Test
+    @DisplayName("carries tickets issued per ticket type")
+    void carriesSoldPerTicketType() throws Exception {
+      UUID typeId = UUID.randomUUID();
+      GetEventDetailsResponseDto dto = new GetEventDetailsResponseDto();
+      com.fullstack.venuesync.events.dto.GetEventDetailsTicketTypesResponseDto type =
+          new com.fullstack.venuesync.events.dto.GetEventDetailsTicketTypesResponseDto();
+      type.setId(typeId);
+      dto.setTicketTypes(new java.util.ArrayList<>(List.of(type)));
+
+      when(eventService.getEventForOrganizer(any(UUID.class), eq(eventId))).thenReturn(Optional.of(event));
+      when(eventMapper.toGetEventDetailsResponseDto(any(Event.class))).thenReturn(dto);
+      when(eventService.ticketsIssuedByTicketType(any())).thenReturn(java.util.Map.of(typeId, 7L));
+
+      mockMvc.perform(get("/api/v1/events/{eventId}", eventId)
+              .with(jwt().jwt(createJwt()).authorities(
+                  new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ORGANIZER"))))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.ticketTypes[0].sold").value(7));
+    }
+
+    @Test
     @DisplayName("should return 404 when event not found")
     void shouldReturn404WhenNotFound() throws Exception {
       when(eventService.getEventForOrganizer(any(UUID.class), eq(eventId)))
@@ -283,6 +304,24 @@ class EventControllerTest {
               .with(jwt().jwt(createJwt()).authorities(
                   new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ORGANIZER"))))
           .andExpect(status().isNoContent());
+    }
+  }
+
+  @Nested
+  @DisplayName("DELETE refused")
+  class DeleteRefused {
+
+    @Test
+    @DisplayName("an event with tickets answers 409 EVENT_HAS_SALES")
+    void eventWithTicketsIsConflict() throws Exception {
+      doThrow(new com.fullstack.venuesync.events.exception.EventHasSalesException("has tickets"))
+          .when(eventService).deleteEventForOrganizer(any(UUID.class), eq(eventId));
+
+      mockMvc.perform(delete("/api/v1/events/{eventId}", eventId)
+              .with(jwt().jwt(createJwt()).authorities(
+                  new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ORGANIZER"))))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.code").value("EVENT_HAS_SALES"));
     }
   }
 

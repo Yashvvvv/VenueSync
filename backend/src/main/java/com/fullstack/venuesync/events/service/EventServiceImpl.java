@@ -217,6 +217,15 @@ public class EventServiceImpl implements EventService {
 
 
 
+  @Override
+  public Map<UUID, Long> ticketsIssuedByTicketType(java.util.Collection<UUID> eventIds) {
+    if (eventIds.isEmpty()) {
+      return Map.of();
+    }
+    return ticketRepository.countSoldByTicketTypeForEvents(eventIds).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+  }
+
   /** Tickets ever issued per ticket type of the event (every status: a used or cancelled ticket was still sold). */
   private Map<UUID, Long> issuedByTicketType(UUID eventId) {
     return ticketRepository.countSoldByTicketTypeForEvent(eventId).stream()
