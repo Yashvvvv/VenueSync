@@ -38,6 +38,9 @@ import com.fullstack.venuesync.tickets.domain.CreateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
+import com.fullstack.venuesync.tickets.repository.TicketRepository;
 
 @ExtendWith(MockitoExtension.class)
 class EventServiceImplTest {
@@ -50,6 +53,9 @@ class EventServiceImplTest {
 
   @Mock
   private com.fullstack.venuesync.staff.repository.StaffInviteRepository staffInviteRepository;
+
+  @Mock
+  private TicketRepository ticketRepository; // default: an empty list, i.e. no tickets issued
 
   @InjectMocks
   private EventServiceImpl eventService;
@@ -276,6 +282,65 @@ class EventServiceImplTest {
     }
 
     @Test
+    @DisplayName("refuses to remove a ticket type that has tickets, and changes nothing")
+    void refusesToRemoveATicketTypeWithTickets() {
+      UUID soldTypeId = UUID.randomUUID();
+      TicketType sold = new TicketType();
+      sold.setId(soldTypeId);
+      sold.setName("Early bird");
+      sold.setPrice(10.0);
+      sold.setEvent(event);
+      event.setTicketTypes(new ArrayList<>(List.of(sold)));
+
+      UpdateTicketTypeRequest other = new UpdateTicketTypeRequest();
+      other.setName("General");
+      other.setPrice(20.0);
+      UpdateEventRequest request = new UpdateEventRequest();
+      request.setId(eventId);
+      request.setName("Event");
+      request.setVenue("Venue");
+      request.setStatus(EventStatusEnum.PUBLISHED);
+      request.setTicketTypes(List.of(other)); // "Early bird" left out
+
+      when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+      when(ticketRepository.countSoldByTicketTypeForEvent(eventId))
+          .thenReturn(List.<Object[]>of(new Object[] {soldTypeId, 3L}));
+
+      assertThrows(TicketTypeHasSalesException.class,
+          () -> eventService.updateEventForOrganizer(organizerId, eventId, request));
+      assertEquals(1, event.getTicketTypes().size());
+      verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("removes a ticket type that never issued a ticket")
+    void removesATicketTypeWithoutTickets() {
+      TicketType unsold = new TicketType();
+      unsold.setId(UUID.randomUUID());
+      unsold.setName("VIP");
+      unsold.setPrice(99.0);
+      unsold.setEvent(event);
+      event.setTicketTypes(new ArrayList<>(List.of(unsold)));
+
+      UpdateTicketTypeRequest other = new UpdateTicketTypeRequest();
+      other.setName("General");
+      other.setPrice(20.0);
+      UpdateEventRequest request = new UpdateEventRequest();
+      request.setId(eventId);
+      request.setName("Event");
+      request.setVenue("Venue");
+      request.setStatus(EventStatusEnum.DRAFT);
+      request.setTicketTypes(List.of(other));
+
+      when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+      when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+
+      Event result = eventService.updateEventForOrganizer(organizerId, eventId, request);
+
+      assertEquals(List.of("General"), result.getTicketTypes().stream().map(TicketType::getName).toList());
+    }
+
+    @Test
     @DisplayName("should add new ticket type when ID is null")
     void shouldAddNewTicketType() {
       event.setTicketTypes(new ArrayList<>());
@@ -340,6 +405,18 @@ class EventServiceImplTest {
       eventService.deleteEventForOrganizer(organizerId, eventId);
 
       verify(eventRepository).delete(event);
+    }
+
+    @Test
+    @DisplayName("refuses to delete an event that has tickets")
+    void refusesToDeleteAnEventWithTickets() {
+      when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+      when(ticketRepository.countSoldByTicketTypeForEvent(eventId))
+          .thenReturn(List.<Object[]>of(new Object[] {UUID.randomUUID(), 1L}));
+
+      assertThrows(EventHasSalesException.class, () -> eventService.deleteEventForOrganizer(organizerId, eventId));
+      verify(eventRepository, never()).delete(any());
+      verify(staffInviteRepository, never()).deleteByEventId(any());
     }
 
     @Test

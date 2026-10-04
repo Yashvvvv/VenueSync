@@ -1,6 +1,5 @@
 package com.fullstack.venuesync.tickets.domain;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -61,7 +60,9 @@ public class TicketType {
   @JoinColumn(name = "event_id")
   private Event event;
 
-  @OneToMany(mappedBy = "ticketType", cascade = CascadeType.ALL)
+  // No cascade: a ticket is the buyer's, never removed with its type. The service refuses such removals (409); the
+  // foreign key is the second line if anything ever slips past it.
+  @OneToMany(mappedBy = "ticketType")
   @Builder.Default
   private List<Ticket> tickets = new ArrayList<>();
 

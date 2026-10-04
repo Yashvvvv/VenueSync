@@ -17,6 +17,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.domain.ErrorDto;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
+import com.fullstack.venuesync.events.exception.EventHasSalesException;
+import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.tickets.exception.IdempotencyKeyReusedException;
@@ -103,6 +105,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(TicketTypeNotFoundException.class)
   public ResponseEntity<ErrorDto> handleTicketTypeNotFoundException(TicketTypeNotFoundException ex) {
     return respond(HttpStatus.NOT_FOUND, "TICKET_TYPE_NOT_FOUND", "Ticket type not found", ex);
+  }
+
+  /** Removing a ticket type someone bought would delete their ticket. */
+  @ExceptionHandler(TicketTypeHasSalesException.class)
+  public ResponseEntity<ErrorDto> handleTicketTypeHasSales(TicketTypeHasSalesException ex) {
+    return respond(HttpStatus.CONFLICT, "TICKET_TYPE_HAS_SALES",
+        "This ticket type has tickets issued, so it can't be removed", ex);
+  }
+
+  /** Deleting an event with tickets would delete them: it has to be cancelled instead. */
+  @ExceptionHandler(EventHasSalesException.class)
+  public ResponseEntity<ErrorDto> handleEventHasSales(EventHasSalesException ex) {
+    return respond(HttpStatus.CONFLICT, "EVENT_HAS_SALES",
+        "This event has tickets issued, so it can't be deleted. Cancel it instead", ex);
   }
 
   @ExceptionHandler(EventNotFoundException.class)

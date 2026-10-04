@@ -18,6 +18,7 @@ import com.fullstack.venuesync.events.domain.CreateEventRequest;
 import com.fullstack.venuesync.events.domain.UpdateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
+import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.EventUpdateException;
 import com.fullstack.venuesync.events.repository.EventRepository;
@@ -28,6 +29,8 @@ import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
+import com.fullstack.venuesync.events.exception.TicketTypeHasSalesException;
+import com.fullstack.venuesync.tickets.repository.TicketRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,7 @@ public class EventServiceImpl implements EventService {
   private final UserRepository userRepository;
   private final EventRepository eventRepository;
   private final StaffInviteRepository staffInviteRepository;
+  private final TicketRepository ticketRepository;
 
   @Override
   @Transactional
@@ -108,6 +112,25 @@ public class EventServiceImpl implements EventService {
             String.format("Event with ID '%s' does not exist", id))
         );
 
+    Set<UUID> requestTicketTypeIds = event.getTicketTypes()
+        .stream()
+        .map(UpdateTicketTypeRequest::getId)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+
+    // Checked before anything changes. A ticket type left out of the request is removed, and the database cascade
+    // would take every ticket bought for it with it. Removing a type that has issued tickets is refused instead: the
+    // buyers keep their tickets.
+    Map<UUID, Long> issued = issuedByTicketType(id);
+    List<String> removedWithTickets = existingEvent.getTicketTypes().stream()
+        .filter(type -> !requestTicketTypeIds.contains(type.getId()) && issued.getOrDefault(type.getId(), 0L) > 0)
+        .map(TicketType::getName)
+        .toList();
+    if (!removedWithTickets.isEmpty()) {
+      throw new TicketTypeHasSalesException(
+          String.format("Ticket types with tickets issued cannot be removed: %s", removedWithTickets));
+    }
+
     existingEvent.setName(event.getName());
     existingEvent.setStart(event.getStart());
     existingEvent.setEnd(event.getEnd());
@@ -115,12 +138,6 @@ public class EventServiceImpl implements EventService {
     existingEvent.setSalesStart(event.getSalesStart());
     existingEvent.setSalesEnd(event.getSalesEnd());
     existingEvent.setStatus(event.getStatus());
-
-    Set<UUID> requestTicketTypeIds = event.getTicketTypes()
-        .stream()
-        .map(UpdateTicketTypeRequest::getId)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
 
     existingEvent.getTicketTypes().removeIf(existingTicketType ->
         !requestTicketTypeIds.contains(existingTicketType.getId())
@@ -161,6 +178,11 @@ public class EventServiceImpl implements EventService {
   @Transactional
   public void deleteEventForOrganizer(UUID organizerId, UUID id) {
     getEventForOrganizer(organizerId, id).ifPresent(event -> {
+      // Deleting cascades to every ticket bought for it. An event that has issued tickets is cancelled, never deleted.
+      if (!issuedByTicketType(event.getId()).isEmpty()) {
+        throw new EventHasSalesException(
+            String.format("Event '%s' has tickets issued; cancel it instead of deleting it", event.getId()));
+      }
       // Door staff links (user_staffing_events, owned by User) and staff invites point at the event but are not in
       // its cascade, so the database refused the delete (500) once an event had staff. Clear them first.
       staffInviteRepository.deleteByEventId(event.getId());
@@ -185,4 +207,10 @@ public class EventServiceImpl implements EventService {
   }
 
 
+
+  /** Tickets ever issued per ticket type of the event (every status: a used or cancelled ticket was still sold). */
+  private Map<UUID, Long> issuedByTicketType(UUID eventId) {
+    return ticketRepository.countSoldByTicketTypeForEvent(eventId).stream()
+        .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+  }
 }
