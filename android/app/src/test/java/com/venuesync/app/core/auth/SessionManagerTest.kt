@@ -53,6 +53,22 @@ class SessionManagerTest {
     }
 
     @Test
+    fun `renew gets a new token whatever the old one, and only once per run on launch`() = runTest {
+        val store = FakeTokenStore(signedIn)
+        val manager = backgroundScope.manager(store, api(body = rotated))
+        manager.renewOncePerRun()
+        manager.renewOncePerRun()
+        assertEquals(1, requests.size)
+        assertEquals("at2", store.tokens.value?.accessToken)
+    }
+
+    @Test
+    fun `renew signed out asks Auth0 nothing`() = runTest {
+        assertNull(backgroundScope.manager(FakeTokenStore(null), api(body = rotated)).renew())
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
     fun `rejected refresh signs out`() = runTest {
         val store = FakeTokenStore(signedIn)
         val result = backgroundScope.manager(store, api(HttpStatusCode.Forbidden, """{"error":"invalid_grant"}""")).refresh("at1")

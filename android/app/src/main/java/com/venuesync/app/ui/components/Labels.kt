@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.venuesync.app.R
+import com.venuesync.app.core.model.EventStatus
 import com.venuesync.app.core.model.TicketStatus
 import com.venuesync.app.ui.theme.Destructive
 import com.venuesync.app.ui.theme.Eyebrow
@@ -88,6 +89,27 @@ fun StatusChip(status: TicketStatus, modifier: Modifier = Modifier) {
             label.uppercase(),
             style = TextStyle(fontFamily = Mono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 0.08.em),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** An event's status for its organizer, as icon + label, same rules as [StatusChip]. */
+@Composable
+fun EventStatusChip(status: EventStatus, modifier: Modifier = Modifier) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val (icon, tint, label) = when (status) {
+        EventStatus.Draft -> Triple(R.drawable.ph_pencil_simple, muted, "Draft")
+        EventStatus.Published -> Triple(R.drawable.ph_check_circle_fill, Success, "On sale")
+        EventStatus.Cancelled -> Triple(R.drawable.ph_x_circle_fill, Destructive, "Cancelled")
+        EventStatus.Completed -> Triple(R.drawable.ph_clock_fill, muted, "Ended")
+        EventStatus.Unknown -> Triple(R.drawable.ph_info_fill, muted, "Unknown")
+    }
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(11.dp))
+        Text(
+            label.uppercase(),
+            style = TextStyle(fontFamily = Mono, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 0.08.em),
+            color = muted,
         )
     }
 }

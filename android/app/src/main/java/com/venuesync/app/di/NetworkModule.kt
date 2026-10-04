@@ -7,6 +7,7 @@ import com.venuesync.app.BuildConfig
 import com.venuesync.app.core.auth.SessionManager
 import com.venuesync.app.core.network.EventsApi
 import com.venuesync.app.core.network.StaffApi
+import com.venuesync.app.core.network.OrganizerApi
 import com.venuesync.app.core.network.TicketsApi
 import com.venuesync.app.core.network.VenueSyncHttpClient
 import dagger.Module
@@ -80,4 +81,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideStaffApi(client: HttpClient): StaffApi = StaffApi(client)
+
+    @Provides
+    @Singleton
+    fun provideOrganizerApi(client: HttpClient): OrganizerApi = OrganizerApi(client)
 }

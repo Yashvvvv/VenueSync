@@ -16,10 +16,31 @@ sealed interface ApiError {
     /** SALES_NOT_STARTED or SALES_ENDED. */
     data object NotOnSale : ApiError
     data object RateLimited : ApiError
+    /**
+     * The request was refused as invalid (400 EVENT_INVALID or VALIDATION_FAILED, or caught on the device first).
+     * [field] names the input to fix (e.g. "end", "ticketTypes[1].price"); the app owns the wording.
+     */
+    data class Invalid(val field: String?) : ApiError
+    /** 409 with a reason this app knows: the server refused to destroy or contradict something that already happened. */
+    data class Refused(val reason: Refusal) : ApiError
     /** The server broke the contract: unparseable JSON, missing required fields, wrong entity. */
     data object InvalidResponse : ApiError
     data class Server(val message: String?) : ApiError
     data class Unknown(val message: String?) : ApiError
+}
+
+/** Why an organizer change was refused. Each one keeps sold tickets or the catalogue honest. */
+enum class Refusal {
+    /** TICKET_TYPE_HAS_SALES: removing it would delete tickets people bought. */
+    TicketTypeHasSales,
+    /** EVENT_HAS_SALES: deleting it would delete tickets people bought; cancel instead. */
+    EventHasSales,
+    /** CAPACITY_BELOW_SOLD */
+    CapacityBelowSold,
+    /** STATUS_CHANGE_INVALID: e.g. a cancelled event is final. */
+    StatusChange,
+    /** EVENT_CHANGED: the edit was made from an older copy; someone changed the event since. */
+    EventChanged,
 }
 
 /** Carrier so repository results fit the stdlib [Result] without losing the typed error. */

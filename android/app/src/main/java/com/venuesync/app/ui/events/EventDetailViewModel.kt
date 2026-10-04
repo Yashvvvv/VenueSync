@@ -161,7 +161,9 @@ class EventDetailViewModel @Inject constructor(
             ApiError.InvalidResponse, is ApiError.Unknown ->
                 PurchaseState.Failed("We couldn't confirm your ticket. Check My Tickets before trying again.")
             // Rejected before anything was created: the key is spent.
-            ApiError.SoldOut, ApiError.NotOnSale, ApiError.NotFound, ApiError.Conflict, ApiError.Gone -> {
+            // (Invalid and Refused are organizer answers; a purchase never gets them, but if one did, nothing was made.)
+            ApiError.SoldOut, ApiError.NotOnSale, ApiError.NotFound, ApiError.Conflict, ApiError.Gone,
+            is ApiError.Invalid, is ApiError.Refused -> {
                 clearPending()
                 load(silent = true) // show the new availability under the message
                 PurchaseState.Failed(

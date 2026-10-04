@@ -151,7 +151,8 @@ class ScannerViewModel @Inject constructor(
             // Refused before anything changed: the key is spent.
             ApiError.Unauthorized -> refused("Your session expired. Sign in again.")
             ApiError.Forbidden -> refused("This account can't scan tickets. Ask an organizer for staff access.")
-            ApiError.NotFound, ApiError.Conflict, ApiError.Gone, ApiError.SoldOut, ApiError.NotOnSale ->
+            ApiError.NotFound, ApiError.Conflict, ApiError.Gone, ApiError.SoldOut, ApiError.NotOnSale,
+            is ApiError.Invalid, is ApiError.Refused ->
                 refused("This event can't be scanned. Go back and pick it again.")
         }
     }

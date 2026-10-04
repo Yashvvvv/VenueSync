@@ -33,6 +33,12 @@ import com.venuesync.app.ui.feed.FeedScreen
 import com.venuesync.app.ui.feed.HypeTab
 import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
+import com.venuesync.app.ui.organizer.BecomeOrganizerScreen
+import com.venuesync.app.ui.organizer.EventFormScreen
+import com.venuesync.app.ui.organizer.OrganizerEventScreen
+import com.venuesync.app.ui.organizer.OrganizerEventViewModel
+import com.venuesync.app.ui.organizer.OrganizerEventsScreen
+import com.venuesync.app.ui.organizer.OrganizerStaffScreen
 import com.venuesync.app.ui.purchase.PurchaseResultScreen
 import com.venuesync.app.ui.scanner.ScanEventPickerScreen
 import com.venuesync.app.ui.scanner.ScannerScreen
@@ -53,11 +59,20 @@ object Routes {
     const val SCAN_EVENTS = "scan"
     const val SCANNER = "scan/{${ScannerViewModel.EVENT_ID_ARG}}"
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
+    const val ORGANIZER_EVENTS = "organizer/events"
+    const val ORGANIZER_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}"
+    const val NEW_EVENT = "organizer/new-event"
+    const val BECOME_ORGANIZER = "organizer/become"
+    const val EDIT_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/edit"
+    const val EVENT_STAFF = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/staff"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
     fun ticketDetail(ticketId: String) = "tickets/$ticketId"
     fun scanner(eventId: String) = "scan/$eventId"
+    fun organizerEvent(eventId: String) = "organizer/events/$eventId"
+    fun editEvent(eventId: String) = "organizer/events/$eventId/edit"
+    fun eventStaff(eventId: String) = "organizer/events/$eventId/staff"
 }
 
 /** The web's feed asks for 8: one screen per event, so a page is 8 screens. */
@@ -155,6 +170,8 @@ private fun NavGraphBuilder.screens(
             onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
             onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
             onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+            onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
+            onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
         )
     }
     composable(Routes.EVENT_DETAIL) {
@@ -180,6 +197,8 @@ private fun NavGraphBuilder.screens(
                         onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
                         onMyTicketsClick = {},
                         onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
+                        onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
+                        onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
                     )
                 }
             },
@@ -212,6 +231,46 @@ private fun NavGraphBuilder.screens(
                 }
             },
         )
+    }
+    composable(Routes.ORGANIZER_EVENTS) { entry ->
+        OrganizerEventsScreen(
+            onBack = { navController.navigateUp() },
+            onEventClick = { navController.navigateOnce(entry, Routes.organizerEvent(it)) },
+            onNewEvent = { navController.navigateOnce(entry, Routes.NEW_EVENT) },
+        )
+    }
+    composable(Routes.ORGANIZER_EVENT) { entry ->
+        OrganizerEventScreen(
+            onBack = { navController.navigateUp() },
+            onEdit = { navController.navigateOnce(entry, Routes.editEvent(it)) },
+            onStaff = { navController.navigateOnce(entry, Routes.eventStaff(it)) },
+        )
+    }
+    composable(Routes.EVENT_STAFF) {
+        OrganizerStaffScreen(onBack = { navController.navigateUp() })
+    }
+    composable(Routes.BECOME_ORGANIZER) {
+        BecomeOrganizerScreen(
+            onBack = { navController.navigateUp() },
+            // The organizer tools replace this screen: Back from them returns to where the menu was opened.
+            onDone = {
+                navController.navigate(Routes.ORGANIZER_EVENTS) { popUpTo(Routes.BECOME_ORGANIZER) { inclusive = true } }
+            },
+        )
+    }
+    composable(Routes.NEW_EVENT) {
+        EventFormScreen(
+            onClose = { navController.popBackStack(Routes.NEW_EVENT, inclusive = true) },
+            // The new event's overview replaces the form, so back from it returns to My events.
+            onSaved = { id ->
+                navController.navigate(Routes.organizerEvent(id)) { popUpTo(Routes.NEW_EVENT) { inclusive = true } }
+            },
+        )
+    }
+    composable(Routes.EDIT_EVENT) {
+        // Idempotent pops, like login: a double trigger can't pop the overview too.
+        val leave: () -> Unit = { navController.popBackStack(Routes.EDIT_EVENT, inclusive = true) }
+        EventFormScreen(onClose = leave, onSaved = { leave() })
     }
     composable(Routes.LOGIN) {
         // Pops exactly the login entry and is a no-op if it's already gone, so a double

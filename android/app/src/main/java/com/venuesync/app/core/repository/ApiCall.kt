@@ -3,6 +3,7 @@ package com.venuesync.app.core.repository
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.ApiException
 import com.venuesync.app.core.model.ErrorDto
+import com.venuesync.app.core.model.Refusal
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
 import io.ktor.serialization.ContentConvertException
@@ -47,6 +48,12 @@ private suspend fun ResponseException.toApiError(): ApiError {
     when (body?.code) {
         "TICKETS_SOLD_OUT" -> return ApiError.SoldOut
         "SALES_NOT_STARTED", "SALES_ENDED" -> return ApiError.NotOnSale
+        "EVENT_INVALID", "VALIDATION_FAILED" -> return ApiError.Invalid(body?.field)
+        "TICKET_TYPE_HAS_SALES" -> return ApiError.Refused(Refusal.TicketTypeHasSales)
+        "EVENT_HAS_SALES" -> return ApiError.Refused(Refusal.EventHasSales)
+        "CAPACITY_BELOW_SOLD" -> return ApiError.Refused(Refusal.CapacityBelowSold)
+        "STATUS_CHANGE_INVALID" -> return ApiError.Refused(Refusal.StatusChange)
+        "EVENT_CHANGED" -> return ApiError.Refused(Refusal.EventChanged)
     }
     return when (response.status.value) {
         401 -> ApiError.Unauthorized

@@ -63,11 +63,11 @@ import androidx.compose.ui.res.painterResource
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.components.ErrorState
 import com.venuesync.app.ui.components.StatusChip
+import com.venuesync.app.ui.components.whenLine
 import com.venuesync.app.core.model.displayStatus
 import java.time.LocalDateTime
 import java.time.ZoneId
 import com.venuesync.app.ui.events.Centered
-import com.venuesync.app.ui.events.DateFormat
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.events.priceLabel
 import com.venuesync.app.ui.theme.LocalExperience
@@ -152,10 +152,7 @@ private fun EventBlock(ticket: Ticket) {
             modifier = Modifier.semantics { heading() },
         )
         ticket.venue?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = muted, textAlign = TextAlign.Center) }
-        ticket.eventStart?.let { start ->
-            val range = ticket.eventEnd?.takeIf { it.isAfter(start) }
-                ?.let { "${start.format(DateFormat)} – ${it.format(DateFormat)}" }
-                ?: start.format(DateFormat)
+        whenLine(ticket.eventStart, ticket.eventEnd)?.let { range ->
             Text(range, style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, color = muted, textAlign = TextAlign.Center)
         }
         Text(
