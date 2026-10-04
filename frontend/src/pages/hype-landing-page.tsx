@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Link } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 import { format } from "date-fns"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import toast from "react-hot-toast"
@@ -140,7 +140,16 @@ const HypeLandingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  // The Search tab on any other page lands here asking for the sheet.
+  const [searchOpen, setSearchOpen] = useState(() => Boolean((location.state as { openSearch?: boolean } | null)?.openSearch))
+  useEffect(() => {
+    // Consumed once: Back to this entry later must not pop the sheet open again.
+    if ((location.state as { openSearch?: boolean } | null)?.openSearch) {
+      navigate(location.pathname + location.search, { replace: true, state: null })
+    }
+  }, [location, navigate])
   const [query, setQuery] = useState("")
   /* The term the current results belong to, as opposed to whatever is
      half-typed in the box. Paging and the empty state both need this. */
