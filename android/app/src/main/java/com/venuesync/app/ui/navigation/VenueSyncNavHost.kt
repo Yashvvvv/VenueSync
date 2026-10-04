@@ -33,6 +33,7 @@ import com.venuesync.app.ui.feed.FeedScreen
 import com.venuesync.app.ui.feed.HypeTab
 import com.venuesync.app.ui.feed.HypeTabBar
 import com.venuesync.app.ui.login.LoginScreen
+import com.venuesync.app.ui.organizer.EventFormScreen
 import com.venuesync.app.ui.organizer.OrganizerEventScreen
 import com.venuesync.app.ui.organizer.OrganizerEventViewModel
 import com.venuesync.app.ui.organizer.OrganizerEventsScreen
@@ -58,12 +59,15 @@ object Routes {
     const val TICKET_DETAIL = "tickets/{${TicketDetailViewModel.TICKET_ID_ARG}}"
     const val ORGANIZER_EVENTS = "organizer/events"
     const val ORGANIZER_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}"
+    const val NEW_EVENT = "organizer/new-event"
+    const val EDIT_EVENT = "organizer/events/{${OrganizerEventViewModel.EVENT_ID_ARG}}/edit"
 
     fun eventDetail(eventId: String) = "events/$eventId"
     fun purchaseResult(ticketId: String) = "purchase-result/$ticketId"
     fun ticketDetail(ticketId: String) = "tickets/$ticketId"
     fun scanner(eventId: String) = "scan/$eventId"
     fun organizerEvent(eventId: String) = "organizer/events/$eventId"
+    fun editEvent(eventId: String) = "organizer/events/$eventId/edit"
 }
 
 /** The web's feed asks for 8: one screen per event, so a page is 8 screens. */
@@ -225,14 +229,28 @@ private fun NavGraphBuilder.screens(
         OrganizerEventsScreen(
             onBack = { navController.navigateUp() },
             onEventClick = { navController.navigateOnce(entry, Routes.organizerEvent(it)) },
-            onNewEvent = {}, // the form arrives in 9.4
+            onNewEvent = { navController.navigateOnce(entry, Routes.NEW_EVENT) },
         )
     }
-    composable(Routes.ORGANIZER_EVENT) {
+    composable(Routes.ORGANIZER_EVENT) { entry ->
         OrganizerEventScreen(
             onBack = { navController.navigateUp() },
-            onEdit = {}, // the form arrives in 9.4
+            onEdit = { navController.navigateOnce(entry, Routes.editEvent(it)) },
         )
+    }
+    composable(Routes.NEW_EVENT) {
+        EventFormScreen(
+            onClose = { navController.popBackStack(Routes.NEW_EVENT, inclusive = true) },
+            // The new event's overview replaces the form, so back from it returns to My events.
+            onSaved = { id ->
+                navController.navigate(Routes.organizerEvent(id)) { popUpTo(Routes.NEW_EVENT) { inclusive = true } }
+            },
+        )
+    }
+    composable(Routes.EDIT_EVENT) {
+        // Idempotent pops, like login: a double trigger can't pop the overview too.
+        val leave: () -> Unit = { navController.popBackStack(Routes.EDIT_EVENT, inclusive = true) }
+        EventFormScreen(onClose = leave, onSaved = { leave() })
     }
     composable(Routes.LOGIN) {
         // Pops exactly the login entry and is a no-op if it's already gone, so a double
