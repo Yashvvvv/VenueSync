@@ -1,12 +1,8 @@
 package com.venuesync.app.ui.feed
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,30 +19,20 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +43,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -91,42 +76,22 @@ import com.venuesync.app.ui.theme.scaled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.launch
-
-/** Hype's own empty copy (the web's hype landing): bolder, and a search that found nothing offers everything. */
-data class FeedEmptyCopy(val title: String, val body: String, val action: String?)
-
-fun feedEmptyCopy(query: String): FeedEmptyCopy = query.trim().let { q ->
-    if (q.isEmpty()) {
-        FeedEmptyCopy(
-            "Nothing on sale yet",
-            "No events are published right now. New ones land here the moment an organizer puts them on sale.",
-            action = null,
-        )
-    } else {
-        FeedEmptyCopy("Nothing matched that", "No events came back for \"$q\".", "Show everything")
-    }
-}
 
 /**
  * Hype's home (the web's hype landing): one event per screen, snapped, with the next page pulled in by a closing
  * screen. No top nav: a floating mark and a way back to Classic; the tab bar (in the shell) is the navigation.
- * [searchOpen] is owned by the shell, because its Search tab opens the sheet.
+ * Searching and browsing everything live in the Explore tab, so the feed is only ever the feed.
  */
 @Composable
 fun FeedScreen(
     onEventClick: (String) -> Unit,
     onBrowseAll: () -> Unit,
-    searchOpen: Boolean,
-    onSearchOpenChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EventsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val query by viewModel.query.collectAsStateWithLifecycle()
     val endReached by viewModel.endReached.collectAsStateWithLifecycle()
     val choose = LocalChooseExperience.current
-    val scope = rememberCoroutineScope()
 
     val events = (state as? UiState.Success)?.data.orEmpty()
     val pager = rememberPagerState { events.size + 1 } // + the closing screen
@@ -140,7 +105,7 @@ fun FeedScreen(
         when (val s = state) {
             UiState.Loading -> PanelSkeleton()
             is UiState.Error -> ErrorState(s.error, viewModel::retry, Modifier.align(Alignment.Center))
-            UiState.Empty -> EmptyFeed(query, onShowAll = { viewModel.submit("") }, Modifier.align(Alignment.Center))
+            UiState.Empty -> EmptyFeed(onBrowseAll, Modifier.align(Alignment.Center))
             is UiState.Success -> {
                 val seen = remember { mutableStateListOf<String>() }
                 VerticalPager(pager, Modifier.fillMaxSize(), key = { if (it < events.size) events[it].id else "end" }) { page ->
@@ -149,10 +114,10 @@ fun FeedScreen(
                         EventPanel(event, onGet = { onEventClick(event.id) }, animate = event.id !in seen)
                         LaunchedEffect(event.id) { if (event.id !in seen) seen += event.id }
                     } else {
-                        ClosingPanel(endReached, searched = query.isNotBlank(), onShowAll = { viewModel.submit("") }, onBrowseAll = onBrowseAll)
+                        ClosingPanel(endReached, onBrowseAll = onBrowseAll)
                     }
                 }
-                ScrollHint(visible = pager.currentPage == 0 && events.size > 0 && !searchOpen, Modifier.align(Alignment.BottomCenter))
+                ScrollHint(visible = pager.currentPage == 0 && events.size > 0, Modifier.align(Alignment.BottomCenter))
             }
         }
         // Floating brand and the way back. No top nav: the tab bar is the navigation.
@@ -164,18 +129,6 @@ fun FeedScreen(
             Box(Modifier.weight(1f))
             ClassicViewChip { choose(Experience.Classic) }
         }
-        SearchSheet(
-            open = searchOpen,
-            initial = query,
-            onClose = { onSearchOpenChange(false) },
-            onSearch = { term ->
-                viewModel.submit(term)
-                onSearchOpenChange(false)
-                // Back to the first screen, so nobody is left halfway down a feed that just changed under them.
-                scope.launch { pager.scrollToPage(0) }
-            },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 
@@ -275,42 +228,34 @@ private fun ClassicViewChip(onClick: () -> Unit) {
     )
 }
 
-/** The end of a page: pulls the next one (keep scrolling) or says plainly that this is everything (that matched). */
+/** The end of a page: pulls the next one (keep scrolling) or says plainly that this is everything, and points at Explore. */
 @Composable
-private fun ClosingPanel(endReached: Boolean, searched: Boolean, onShowAll: () -> Unit, onBrowseAll: () -> Unit) {
+private fun ClosingPanel(endReached: Boolean, onBrowseAll: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DisplayText(
-            when {
-                !endReached -> "Keep scrolling"
-                // After a search, "everything on sale" would overstate it: it's everything that matched.
-                searched -> "That is everything that matched"
-                else -> "That is everything on sale"
-            },
+            if (endReached) "That is everything on sale" else "Keep scrolling",
             LocalExperience.current.displaySection().copy(textAlign = TextAlign.Center),
             Modifier.semantics { heading() },
         )
-        if (searched) StubButton("Show everything", onShowAll, Modifier.padding(top = 28.dp))
-        StubButton("Browse the full list", onBrowseAll, Modifier.padding(top = if (searched) 12.dp else 28.dp), outlined = searched)
+        StubButton("Explore all events", onBrowseAll, Modifier.padding(top = 28.dp))
     }
 }
 
 @Composable
-private fun EmptyFeed(query: String, onShowAll: () -> Unit, modifier: Modifier = Modifier) {
-    val copy = feedEmptyCopy(query)
+private fun EmptyFeed(onBrowseAll: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        DisplayText(copy.title, LocalExperience.current.displaySection().copy(textAlign = TextAlign.Center), Modifier.semantics { heading() })
+        DisplayText("Nothing on sale yet", LocalExperience.current.displaySection().copy(textAlign = TextAlign.Center), Modifier.semantics { heading() })
         Text(
-            copy.body,
+            "No events are published right now. New ones land here the moment an organizer puts them on sale.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 16.dp),
         )
-        copy.action?.let { StubButton(it, onShowAll, Modifier.padding(top = 24.dp)) }
     }
 }
 
@@ -342,63 +287,6 @@ private fun PanelSkeleton() {
             Box(Modifier.size(width = 260.dp, height = 48.dp).background(tone))
             Box(Modifier.size(width = 200.dp, height = 48.dp).background(tone))
             Box(Modifier.padding(top = 16.dp).size(width = 160.dp, height = 52.dp).background(tone))
-        }
-    }
-}
-
-/**
- * Raised from behind the tab bar (300ms, the drawer easing): one input, GO, close. It searches on GO only, not per
- * keystroke: a feed that reshuffles under your thumb while you type is unreadable.
- */
-@Composable
-private fun SearchSheet(
-    open: Boolean,
-    initial: String,
-    onClose: () -> Unit,
-    onSearch: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = MaterialTheme.colorScheme
-    val duration = scaled(300)
-    BackHandler(enabled = open, onBack = onClose)
-    AnimatedVisibility(
-        open,
-        // No imePadding: the window pans for the keyboard (adjustPan), which already lifts the focused field above it.
-        modifier = modifier,
-        enter = slideInVertically(tween(duration, easing = Easings.Drawer)) { it },
-        exit = slideOutVertically(tween(duration, easing = Easings.Drawer)) { it },
-    ) {
-        var text by rememberSaveable { mutableStateOf(initial) }
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { focus.requestFocus() }
-        Row(
-            Modifier.fillMaxWidth()
-                .background(colors.background)
-                .border(2.dp, colors.outlineVariant)
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                placeholder = { Text("what are you looking for") },
-                singleLine = true,
-                shape = RectangleShape,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearch(text) }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.primary,
-                    unfocusedBorderColor = colors.outline,
-                    focusedContainerColor = colors.surfaceContainerLow,
-                    unfocusedContainerColor = colors.surfaceContainerLow,
-                ),
-                modifier = Modifier.weight(1f).focusRequester(focus).semantics { contentDescription = "Search events" },
-            )
-            StubButton("Go", { onSearch(text) }, Modifier.height(56.dp))
-            IconButton(onClick = onClose, modifier = Modifier.size(56.dp).border(2.dp, colors.outlineVariant)) {
-                Icon(painterResource(R.drawable.ph_x_bold), contentDescription = "Close search", Modifier.size(17.dp))
-            }
         }
     }
 }
