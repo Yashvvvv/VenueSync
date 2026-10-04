@@ -121,8 +121,8 @@ const Navbar: React.FC = () => {
   ]
 
   const visibleLinks = navLinks.filter((l) => l.public || isAuthenticated)
-  // Hype's account menu: the links the tab bar doesn't already have.
-  const menuLinks = visibleLinks.filter(({ to }) => to !== "/" && to !== "/dashboard/tickets")
+  // Hype's account menu: the links the tab bar doesn't already have (Feed, Tickets and, for organizers, Events).
+  const menuLinks = visibleLinks.filter(({ to }) => !["/", "/dashboard/tickets", "/dashboard/events"].includes(to))
   const canHost = isAttendee && !isOrganizer
 
   return (

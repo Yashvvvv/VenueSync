@@ -5,12 +5,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
@@ -25,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.venuesync.app.ui.account.AccountAction
+import com.venuesync.app.ui.account.isOrganizer
 import com.venuesync.app.ui.events.EventDetailScreen
 import com.venuesync.app.ui.events.EventDetailViewModel
 import com.venuesync.app.ui.events.EventListScreen
@@ -87,7 +82,7 @@ fun VenueSyncNavHost(experience: Experience) {
     val navController = rememberNavController()
     when (experience) {
         Experience.Classic -> NavHost(navController, startDestination = Routes.EVENT_LIST) {
-            screens(navController, Experience.Classic, sheet = null)
+            screens(navController, Experience.Classic)
         }
         Experience.Hype -> HypeShell(navController)
     }
@@ -95,15 +90,14 @@ fun VenueSyncNavHost(experience: Experience) {
 
 @Composable
 private fun HypeShell(navController: NavHostController) {
-    // A state object, not a value: NavHost builds its graph once, so a captured Boolean would never change there.
-    val sheet = rememberSaveable { mutableStateOf(false) }
-    var searchOpen by sheet
     val route = navController.currentBackStackEntryAsState().value?.destination?.route
-    // The sheet belongs to the feed: leaving the feed closes it.
-    LaunchedEffect(route) { if (route != Routes.FEED) searchOpen = false }
-    val active = when (route) {
-        Routes.FEED -> if (searchOpen) HypeTab.Search else HypeTab.Feed
-        Routes.MY_TICKETS -> HypeTab.Tickets
+    val organizer = isOrganizer()
+    val active = when {
+        route == Routes.FEED -> HypeTab.Feed
+        route == Routes.EVENT_LIST -> HypeTab.Explore
+        route == Routes.MY_TICKETS -> HypeTab.Tickets
+        // The whole organizer area sits under its tab, so the bar says where you are inside it too.
+        route == Routes.NEW_EVENT || route?.startsWith(Routes.ORGANIZER_EVENTS) == true -> HypeTab.Events
         else -> null
     }
     Scaffold(
@@ -111,20 +105,15 @@ private fun HypeShell(navController: NavHostController) {
         bottomBar = {
             // The door scanner keeps its full-screen colours; sign-in stays a focused, single task.
             if (route != Routes.SCANNER && route != Routes.LOGIN) {
-                HypeTabBar(active, onSelect = { tab ->
-                    when (tab) {
-                        HypeTab.Feed -> {
-                            searchOpen = false
-                            navController.toTab(Routes.FEED)
-                        }
-                        HypeTab.Search -> if (route == Routes.FEED) {
-                            searchOpen = !searchOpen
-                        } else {
-                            navController.toTab(Routes.FEED)
-                            searchOpen = true
-                        }
-                        HypeTab.Tickets -> navController.toTab(Routes.MY_TICKETS)
-                    }
+                HypeTabBar(active, showEvents = organizer, onSelect = { tab ->
+                    navController.toTab(
+                        when (tab) {
+                            HypeTab.Feed -> Routes.FEED
+                            HypeTab.Explore -> Routes.EVENT_LIST
+                            HypeTab.Tickets -> Routes.MY_TICKETS
+                            HypeTab.Events -> Routes.ORGANIZER_EVENTS
+                        },
+                    )
                 })
             }
         },
@@ -135,7 +124,7 @@ private fun HypeShell(navController: NavHostController) {
             startDestination = Routes.FEED,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
-            screens(navController, Experience.Hype, sheet)
+            screens(navController, Experience.Hype)
         }
     }
 }
@@ -150,7 +139,6 @@ private fun NavController.toTab(route: String) = navigate(if (route == Routes.FE
 private fun NavGraphBuilder.screens(
     navController: NavHostController,
     experience: Experience,
-    sheet: MutableState<Boolean>?, // Hype's search sheet; null in Classic, which has no feed
 ) {
     val hype = experience == Experience.Hype
     composable(
@@ -159,18 +147,18 @@ private fun NavGraphBuilder.screens(
     ) { entry ->
         FeedScreen(
             onEventClick = { navController.navigateOnce(entry, Routes.eventDetail(it)) },
-            onBrowseAll = { navController.navigateOnce(entry, Routes.EVENT_LIST) },
-            searchOpen = sheet?.value == true,
-            onSearchOpenChange = { sheet?.value = it },
+            onBrowseAll = { navController.toTab(Routes.EVENT_LIST) },
         )
     }
     composable(Routes.EVENT_LIST) { entry ->
         EventListScreen(
             onEventClick = { eventId -> navController.navigateOnce(entry, Routes.eventDetail(eventId)) },
             onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
-            onMyTicketsClick = { navController.navigateOnce(entry, Routes.MY_TICKETS) },
+            // In Hype this is the Explore tab: the other tabs are switched to, not pushed.
+            onMyTicketsClick = { if (hype) navController.toTab(Routes.MY_TICKETS) else navController.navigateOnce(entry, Routes.MY_TICKETS) },
             onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
-            onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
+            // Classic's top-bar button; Hype has the Events tab instead.
+            onManageEventsClick = if (hype) null else ({ navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) }),
             onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
         )
     }
@@ -197,7 +185,6 @@ private fun NavGraphBuilder.screens(
                         onSignInClick = { navController.navigateOnce(entry, Routes.LOGIN) },
                         onMyTicketsClick = {},
                         onScanClick = { navController.navigateOnce(entry, Routes.SCAN_EVENTS) },
-                        onManageEventsClick = { navController.navigateOnce(entry, Routes.ORGANIZER_EVENTS) },
                         onBecomeOrganizerClick = { navController.navigateOnce(entry, Routes.BECOME_ORGANIZER) },
                     )
                 }
@@ -234,7 +221,8 @@ private fun NavGraphBuilder.screens(
     }
     composable(Routes.ORGANIZER_EVENTS) { entry ->
         OrganizerEventsScreen(
-            onBack = { navController.navigateUp() },
+            // In Hype this is the Events tab, a root: no back arrow.
+            onBack = if (hype) null else ({ navController.navigateUp() }),
             onEventClick = { navController.navigateOnce(entry, Routes.organizerEvent(it)) },
             onNewEvent = { navController.navigateOnce(entry, Routes.NEW_EVENT) },
         )
@@ -254,7 +242,11 @@ private fun NavGraphBuilder.screens(
             onBack = { navController.navigateUp() },
             // The organizer tools replace this screen: Back from them returns to where the menu was opened.
             onDone = {
-                navController.navigate(Routes.ORGANIZER_EVENTS) { popUpTo(Routes.BECOME_ORGANIZER) { inclusive = true } }
+                if (hype) {
+                    navController.toTab(Routes.ORGANIZER_EVENTS) // the new Events tab
+                } else {
+                    navController.navigate(Routes.ORGANIZER_EVENTS) { popUpTo(Routes.BECOME_ORGANIZER) { inclusive = true } }
+                }
             },
         )
     }

@@ -54,7 +54,8 @@ import com.venuesync.app.ui.theme.rememberEntrance
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrganizerEventsScreen(
-    onBack: () -> Unit,
+    /** Null where this is a root (Hype's Events tab): no back arrow. */
+    onBack: (() -> Unit)?,
     onEventClick: (String) -> Unit,
     onNewEvent: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,8 +77,10 @@ fun OrganizerEventsScreen(
             TopAppBar(
                 title = { DisplayText("My events", MaterialTheme.typography.headlineSmall) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ph_arrow_left), contentDescription = "Back")
+                    onBack?.let {
+                        IconButton(onClick = it) {
+                            Icon(painterResource(R.drawable.ph_arrow_left), contentDescription = "Back")
+                        }
                     }
                 },
                 actions = {

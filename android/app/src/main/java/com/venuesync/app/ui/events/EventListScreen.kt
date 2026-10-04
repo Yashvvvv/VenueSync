@@ -58,6 +58,7 @@ import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.core.model.Event
 import com.venuesync.app.core.model.Refusal
 import com.venuesync.app.ui.account.AccountAction
+import com.venuesync.app.ui.account.MyEventsAction
 import com.venuesync.app.ui.common.UiState
 import com.venuesync.app.ui.components.Clock
 import com.venuesync.app.ui.components.ErrorState
@@ -97,11 +98,12 @@ fun EventListScreen(
             TopAppBar(
                 title = { Lockup() },
                 actions = {
+                    // Null in Hype, where the Events tab is the way there.
+                    onManageEventsClick?.let { MyEventsAction(it) }
                     AccountAction(
                         onSignInClick = onSignInClick,
                         onMyTicketsClick = onMyTicketsClick,
                         onScanClick = onScanClick,
-                        onManageEventsClick = onManageEventsClick,
                         onBecomeOrganizerClick = onBecomeOrganizerClick,
                     )
                 },

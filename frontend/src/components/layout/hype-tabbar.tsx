@@ -2,38 +2,34 @@
 
 import type React from "react"
 import { Link, useLocation } from "react-router"
-import { House, MagnifyingGlass, Ticket } from "@/components/icons"
-
-interface HypeTabBarProps {
-  /**
-   * Supplied only by the feed, which owns the inline search sheet. Elsewhere
-   * the same Search tab goes to the feed and opens the sheet there, so the
-   * bar never changes under the reader (it used to turn into "Browse").
-   */
-  onSearch?: () => void
-  searchOpen?: boolean
-}
+import { CalendarDots, House, MagnifyingGlass, Ticket } from "@/components/icons"
+import { useRoles } from "@/hooks/use-roles"
 
 /**
  * Bottom tab bar: the whole navigation model for the hype experience.
  *
- * Sits in the thumb zone because this build is for one-handed phone use.
- * Three destinations, not five: bottom bars degrade past that, and the
- * research on this cohort points at fewer, larger targets rather than a
- * denser menu.
+ * Feed, Explore (every event, searchable) and Tickets for everyone, and Events for organizers: their main
+ * destination, too important to hide in the account menu. Four at most: bottom bars degrade past that, and this
+ * cohort wants fewer, larger targets. The same tabs as the Android app.
  *
  * `env(safe-area-inset-bottom)` keeps the row clear of the iOS home
  * indicator, which otherwise sits on top of the middle tab.
  */
-export const HypeTabBar: React.FC<HypeTabBarProps> = ({ onSearch, searchOpen = false }) => {
+export const HypeTabBar: React.FC = () => {
   const { pathname } = useLocation()
+  const { isOrganizer } = useRoles()
 
   const item =
     "focus-ring flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors"
-  const on = "text-primary"
-  const off = "text-muted-foreground"
 
-  const feedActive = pathname === "/" && !searchOpen
+  const tabs = [
+    { to: "/", label: "Feed", Icon: House, active: pathname === "/" },
+    { to: "/events", label: "Explore", Icon: MagnifyingGlass, active: pathname === "/events" },
+    { to: "/dashboard/tickets", label: "Tickets", Icon: Ticket, active: pathname.startsWith("/dashboard/tickets") },
+    ...(isOrganizer
+      ? [{ to: "/dashboard/events", label: "Events", Icon: CalendarDots, active: pathname.startsWith("/dashboard/events") }]
+      : []),
+  ]
 
   return (
     <nav
@@ -41,39 +37,17 @@ export const HypeTabBar: React.FC<HypeTabBarProps> = ({ onSearch, searchOpen = f
       className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-border bg-background pb-[env(safe-area-inset-bottom)]"
     >
       <div className="mx-auto flex max-w-md items-stretch">
-        <Link
-          to="/"
-          className={`${item} ${feedActive ? on : off}`}
-          aria-current={feedActive ? "page" : undefined}
-        >
-          <House weight={feedActive ? "fill" : "regular"} size={20} />
-          Feed
-        </Link>
-
-        {onSearch ? (
-          <button
-            onClick={onSearch}
-            aria-expanded={searchOpen}
-            className={`${item} ${searchOpen ? on : off}`}
+        {tabs.map(({ to, label, Icon, active }) => (
+          <Link
+            key={to}
+            to={to}
+            className={`${item} ${active ? "text-primary" : "text-muted-foreground"}`}
+            aria-current={active ? "page" : undefined}
           >
-            <MagnifyingGlass weight={searchOpen ? "bold" : "regular"} size={20} />
-            Search
-          </button>
-        ) : (
-          <Link to="/" state={{ openSearch: true }} className={`${item} ${off}`}>
-            <MagnifyingGlass weight="regular" size={20} />
-            Search
+            <Icon weight={active ? "fill" : "regular"} size={20} />
+            {label}
           </Link>
-        )}
-
-        <Link
-          to="/dashboard/tickets"
-          className={`${item} ${pathname.startsWith("/dashboard/tickets") ? on : off}`}
-          aria-current={pathname.startsWith("/dashboard/tickets") ? "page" : undefined}
-        >
-          <Ticket weight={pathname.startsWith("/dashboard/tickets") ? "fill" : "regular"} size={20} />
-          Tickets
-        </Link>
+        ))}
       </div>
     </nav>
   )

@@ -33,14 +33,14 @@ import androidx.compose.ui.unit.sp
 import com.venuesync.app.R
 import com.venuesync.app.ui.theme.LocalExperience
 
-enum class HypeTab { Feed, Search, Tickets }
+enum class HypeTab { Feed, Explore, Tickets, Events }
 
 /**
- * Hype's whole navigation, in the thumb zone. Three destinations, not five: bottom bars degrade past that, and this
- * audience wants fewer, larger targets. Search opens the feed's sheet rather than a page.
+ * Hype's whole navigation, in the thumb zone. Feed, Explore (every event, searchable) and Tickets for everyone, and
+ * Events for organizers: their main destination, too important for a menu. Four at most, never five.
  */
 @Composable
-fun HypeTabBar(active: HypeTab?, onSelect: (HypeTab) -> Unit, modifier: Modifier = Modifier) {
+fun HypeTabBar(active: HypeTab?, showEvents: Boolean, onSelect: (HypeTab) -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val rule = LocalExperience.current.border
     Row(
@@ -51,8 +51,9 @@ fun HypeTabBar(active: HypeTab?, onSelect: (HypeTab) -> Unit, modifier: Modifier
             .selectableGroup(),
     ) {
         Tab(HypeTab.Feed, "Feed", R.drawable.ph_house_fill, R.drawable.ph_house, active, onSelect)
-        Tab(HypeTab.Search, "Search", R.drawable.ph_magnifying_glass_bold, R.drawable.ph_magnifying_glass, active, onSelect)
+        Tab(HypeTab.Explore, "Explore", R.drawable.ph_magnifying_glass_bold, R.drawable.ph_magnifying_glass, active, onSelect)
         Tab(HypeTab.Tickets, "Tickets", R.drawable.ph_ticket_fill, R.drawable.ph_ticket, active, onSelect)
+        if (showEvents) Tab(HypeTab.Events, "Events", R.drawable.ph_calendar_blank_fill, R.drawable.ph_calendar_blank_bold, active, onSelect)
     }
 }
 
