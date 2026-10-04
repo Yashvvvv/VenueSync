@@ -24,6 +24,8 @@ public class UpdateEventResponseDto {
   private LocalDateTime salesStart;
   private LocalDateTime salesEnd;
   private EventStatusEnum status;
+  /** Send it back on update: an update from an older copy is refused. */
+  private Long version;
   private List<UpdateTicketTypeResponseDto> ticketTypes;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;

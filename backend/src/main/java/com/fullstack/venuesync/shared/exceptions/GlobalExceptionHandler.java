@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.shared.domain.ErrorDto;
+import com.fullstack.venuesync.events.exception.EventChangedException;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
@@ -114,6 +115,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(EventInvalidException.class)
   public ResponseEntity<ErrorDto> handleEventInvalid(EventInvalidException ex) {
     return respond(HttpStatus.BAD_REQUEST, "EVENT_INVALID", ex.getMessage(), ex.getField(), ex);
+  }
+
+  /**
+   * The update was made from an older copy (the version check), or lost a race with another write (JPA's own
+   * optimistic lock, the only entity with a version being the event). Either way: reload, then change it again.
+   */
+  @ExceptionHandler({EventChangedException.class,
+      org.springframework.orm.ObjectOptimisticLockingFailureException.class})
+  public ResponseEntity<ErrorDto> handleEventChanged(Exception ex) {
+    return respond(HttpStatus.CONFLICT, "EVENT_CHANGED",
+        "This event was changed somewhere else since you opened it. Reload it, then make your change again", ex);
   }
 
   @ExceptionHandler(StatusChangeInvalidException.class)

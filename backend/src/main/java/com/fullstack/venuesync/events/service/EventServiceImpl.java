@@ -20,6 +20,7 @@ import com.fullstack.venuesync.events.domain.UpdateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.exception.CapacityBelowSoldException;
+import com.fullstack.venuesync.events.exception.EventChangedException;
 import com.fullstack.venuesync.events.exception.EventHasSalesException;
 import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
@@ -30,6 +31,7 @@ import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.shared.exceptions.UserNotFoundException;
 import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
+import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.exception.TicketTypeNotFoundException;
@@ -62,6 +64,7 @@ public class EventServiceImpl implements EventService {
       throw new EventInvalidException("status", "A new event starts as a draft or published");
     }
     checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
+    checkPublishable(event.getStatus(), event.getStart(), event.getEnd());
 
     User organizer = userRepository.findById(Objects.requireNonNull(organizerId))
         .orElseThrow(() -> new UserNotFoundException(
@@ -132,6 +135,13 @@ public class EventServiceImpl implements EventService {
             String.format("Event with ID '%s' does not exist", id))
         );
 
+    // Made from an older copy: someone (the website, another phone) changed the event since this client read it.
+    // Refused rather than letting the later write silently undo theirs. No version sent = not checked (old clients).
+    if (event.getVersion() != null && !event.getVersion().equals(existingEvent.getVersion())) {
+      throw new EventChangedException(String.format(
+          "Event '%s' changed since version %d was read", id, event.getVersion()));
+    }
+
     Set<UUID> requestTicketTypeIds = event.getTicketTypes()
         .stream()
         .map(UpdateTicketTypeRequest::getId)
@@ -152,6 +162,7 @@ public class EventServiceImpl implements EventService {
     }
     checkSchedule(event.getStart(), event.getEnd(), event.getSalesStart(), event.getSalesEnd());
     checkStatusChange(existingEvent.getStatus(), event.getStatus(), !issued.isEmpty());
+    checkPublishable(event.getStatus(), event.getStart(), event.getEnd());
 
     // Capacity can't drop below what's already issued: those tickets exist whatever the number says.
     for (UpdateTicketTypeRequest requested : event.getTicketTypes()) {
@@ -168,6 +179,11 @@ public class EventServiceImpl implements EventService {
     existingEvent.setVenue(event.getVenue());
     existingEvent.setSalesStart(event.getSalesStart());
     existingEvent.setSalesEnd(event.getSalesEnd());
+    // Cancelling voids every ticket nobody has used yet, in the same transaction: a cancelled event's tickets show as
+    // cancelled to their holders and never get anyone in. Used tickets stay used (they're a record of who came).
+    if (existingEvent.getStatus() != EventStatusEnum.CANCELLED && event.getStatus() == EventStatusEnum.CANCELLED) {
+      ticketRepository.moveStatusForEvent(id, TicketStatusEnum.PURCHASED, TicketStatusEnum.CANCELLED);
+    }
     existingEvent.setStatus(event.getStatus());
 
     existingEvent.getTicketTypes().removeIf(existingTicketType ->
@@ -259,6 +275,19 @@ public class EventServiceImpl implements EventService {
     }
     if (salesEnd != null && end != null && salesEnd.isAfter(end)) {
       throw new EventInvalidException("salesEnd", "Sales can't end after the event does");
+    }
+  }
+
+  /** On sale means people plan around it: a published event needs a start and an end. Drafts can be vague. */
+  private static void checkPublishable(EventStatusEnum status, LocalDateTime start, LocalDateTime end) {
+    if (status != EventStatusEnum.PUBLISHED) {
+      return;
+    }
+    if (start == null) {
+      throw new EventInvalidException("start", "A published event needs a start time");
+    }
+    if (end == null) {
+      throw new EventInvalidException("end", "A published event needs an end time");
     }
   }
 

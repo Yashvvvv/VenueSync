@@ -135,6 +135,7 @@ interface EventData {
   status: EventStatusEnum
   createdAt: string | undefined
   updatedAt: string | undefined
+  version: number | undefined
 }
 
 const DashboardManageEventPage: React.FC = () => {
@@ -159,6 +160,7 @@ const DashboardManageEventPage: React.FC = () => {
     status: EventStatusEnum.DRAFT,
     createdAt: undefined,
     updatedAt: undefined,
+    version: undefined,
   })
 
   const [currentTicketType, setCurrentTicketType] = useState<TicketTypeData | undefined>()
@@ -198,6 +200,7 @@ const DashboardManageEventPage: React.FC = () => {
               totalAvailable: ticket.totalAvailable,
             })),
             createdAt: event.createdAt,
+            version: event.version,
             updatedAt: event.updatedAt,
           })
           setEventDateEnabled(!!(event.start || event.end))
@@ -294,6 +297,7 @@ const DashboardManageEventPage: React.FC = () => {
               : undefined,
           status: eventData.status,
           ticketTypes,
+          version: eventData.version,
         }
 
         console.log("Update payload:", serializeEventRequest(request))

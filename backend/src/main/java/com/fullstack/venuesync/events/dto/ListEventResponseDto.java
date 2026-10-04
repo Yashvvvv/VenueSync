@@ -25,5 +25,7 @@ public class ListEventResponseDto {
   private LocalDateTime salesStart;
   private LocalDateTime salesEnd;
   private EventStatusEnum status;
+  /** Send it back on update: an update from an older copy is refused. */
+  private Long version;
   private List<ListEventTicketTypeResponseDto> ticketTypes = new ArrayList<>();
 }

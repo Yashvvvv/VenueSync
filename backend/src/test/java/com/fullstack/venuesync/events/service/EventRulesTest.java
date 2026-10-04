@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,6 +13,7 @@ import com.fullstack.venuesync.events.domain.CreateEventRequest;
 import com.fullstack.venuesync.events.domain.Event;
 import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.domain.UpdateEventRequest;
+import com.fullstack.venuesync.events.exception.EventChangedException;
 import com.fullstack.venuesync.events.exception.EventInvalidException;
 import com.fullstack.venuesync.events.exception.StatusChangeInvalidException;
 import com.fullstack.venuesync.events.repository.EventRepository;
@@ -19,6 +21,7 @@ import com.fullstack.venuesync.shared.domain.User;
 import com.fullstack.venuesync.shared.domain.UserRepository;
 import com.fullstack.venuesync.staff.repository.StaffInviteRepository;
 import com.fullstack.venuesync.tickets.domain.CreateTicketTypeRequest;
+import com.fullstack.venuesync.tickets.domain.TicketStatusEnum;
 import com.fullstack.venuesync.tickets.domain.TicketType;
 import com.fullstack.venuesync.tickets.domain.UpdateTicketTypeRequest;
 import com.fullstack.venuesync.tickets.repository.TicketRepository;
@@ -130,6 +133,69 @@ class EventRulesTest {
     event.setStatus(EventStatusEnum.COMPLETED);
     assertThrows(StatusChangeInvalidException.class, () -> service.updateEventForOrganizer(
         organizerId, eventId, update(EventStatusEnum.PUBLISHED, null, null, null, null)));
+  }
+
+  @Test
+  void publishingNeedsAStartAndAnEnd() {
+    given(EventStatusEnum.DRAFT, 0);
+    EventInvalidException noStart = assertThrows(EventInvalidException.class, () -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.PUBLISHED, null, at, null, null)));
+    assertEquals("start", noStart.getField());
+    EventInvalidException noEnd = assertThrows(EventInvalidException.class, () -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.PUBLISHED, at, null, null, null)));
+    assertEquals("end", noEnd.getField());
+    verify(eventRepository, never()).save(any());
+  }
+
+  @Test
+  void aNewPublishedEventNeedsDatesToo() {
+    CreateEventRequest request = new CreateEventRequest();
+    request.setName("Show");
+    request.setVenue("Hall");
+    request.setStatus(EventStatusEnum.PUBLISHED);
+    request.setTicketTypes(List.of(new CreateTicketTypeRequest("GA", 10.0, null, null)));
+    EventInvalidException ex = assertThrows(EventInvalidException.class,
+        () -> service.createEvent(organizerId, request));
+    assertEquals("start", ex.getField());
+  }
+
+  @Test
+  void anUpdateFromAnOlderCopyIsRefused() {
+    event.setStatus(EventStatusEnum.DRAFT);
+    when(eventRepository.findByIdAndOrganizerId(eventId, organizerId)).thenReturn(Optional.of(event));
+    event.setVersion(4L);
+    UpdateEventRequest stale = update(EventStatusEnum.DRAFT, null, null, null, null);
+    stale.setVersion(3L);
+    assertThrows(EventChangedException.class, () -> service.updateEventForOrganizer(organizerId, eventId, stale));
+    verify(eventRepository, never()).save(any());
+  }
+
+  @Test
+  void anUpdateFromTheCurrentCopyOrWithoutAVersionGoesThrough() {
+    given(EventStatusEnum.DRAFT, 0);
+    event.setVersion(4L);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    UpdateEventRequest current = update(EventStatusEnum.DRAFT, null, null, null, null);
+    current.setVersion(4L);
+    assertDoesNotThrow(() -> service.updateEventForOrganizer(organizerId, eventId, current));
+    assertDoesNotThrow(() -> service.updateEventForOrganizer(
+        organizerId, eventId, update(EventStatusEnum.DRAFT, null, null, null, null)));
+  }
+
+  @Test
+  void cancellingVoidsTheTicketsNobodyHasUsed() {
+    given(EventStatusEnum.PUBLISHED, 3);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    service.updateEventForOrganizer(organizerId, eventId, update(EventStatusEnum.CANCELLED, at, at.plusHours(4), null, null));
+    verify(ticketRepository).moveStatusForEvent(eq(eventId), eq(TicketStatusEnum.PURCHASED), eq(TicketStatusEnum.CANCELLED));
+  }
+
+  @Test
+  void editingAnEventThatIsAlreadyCancelledMovesNoTickets() {
+    given(EventStatusEnum.CANCELLED, 3);
+    when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArgument(0));
+    service.updateEventForOrganizer(organizerId, eventId, update(EventStatusEnum.CANCELLED, null, null, null, null));
+    verify(ticketRepository, never()).moveStatusForEvent(any(), any(), any());
   }
 
   @Test
