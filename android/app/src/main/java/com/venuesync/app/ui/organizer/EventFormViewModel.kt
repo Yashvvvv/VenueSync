@@ -38,6 +38,8 @@ data class EventForm(
     val salesEnd: String? = null,
     val status: String = EventStatus.Draft.wire,
     val ticketTypes: List<TicketTypeForm> = listOf(TicketTypeForm()),
+    /** The server's version of the event being edited; sent back so a stale save is refused, not applied. */
+    val version: Long? = null,
 )
 
 @Serializable
@@ -220,6 +222,7 @@ internal fun EventForm.toDraft() = EventDraft(
             sold = type.sold,
         )
     },
+    version = version,
 )
 
 internal fun OrganizerEvent.toForm() = EventForm(
@@ -241,6 +244,7 @@ internal fun OrganizerEvent.toForm() = EventForm(
             sold = it.sold,
         )
     },
+    version = version,
 )
 
 internal fun String?.toWallClock(): LocalDateTime? = this?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
@@ -268,7 +272,8 @@ internal fun fieldMessage(field: String?, form: EventForm): String {
     return when (field) {
         "name" -> "Give the event a name, 2 to 200 characters."
         "venue" -> "Add the venue, 2 to 500 characters."
-        "end" -> "The event has to end after it starts."
+        "start" -> "A published event needs a start time."
+        "end" -> if (form.end == null) "A published event needs an end time." else "The event has to end after it starts."
         "salesEnd" -> {
             val opens = form.salesStart.toWallClock()
             val closes = form.salesEnd.toWallClock()

@@ -39,6 +39,8 @@ enum class Refusal {
     CapacityBelowSold,
     /** STATUS_CHANGE_INVALID: e.g. a cancelled event is final. */
     StatusChange,
+    /** EVENT_CHANGED: the edit was made from an older copy; someone changed the event since. */
+    EventChanged,
 }
 
 /** Carrier so repository results fit the stdlib [Result] without losing the typed error. */

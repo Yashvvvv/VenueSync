@@ -162,10 +162,11 @@ private fun EventOverview(
         Column(Modifier.padding(top = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val actions = event.actions()
             if (EventAction.Publish in actions) {
-                if (event.start == null) {
-                    // The server would take it, but an event with no date can't be planned around or sold honestly.
+                val undated = event.start == null || event.end == null
+                if (undated) {
+                    // The server refuses it too (EVENT_INVALID): said here before the tap, not after.
                     Text(
-                        "Add the date and time before publishing.",
+                        "Add when it starts and ends before publishing.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant,
                     )
@@ -174,7 +175,7 @@ private fun EventOverview(
                     if (action == ActionState.Working(EventAction.Publish)) "Publishing" else "Publish",
                     { confirming = EventAction.Publish },
                     FullWidth,
-                    enabled = !busy && event.start != null,
+                    enabled = !busy && !undated,
                 )
             }
             if (event.editable()) StubButton("Edit", onEdit, FullWidth, enabled = !busy, outlined = true, icon = R.drawable.ph_pencil_simple)
@@ -302,7 +303,7 @@ internal fun confirmCopy(action: EventAction, event: OrganizerEvent): ConfirmCop
     EventAction.Cancel -> ConfirmCopy(
         "Cancel this event?",
         "It leaves the catalogue and can't be sold or published again. " +
-            (if (event.sold > 0) "The ${event.sold} tickets already issued stay on their holders' accounts. " else "") +
+            (if (event.sold > 0) "The ${event.sold} tickets issued are cancelled, apart from any already used at the door, and won't get anyone in. " else "") +
             "This can't be undone.",
         "Cancel event",
         keep = "Keep it",

@@ -21,6 +21,8 @@ data class OrganizerEventDto(
     // String, not an enum: a status this app doesn't know must not fail the whole page.
     val status: String? = null,
     val ticketTypes: List<OrganizerTicketTypeDto>? = null,
+    /** Sent back on update: the server refuses an edit made from an older copy (EVENT_CHANGED). */
+    val version: Long? = null,
 )
 
 @Serializable
@@ -47,6 +49,8 @@ data class EventWriteDto(
     val salesEnd: String? = null,
     val status: String,
     val ticketTypes: List<TicketTypeWriteDto>,
+    /** The version the edit was made from; null on create. */
+    val version: Long? = null,
 )
 
 @Serializable
@@ -98,6 +102,8 @@ data class OrganizerEvent(
     val salesEnd: LocalDateTime?,
     val status: EventStatus,
     val ticketTypes: List<OrganizerTicketType>,
+    /** Null from a server that doesn't version events: then an update isn't checked for staleness. */
+    val version: Long? = null,
 ) {
     val sold: Long get() = ticketTypes.sumOf { it.sold }
 
@@ -110,6 +116,7 @@ data class OrganizerEvent(
         name = name, venue = venue, start = start, end = end, salesStart = salesStart, salesEnd = salesEnd,
         status = status,
         ticketTypes = ticketTypes.map { TicketTypeDraft(it.id, it.name, it.price, it.description, it.capacity, it.sold) },
+        version = version,
     )
 }
 
@@ -126,6 +133,8 @@ data class EventDraft(
     val salesEnd: LocalDateTime? = null,
     val status: EventStatus = EventStatus.Draft,
     val ticketTypes: List<TicketTypeDraft> = emptyList(),
+    /** The version of the event this edit started from; null for a new one. */
+    val version: Long? = null,
 )
 
 data class TicketTypeDraft(
@@ -164,6 +173,7 @@ internal fun OrganizerEventDto.toDomainOrNull(): OrganizerEvent? {
         salesEnd = salesEnd?.toLocalDateTimeOrNull(),
         status = EventStatus.of(status),
         ticketTypes = types,
+        version = version,
     )
 }
 
@@ -209,6 +219,7 @@ internal fun EventDraft.toWire(id: String?) = EventWriteDto(
     ticketTypes = ticketTypes.map {
         TicketTypeWriteDto(it.id, it.name.trim(), it.price.toDouble(), it.description?.trim()?.ifBlank { null }, it.capacity)
     },
+    version = if (id != null) version else null,
 )
 
 /**
@@ -220,6 +231,9 @@ fun EventDraft.firstInvalidField(creating: Boolean): String? {
     if (venue.trim().length !in 2..500) return "venue"
     if (creating && status != EventStatus.Draft && status != EventStatus.Published) return "status"
     if (status == EventStatus.Unknown) return "status"
+    // On sale means people plan around it: the server refuses a published event without both times.
+    if (status == EventStatus.Published && start == null) return "start"
+    if (status == EventStatus.Published && end == null) return "end"
     if (start != null && end != null && !end.isAfter(start)) return "end"
     if (salesStart != null && salesEnd != null && !salesEnd.isAfter(salesStart)) return "salesEnd"
     if (salesEnd != null && end != null && salesEnd.isAfter(end)) return "salesEnd"

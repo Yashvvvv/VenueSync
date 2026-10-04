@@ -52,7 +52,7 @@ class OrganizerRepositoryTest {
 
     private val eventJson = """{"id":"$eventId","name":"Show","venue":"Hall","status":"PUBLISHED",
         "start":"2026-11-20T19:00:00+05:30","end":"2026-11-20T23:00:00+05:30",
-        "ticketTypes":[{"id":"$typeId","name":"GA","price":25.5,"totalAvailable":100,"sold":40}]}"""
+        "ticketTypes":[{"id":"$typeId","name":"GA","price":25.5,"totalAvailable":100,"sold":40}],"version":7}"""
 
     private val draft = EventDraft(
         name = "Show",
@@ -121,6 +121,24 @@ class OrganizerRepositoryTest {
     }
 
     @Test
+    fun `an edit sends back the version it was made from, a create sends none`() = runTest {
+        val event = repo(body = eventJson).event(eventId).getOrThrow()
+        assertEquals(7L, event.version)
+        repo(body = eventJson).update(eventId, event.toDraft()).getOrThrow()
+        assertTrue(bodies.last().contains("\"version\":7"))
+        repo(body = eventJson).create(draft.copy(version = 7), key).getOrThrow()
+        assertTrue("\"version\":7" !in bodies.last())
+    }
+
+    @Test
+    fun `a published event needs both times before it's sent`() = runTest {
+        val published = draft.copy(status = EventStatus.Published)
+        assertEquals(ApiError.Invalid("start"), repo().create(published.copy(start = null), key).error())
+        assertEquals(ApiError.Invalid("end"), repo().create(published.copy(end = null), key).error())
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
     fun `refusals and field errors keep their meaning`() = runTest {
         fun body(code: String, field: String? = null) =
             """{"code":"$code","error":"server text"${field?.let { ",\"field\":\"$it\"" } ?: ""}}"""
@@ -139,6 +157,10 @@ class OrganizerRepositoryTest {
         assertEquals(
             ApiError.Refused(Refusal.StatusChange),
             repo(HttpStatusCode.Conflict, body("STATUS_CHANGE_INVALID")).update(eventId, draft).error(),
+        )
+        assertEquals(
+            ApiError.Refused(Refusal.EventChanged),
+            repo(HttpStatusCode.Conflict, body("EVENT_CHANGED")).update(eventId, draft).error(),
         )
         assertEquals(
             ApiError.Invalid("salesEnd"),

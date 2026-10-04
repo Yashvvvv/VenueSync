@@ -46,6 +46,7 @@ class OrganizerEventViewModelTest {
         assertEquals(2, repo.eventCalls) // the load, then a fresh read before the write
         assertEquals(EventStatus.Published, repo.updates.single().second.status)
         assertEquals("General", repo.updates.single().second.ticketTypes.single().name)
+        assertEquals(3L, repo.updates.single().second.version)
         assertEquals(EventStatus.Published, (vm.state.value as UiState.Success).data.status)
         assertEquals(ActionState.Idle, vm.action.value)
     }

@@ -348,6 +348,9 @@ internal fun ApiError.message(): String = when (this) {
         Refusal.EventHasSales -> "This event has tickets sold, so it can't be deleted. Cancel it instead."
         Refusal.CapacityBelowSold -> "Capacity can't be lower than the tickets already sold."
         Refusal.StatusChange -> "This event can't change to that status."
+        Refusal.EventChanged ->
+            "This event was changed somewhere else (the website or another phone) since you opened it. Go back, " +
+                "open it again to see the changes, then make yours."
     }
     ApiError.InvalidResponse -> "We couldn't load this. Try again later."
     is ApiError.Server -> "Server error. Try again later."

@@ -132,6 +132,7 @@ class EventFormViewModelTest {
         val (id, draft) = repo.updates.single()
         assertEquals(EVENT_ID, id)
         assertEquals(TYPE_ID, draft.ticketTypes.single().id)
+        assertEquals(3L, draft.version) // the copy the form loaded, so a stale save is refused
         assertEquals(EventStatus.Published, draft.status)
         assertEquals(EVENT_ID, vm.ui.value.savedId)
     }

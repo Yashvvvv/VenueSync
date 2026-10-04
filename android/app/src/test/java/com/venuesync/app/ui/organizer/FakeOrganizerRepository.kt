@@ -52,6 +52,7 @@ fun organizerEvent(
     sold: Long = 0,
     capacity: Int? = 100,
     start: LocalDateTime? = LocalDateTime.of(2026, 11, 14, 19, 0),
+    version: Long? = 3,
 ) = OrganizerEvent(
     id = EVENT_ID,
     name = "Night Market",
@@ -62,4 +63,5 @@ fun organizerEvent(
     salesEnd = null,
     status = status,
     ticketTypes = listOf(OrganizerTicketType(TYPE_ID, "General", BigDecimal("25.00"), null, capacity, sold)),
+    version = version,
 )

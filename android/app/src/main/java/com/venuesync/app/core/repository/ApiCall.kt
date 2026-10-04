@@ -53,6 +53,7 @@ private suspend fun ResponseException.toApiError(): ApiError {
         "EVENT_HAS_SALES" -> return ApiError.Refused(Refusal.EventHasSales)
         "CAPACITY_BELOW_SOLD" -> return ApiError.Refused(Refusal.CapacityBelowSold)
         "STATUS_CHANGE_INVALID" -> return ApiError.Refused(Refusal.StatusChange)
+        "EVENT_CHANGED" -> return ApiError.Refused(Refusal.EventChanged)
     }
     return when (response.status.value) {
         401 -> ApiError.Unauthorized
