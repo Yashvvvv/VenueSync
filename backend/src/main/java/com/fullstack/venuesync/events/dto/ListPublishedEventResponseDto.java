@@ -16,4 +16,6 @@ public class ListPublishedEventResponseDto {
   private LocalDateTime start;
   private LocalDateTime end;
   private String venue;
+  /** The event's photo, relative to the API origin; null without one (clients show a stand-in). */
+  private String imageUrl;
 }

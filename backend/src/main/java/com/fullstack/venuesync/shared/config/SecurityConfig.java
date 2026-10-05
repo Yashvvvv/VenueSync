@@ -34,6 +34,9 @@ public class SecurityConfig {
 
                 // ── Public endpoints ───────────────────────────────────────
                 .requestMatchers(HttpMethod.GET, "/api/v1/published-events/**").permitAll()
+                // Event photos load in <img> tags and Coil, which send no token. The URL is the event's unguessable
+                // id plus a version, the same exposure as the event page itself.
+                .requestMatchers(HttpMethod.GET, "/api/v1/event-images/**").permitAll()
                 .requestMatchers("/actuator/**", "/health", "/actuator/health").permitAll()
 
                 // ── ATTENDEE: purchase tickets + view own tickets ───────────

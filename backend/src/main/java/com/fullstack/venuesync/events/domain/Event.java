@@ -19,6 +19,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
+import java.time.ZoneOffset;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,6 +94,10 @@ public class Event {
   @Column(name = "version", nullable = false, columnDefinition = "bigint not null default 0")
   private Long version;
 
+  /** When the photo last changed, or null without one. Written only by EventRepository.setImageUpdatedAt. */
+  @Column(name = "image_updated_at")
+  private LocalDateTime imageUpdatedAt;
+
   @ManyToMany(mappedBy = "attendingEvents")
   @Builder.Default
   private List<User> attendees = new ArrayList<>();
@@ -112,6 +117,19 @@ public class Event {
   @LastModifiedDate
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
+
+  /**
+   * Where clients load the photo (relative to the API's origin), or null without one. The version in the query means
+   * a new photo is a new URL, so the old one can be cached forever.
+   */
+  public String getImageUrl() {
+    return imageUrl(id, imageUpdatedAt);
+  }
+
+  public static String imageUrl(UUID id, LocalDateTime imageUpdatedAt) {
+    return imageUpdatedAt == null ? null
+        : "/api/v1/event-images/" + id + "?v=" + imageUpdatedAt.toInstant(ZoneOffset.UTC).toEpochMilli();
+  }
 
   /**
    * The single source of truth for "can tickets be bought at {@code now}", used by both the
