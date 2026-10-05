@@ -1,6 +1,7 @@
 package com.venuesync.app.core.network
 
 import com.venuesync.app.core.model.EventWriteDto
+import com.venuesync.app.core.model.ImageUrlDto
 import com.venuesync.app.core.model.OrganizerEventDto
 import com.venuesync.app.core.model.PageResponse
 import com.venuesync.app.core.model.StaffInviteDto
@@ -52,6 +53,18 @@ class OrganizerApi(private val client: HttpClient) {
 
     suspend fun deleteEvent(id: String) {
         client.delete("events/$id")
+    }
+
+    /** The raw JPEG, no multipart: the server reads the type from the bytes. */
+    suspend fun uploadImage(eventId: String, jpeg: ByteArray): ImageUrlDto =
+        client.put("events/$eventId/image") {
+            contentType(ContentType.Image.JPEG)
+            setBody(jpeg)
+            timeout { requestTimeoutMillis = 60_000 } // a 2 MB upload on a slow connection, plus a cold start
+        }.body()
+
+    suspend fun deleteImage(eventId: String) {
+        client.delete("events/$eventId/image")
     }
 
     suspend fun staff(eventId: String): List<StaffMemberDto> = client.get("events/$eventId/staff").body()

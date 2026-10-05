@@ -69,6 +69,7 @@ import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.theme.TicketShape
 import com.venuesync.app.ui.theme.animationsOn
+import com.venuesync.app.ui.theme.eventImage
 import com.venuesync.app.ui.theme.eventImageFor
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -132,7 +133,10 @@ fun EventStubCard(event: Event, onClick: () -> Unit, modifier: Modifier = Modifi
         val photo = maxWidth * 0.6f // 5:3
         StubCard(shape = TicketShape(photo, vertical = false, LocalExperience.current.radius), onClick = onClick) {
             Box(Modifier.fillMaxWidth().height(photo).background(colors.surfaceContainerHigh)) {
-                AsyncImage(eventImageFor(event.id), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                AsyncImage(
+                    eventImage(event.id, event.imageUrl), null, Modifier.fillMaxSize(),
+                    error = painterResource(eventImageFor(event.id)), contentScale = ContentScale.Crop,
+                )
                 // Weighs the photo down so the stub below reads as the same object. Sized to the photo (a fixed 96dp
                 // fogged nearly half of it) and eased, so on paper it settles the edge instead of washing the picture out.
                 Box(

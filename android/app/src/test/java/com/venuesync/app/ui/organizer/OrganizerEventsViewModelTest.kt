@@ -44,6 +44,8 @@ class OrganizerEventsViewModelTest {
         override suspend fun create(draft: EventDraft, idempotencyKey: String): Result<OrganizerEvent> = error("not used")
         override suspend fun update(id: String, draft: EventDraft): Result<OrganizerEvent> = error("not used")
         override suspend fun delete(id: String): Result<Unit> = error("not used")
+        override suspend fun setPhoto(eventId: String, jpeg: ByteArray): Result<String> = error("not used")
+        override suspend fun removePhoto(eventId: String): Result<Unit> = error("not used")
         override suspend fun staff(eventId: String): Result<List<StaffMember>> = error("not used")
         override suspend fun createInvite(eventId: String): Result<StaffInvite> = error("not used")
         override suspend fun removeStaff(eventId: String, userId: String): Result<Unit> = error("not used")

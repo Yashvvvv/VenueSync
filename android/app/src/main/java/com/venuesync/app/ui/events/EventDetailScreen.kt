@@ -96,6 +96,7 @@ import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.theme.Total
 import com.venuesync.app.ui.theme.displayHero
 import com.venuesync.app.ui.theme.displaySection
+import com.venuesync.app.ui.theme.eventImage
 import com.venuesync.app.ui.theme.eventImageFor
 import java.math.BigDecimal
 
@@ -197,10 +198,15 @@ private fun Modifier.pullUp(by: Dp) = layout { measurable, constraints ->
 }
 
 @Composable
-private fun HeroPhoto(eventId: String?) {
+private fun HeroPhoto(eventId: String?, imageUrl: String? = null) {
     val bg = MaterialTheme.colorScheme.background
     Box(Modifier.fillMaxWidth().height(heroHeight()).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        eventId?.let { AsyncImage(eventImageFor(it), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        eventId?.let {
+            AsyncImage(
+                eventImage(it, imageUrl), null, Modifier.fillMaxSize(),
+                error = painterResource(eventImageFor(it)), contentScale = ContentScale.Crop,
+            )
+        }
         // A light band under the status bar so the clock reads; the photo clear through its middle; then solid only
         // where the title overlaps it (the bottom 96dp, about the last quarter). A full-height wash fogged it on paper.
         Box(
@@ -229,7 +235,7 @@ private fun EventDetailContent(event: EventDetail, buyer: Buyer, listState: Lazy
     val colors = MaterialTheme.colorScheme
     LazyColumn(state = listState) {
         item {
-            HeroPhoto(event.id)
+            HeroPhoto(event.id, event.imageUrl)
             Column(Modifier.pullUp(96.dp).padding(horizontal = 20.dp)) {
                 event.start?.let { EyebrowText(it.format(HeroDay), color = colors.primary) }
                 DisplayText(event.name, style.displayHero(), Modifier.padding(top = 16.dp).semantics { heading() })

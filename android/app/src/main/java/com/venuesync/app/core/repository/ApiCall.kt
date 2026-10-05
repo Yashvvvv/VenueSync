@@ -54,6 +54,7 @@ private suspend fun ResponseException.toApiError(): ApiError {
         "CAPACITY_BELOW_SOLD" -> return ApiError.Refused(Refusal.CapacityBelowSold)
         "STATUS_CHANGE_INVALID" -> return ApiError.Refused(Refusal.StatusChange)
         "EVENT_CHANGED" -> return ApiError.Refused(Refusal.EventChanged)
+        "IMAGE_INVALID", "IMAGE_TOO_LARGE" -> return ApiError.Invalid("photo")
     }
     return when (response.status.value) {
         401 -> ApiError.Unauthorized

@@ -23,6 +23,10 @@ open class FakeOrganizerRepository : OrganizerRepository {
     var removeStaff: Result<Unit>? = null
     var becomeOrganizer: Result<Unit>? = null
     val removed = mutableListOf<String>()
+    var setPhoto: Result<String>? = null
+    var removePhoto: Result<Unit>? = null
+    val photos = mutableListOf<Pair<String, Int>>() // event id to bytes sent
+    val photosRemoved = mutableListOf<String>()
 
     val updates = mutableListOf<Pair<String, EventDraft>>()
     val creates = mutableListOf<Pair<EventDraft, String>>()
@@ -43,6 +47,14 @@ open class FakeOrganizerRepository : OrganizerRepository {
         return (update ?: error("update not set up"))(id, draft)
     }
     override suspend fun delete(id: String): Result<Unit> = delete ?: error("delete not set up")
+    override suspend fun setPhoto(eventId: String, jpeg: ByteArray): Result<String> {
+        photos += eventId to jpeg.size
+        return setPhoto ?: error("setPhoto not set up")
+    }
+    override suspend fun removePhoto(eventId: String): Result<Unit> {
+        photosRemoved += eventId
+        return removePhoto ?: error("removePhoto not set up")
+    }
     override suspend fun staff(eventId: String): Result<List<StaffMember>> = staff ?: error("staff not set up")
     override suspend fun createInvite(eventId: String): Result<StaffInvite> = invite ?: error("invite not set up")
     override suspend fun removeStaff(eventId: String, userId: String): Result<Unit> {

@@ -13,9 +13,13 @@ import com.venuesync.app.core.model.firstInvalidField
 import com.venuesync.app.core.model.toDomainOrNull
 import com.venuesync.app.core.model.toEventCounts
 import com.venuesync.app.core.model.toLocalDateTimeOrNull
+import com.venuesync.app.core.model.toImagePathOrNull
 import com.venuesync.app.core.model.toWire
 import com.venuesync.app.core.network.OrganizerApi
 import javax.inject.Inject
+
+/** The server's photo limit (EventImages.MAX_BYTES). */
+internal const val MaxPhotoBytes = 2 * 1024 * 1024
 
 /** A page of the organizer's events plus whether the server has more. */
 data class OrganizerEventPage(val events: List<OrganizerEvent>, val isLast: Boolean)
@@ -30,6 +34,9 @@ interface OrganizerRepository {
     suspend fun create(draft: EventDraft, idempotencyKey: String): Result<OrganizerEvent>
     suspend fun update(id: String, draft: EventDraft): Result<OrganizerEvent>
     suspend fun delete(id: String): Result<Unit>
+    /** Sets the event's photo from a JPEG (already scaled to fit); returns its new image URL. */
+    suspend fun setPhoto(eventId: String, jpeg: ByteArray): Result<String>
+    suspend fun removePhoto(eventId: String): Result<Unit>
     suspend fun staff(eventId: String): Result<List<StaffMember>>
     suspend fun createInvite(eventId: String): Result<StaffInvite>
     suspend fun removeStaff(eventId: String, userId: String): Result<Unit>
@@ -80,6 +87,20 @@ class OrganizerRepositoryImpl @Inject constructor(
     override suspend fun delete(id: String): Result<Unit> {
         if (!UuidRegex.matches(id)) return Result.failure(ApiException(ApiError.NotFound))
         return apiCall { api.deleteEvent(id) }
+    }
+
+    override suspend fun setPhoto(eventId: String, jpeg: ByteArray): Result<String> {
+        if (!UuidRegex.matches(eventId)) return Result.failure(ApiException(ApiError.NotFound))
+        // The server's limit, checked before 2 MB leaves the phone for nothing.
+        if (jpeg.isEmpty() || jpeg.size > MaxPhotoBytes) return invalid("photo")
+        return apiCall {
+            api.uploadImage(eventId, jpeg).imageUrl.toImagePathOrNull() ?: throw ApiException(ApiError.InvalidResponse)
+        }
+    }
+
+    override suspend fun removePhoto(eventId: String): Result<Unit> {
+        if (!UuidRegex.matches(eventId)) return Result.failure(ApiException(ApiError.NotFound))
+        return apiCall { api.deleteImage(eventId) }
     }
 
     override suspend fun staff(eventId: String): Result<List<StaffMember>> {
