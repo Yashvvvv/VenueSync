@@ -41,7 +41,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, index = 0, priority
           {/* Counterfoil */}
           <div className="relative aspect-[5/3] overflow-hidden rounded-t-md bg-secondary">
             <div className="absolute inset-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]">
-              <RandomEventImage seed={event.id} priority={priority} />
+              <RandomEventImage seed={event.id} src={event.imageUrl} priority={priority} />
             </div>
             {/* Weighs the photo down so the stub below reads as the same object */}
             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent" />

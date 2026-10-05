@@ -32,7 +32,8 @@ import {
   type UpdateEventRequest,
   type UpdateTicketTypeRequest,
 } from "@/domain/domain"
-import { createEvent, getEvent, updateEvent, serializeEventRequest } from "@/lib/api"
+import { createEvent, deleteEventImage, getEvent, updateEvent, serializeEventRequest, uploadEventImage } from "@/lib/api"
+import EventPhotoPicker from "@/components/events/event-photo-picker"
 import { format } from "date-fns"
 import { AlertCircle, CalendarIcon, Edit, Plus, Ticket, Trash2, ArrowLeft, Save } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -137,6 +138,7 @@ interface EventData {
   createdAt: string | undefined
   updatedAt: string | undefined
   version: number | undefined
+  imageUrl: string | null | undefined
 }
 
 const DashboardManageEventPage: React.FC = () => {
@@ -162,7 +164,11 @@ const DashboardManageEventPage: React.FC = () => {
     createdAt: undefined,
     updatedAt: undefined,
     version: undefined,
+    imageUrl: undefined,
   })
+  // A photo chosen on the form (uploaded once the event is saved), or the current one marked for removal.
+  const [photo, setPhoto] = useState<Blob | null>(null)
+  const [photoRemoved, setPhotoRemoved] = useState(false)
 
   const [currentTicketType, setCurrentTicketType] = useState<TicketTypeData | undefined>()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -202,6 +208,7 @@ const DashboardManageEventPage: React.FC = () => {
             })),
             createdAt: event.createdAt,
             version: event.version,
+            imageUrl: event.imageUrl,
             updatedAt: event.updatedAt,
           })
           setEventDateEnabled(!!(event.start || event.end))
@@ -255,6 +262,19 @@ const DashboardManageEventPage: React.FC = () => {
     return `${year}-${month}-${day}T${hours}:${minutes}:00`;
   }
 
+  /**
+   * The photo goes after the event: a new event needs its id first. A photo that fails doesn't undo the saved
+   * event; the organizer is told and can add it again from the edit page.
+   */
+  const savePhoto = async (token: string, eventId: string) => {
+    try {
+      if (photo) await uploadEventImage(token, eventId, photo)
+      else if (photoRemoved && eventData.imageUrl) await deleteEventImage(token, eventId)
+    } catch (e) {
+      toast.error(`The event was saved, but not its photo: ${e instanceof Error ? e.message : "try again"}`)
+    }
+  }
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(undefined)
@@ -303,6 +323,7 @@ const DashboardManageEventPage: React.FC = () => {
 
         console.log("Update payload:", serializeEventRequest(request))
         await updateEvent(user.access_token, eventData.id, request)
+        await savePhoto(user.access_token, eventData.id)
         toast.success("Event updated successfully")
       } else {
         const ticketTypes: CreateTicketTypeRequest[] = eventData.ticketTypes.map((tt) => ({
@@ -335,7 +356,8 @@ const DashboardManageEventPage: React.FC = () => {
           ticketTypes,
         }
 
-        await createEvent(user.access_token, request)
+        const created = await createEvent(user.access_token, request)
+        await savePhoto(user.access_token, created.id)
         toast.success("Event created successfully")
       }
       navigate("/dashboard/events")
@@ -515,6 +537,30 @@ const DashboardManageEventPage: React.FC = () => {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Photo */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                <Card className="glass border-border/50">
+                  <CardHeader>
+                    <CardTitle className="text-foreground">Photo</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <EventPhotoPicker
+                      currentUrl={eventData.imageUrl}
+                      picked={photo}
+                      removed={photoRemoved}
+                      onPick={(blob) => {
+                        setPhoto(blob)
+                        setPhotoRemoved(false)
+                      }}
+                      onRemove={() => {
+                        setPhoto(null)
+                        setPhotoRemoved(true)
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+
               {/* Ticket Types */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <Card className="glass border-border/50">

@@ -172,7 +172,7 @@ const AppDownloadPage: React.FC = () => {
                       return (
                         <div key={event?.id ?? i} className="flex items-center gap-3 p-3">
                           <div className="h-11 w-11 shrink-0 overflow-hidden rounded-md bg-secondary">
-                            {event && <RandomEventImage seed={event.id} alt="" />}
+                            {event && <RandomEventImage seed={event.id} src={event.imageUrl} alt="" />}
                           </div>
                           <div className="min-w-0 flex-1 space-y-1.5">
                             {/* Once the request settles, an unreachable API
