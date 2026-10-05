@@ -83,10 +83,18 @@ internal val Clock: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 internal val HeroDay: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy")
 internal val TicketWhen: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy · HH:mm")
 
-// ponytail: the API contract has no currency field and the web shows "$", so USD is assumed. Add `currency` to the
-// DTOs once the backend sends it. NumberFormat isn't thread-safe, so one per call.
-internal fun money(price: BigDecimal): String =
-    NumberFormat.getCurrencyInstance().apply { currency = Currency.getInstance("USD") }.format(price)
+/** Rupees, as the website writes them: "₹1,499", "₹12.50", "₹0". VenueSync is India-only, so INR is the currency. */
+internal fun money(price: BigDecimal): String {
+    val whole = price.stripTrailingZeros().scale() <= 0
+    // NumberFormat isn't thread-safe, so one per call.
+    return NumberFormat.getCurrencyInstance(IndiaLocale).apply {
+        currency = Currency.getInstance("INR")
+        minimumFractionDigits = if (whole) 0 else 2
+        maximumFractionDigits = if (whole) 0 else 2
+    }.format(price)
+}
+
+private val IndiaLocale = java.util.Locale.Builder().setLanguage("en").setRegion("IN").build()
 
 /** The fade at a photo's lower edge: clear for half its height, then easing into the card, never quite solid. */
 internal fun PhotoEdge(card: Color) = Brush.verticalGradient(

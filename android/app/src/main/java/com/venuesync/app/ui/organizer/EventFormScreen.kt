@@ -399,7 +399,7 @@ private fun TicketTypeEditor(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FormField(
                         "Price", type.price, { onChange(type.copy(price = it)) }, error("price"), enabled,
-                        Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "$", placeholder = "0",
+                        Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "₹", placeholder = "0",
                     )
                     FormField(
                         "How many", type.capacity, { onChange(type.copy(capacity = it)) }, error("capacity"), enabled,
