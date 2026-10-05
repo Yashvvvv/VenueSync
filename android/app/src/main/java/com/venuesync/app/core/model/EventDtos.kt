@@ -17,6 +17,8 @@ data class ListPublishedEventResponseDto(
     val start: String? = null,
     val end: String? = null,
     val venue: String? = null,
+    /** The event's photo, relative to the API origin; null without one (a stand-in is shown). */
+    val imageUrl: String? = null,
 )
 
 /**
@@ -35,6 +37,8 @@ data class GetPublishedEventDetailsResponseDto(
     // String, not an enum: kotlinx throws on an unknown enum value, which would fail the whole detail.
     val salesStatus: String? = null,
     val ticketTypes: List<PublishedTicketTypeDto>? = null,
+    /** The event's photo, relative to the API origin; null without one (a stand-in is shown). */
+    val imageUrl: String? = null,
 )
 
 @Serializable

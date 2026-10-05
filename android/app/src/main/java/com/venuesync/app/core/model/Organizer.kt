@@ -23,7 +23,13 @@ data class OrganizerEventDto(
     val ticketTypes: List<OrganizerTicketTypeDto>? = null,
     /** Sent back on update: the server refuses an edit made from an older copy (EVENT_CHANGED). */
     val version: Long? = null,
+    /** The event's photo, relative to the API origin; null without one (a stand-in is shown). */
+    val imageUrl: String? = null,
 )
+
+/** PUT /events/{id}/image's answer. */
+@Serializable
+data class ImageUrlDto(val imageUrl: String? = null)
 
 @Serializable
 data class OrganizerTicketTypeDto(
@@ -104,6 +110,7 @@ data class OrganizerEvent(
     val ticketTypes: List<OrganizerTicketType>,
     /** Null from a server that doesn't version events: then an update isn't checked for staleness. */
     val version: Long? = null,
+    val imageUrl: String? = null,
 ) {
     val sold: Long get() = ticketTypes.sumOf { it.sold }
 
@@ -174,6 +181,7 @@ internal fun OrganizerEventDto.toDomainOrNull(): OrganizerEvent? {
         status = EventStatus.of(status),
         ticketTypes = types,
         version = version,
+        imageUrl = imageUrl.toImagePathOrNull(),
     )
 }
 

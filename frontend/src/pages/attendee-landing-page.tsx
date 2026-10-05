@@ -102,7 +102,7 @@ const HeroStub: React.FC<{
       aria-hidden
     >
       <div className="relative aspect-[5/3] overflow-hidden rounded-t-md bg-secondary">
-        <RandomEventImage seed={event?.id ?? String(rotate)} priority />
+        <RandomEventImage seed={event?.id ?? String(rotate)} src={event?.imageUrl} priority />
         {dim && <div className="absolute inset-0 bg-background/45" />}
       </div>
       <div className="relative">

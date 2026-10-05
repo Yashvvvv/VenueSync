@@ -69,6 +69,7 @@ import com.venuesync.app.ui.theme.Perforation
 import com.venuesync.app.ui.theme.StubCard
 import com.venuesync.app.ui.theme.TicketShape
 import com.venuesync.app.ui.theme.animationsOn
+import com.venuesync.app.ui.theme.eventImage
 import com.venuesync.app.ui.theme.eventImageFor
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -83,10 +84,18 @@ internal val Clock: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 internal val HeroDay: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy")
 internal val TicketWhen: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM yyyy · HH:mm")
 
-// ponytail: the API contract has no currency field and the web shows "$", so USD is assumed. Add `currency` to the
-// DTOs once the backend sends it. NumberFormat isn't thread-safe, so one per call.
-internal fun money(price: BigDecimal): String =
-    NumberFormat.getCurrencyInstance().apply { currency = Currency.getInstance("USD") }.format(price)
+/** Rupees, as the website writes them: "₹1,499", "₹12.50", "₹0". VenueSync is India-only, so INR is the currency. */
+internal fun money(price: BigDecimal): String {
+    val whole = price.stripTrailingZeros().scale() <= 0
+    // NumberFormat isn't thread-safe, so one per call.
+    return NumberFormat.getCurrencyInstance(IndiaLocale).apply {
+        currency = Currency.getInstance("INR")
+        minimumFractionDigits = if (whole) 0 else 2
+        maximumFractionDigits = if (whole) 0 else 2
+    }.format(price)
+}
+
+private val IndiaLocale = java.util.Locale.Builder().setLanguage("en").setRegion("IN").build()
 
 /** The fade at a photo's lower edge: clear for half its height, then easing into the card, never quite solid. */
 internal fun PhotoEdge(card: Color) = Brush.verticalGradient(
@@ -124,7 +133,10 @@ fun EventStubCard(event: Event, onClick: () -> Unit, modifier: Modifier = Modifi
         val photo = maxWidth * 0.6f // 5:3
         StubCard(shape = TicketShape(photo, vertical = false, LocalExperience.current.radius), onClick = onClick) {
             Box(Modifier.fillMaxWidth().height(photo).background(colors.surfaceContainerHigh)) {
-                AsyncImage(eventImageFor(event.id), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                AsyncImage(
+                    eventImage(event.id, event.imageUrl), null, Modifier.fillMaxSize(),
+                    error = painterResource(eventImageFor(event.id)), contentScale = ContentScale.Crop,
+                )
                 // Weighs the photo down so the stub below reads as the same object. Sized to the photo (a fixed 96dp
                 // fogged nearly half of it) and eased, so on paper it settles the edge instead of washing the picture out.
                 Box(

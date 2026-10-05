@@ -139,6 +139,7 @@ const PublishedEventsPage: React.FC = () => {
           start={publishedEvent.start}
           end={publishedEvent.end}
           seed={publishedEvent.id}
+          imageUrl={publishedEvent.imageUrl}
         />
       )}
 

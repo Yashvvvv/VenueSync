@@ -14,7 +14,18 @@ data class Event(
     val start: LocalDateTime?,
     val end: LocalDateTime?,
     val venue: String?,
+    /** The event's own photo (see [toImagePathOrNull]); null shows the stand-in. */
+    val imageUrl: String? = null,
 )
+
+/**
+ * Only our own photo path is trusted: an image URL is loaded without asking, so anything that isn't
+ * /api/v1/event-images/... (another host, a scheme, junk) is dropped and the stand-in shows instead.
+ */
+internal fun String?.toImagePathOrNull(): String? =
+    this?.takeIf { it.length <= 200 && ImagePath.matches(it) }
+
+private val ImagePath = Regex("^/api/v1/event-images/[0-9a-fA-F-]{36}(\\?v=\\d+)?$")
 
 /** Null when the row has no id or name; the repository drops it and keeps the rest of the page. */
 internal fun ListPublishedEventResponseDto.toDomainOrNull(): Event? {
@@ -26,6 +37,7 @@ internal fun ListPublishedEventResponseDto.toDomainOrNull(): Event? {
         start = start?.toLocalDateTimeOrNull(),
         end = end?.toLocalDateTimeOrNull(),
         venue = venue?.takeIf { it.isNotBlank() },
+        imageUrl = imageUrl.toImagePathOrNull(),
     )
 }
 
@@ -39,6 +51,7 @@ data class EventDetail(
     val salesStatus: SalesStatus,
     val salesStart: LocalDateTime?,
     val salesEnd: LocalDateTime?,
+    val imageUrl: String? = null,
 )
 
 data class TicketType(
@@ -93,6 +106,7 @@ internal fun GetPublishedEventDetailsResponseDto.toDomainOrNull(): EventDetail? 
         salesStatus = salesStatus.toSalesStatus(),
         salesStart = salesStart?.toLocalDateTimeOrNull(),
         salesEnd = salesEnd?.toLocalDateTimeOrNull(),
+        imageUrl = imageUrl.toImagePathOrNull(),
     )
 }
 

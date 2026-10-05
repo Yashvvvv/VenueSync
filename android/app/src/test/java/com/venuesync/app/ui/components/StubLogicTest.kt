@@ -10,6 +10,13 @@ import org.junit.Test
 
 class StubLogicTest {
 
+    @Test fun `prices read in rupees, paise only when there are some`() {
+        assertEquals("₹1,499", money(java.math.BigDecimal("1499")))
+        assertEquals("₹12.50", money(java.math.BigDecimal("12.5")))
+        assertEquals("₹0", money(java.math.BigDecimal.ZERO))
+        assertEquals("₹2,999", money(java.math.BigDecimal.valueOf(2999.0)))
+    }
+
     @Test fun `empty copy says which situation it is`() {
         assertEquals("Nothing on sale right now", eventsEmptyCopy("").title)
         assertNull("nothing to search again, so no action", eventsEmptyCopy("   ").action)

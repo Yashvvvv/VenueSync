@@ -26,6 +26,9 @@ class EventFormViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
+    /** The photo's file work runs inline, so a test sees its outcome. */
+    private fun EventFormViewModel.inline() = apply { io = Dispatchers.Main }
+
     /** What the system hands a new process: the same keys and values. */
     private fun SavedStateHandle.afterProcessDeath() = SavedStateHandle(keys().associateWith { get<Any>(it) })
 
@@ -42,7 +45,7 @@ class EventFormViewModelTest {
     @Test
     fun `a blank form is marked on the phone, nothing is sent`() = runTest {
         val repo = FakeOrganizerRepository()
-        val vm = EventFormViewModel(SavedStateHandle(), repo)
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
         assertTrue(vm.creating)
         assertFalse(vm.ui.value.dirty)
         vm.save()
@@ -53,7 +56,7 @@ class EventFormViewModelTest {
     @Test
     fun `create sends the typed values and ends on the new event`() = runTest {
         val repo = FakeOrganizerRepository().apply { create = { _, _ -> Result.success(organizerEvent()) } }
-        val vm = EventFormViewModel(SavedStateHandle(), repo)
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
         vm.fill()
         assertTrue(vm.ui.value.dirty)
         vm.save()
@@ -68,7 +71,7 @@ class EventFormViewModelTest {
     @Test
     fun `an unanswered create locks the form and retries with the same key`() = runTest {
         val repo = FakeOrganizerRepository().apply { create = { _, _ -> Result.failure(ApiException(ApiError.Network)) } }
-        val vm = EventFormViewModel(SavedStateHandle(), repo)
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
         vm.fill()
         vm.save()
         assertTrue(vm.ui.value.unconfirmed)
@@ -84,7 +87,7 @@ class EventFormViewModelTest {
         val repo = FakeOrganizerRepository().apply {
             create = { _, _ -> Result.failure(ApiException(ApiError.Invalid("ticketTypes[0].totalAvailable"))) }
         }
-        val vm = EventFormViewModel(SavedStateHandle(), repo)
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
         vm.fill()
         vm.save()
         assertEquals(ApiError.Invalid("ticketTypes[0].capacity"), vm.ui.value.error)
@@ -97,9 +100,9 @@ class EventFormViewModelTest {
     fun `the form and an unconfirmed save survive process death`() = runTest {
         val handle = SavedStateHandle()
         val repo = FakeOrganizerRepository().apply { create = { _, _ -> Result.failure(ApiException(ApiError.Network)) } }
-        EventFormViewModel(handle, repo).apply { fill(); save() }
+        EventFormViewModel(handle, repo).inline().apply { fill(); save() }
 
-        val restored = EventFormViewModel(handle.afterProcessDeath(), repo)
+        val restored = EventFormViewModel(handle.afterProcessDeath(), repo).inline()
         assertEquals("Night Market", restored.ui.value.form!!.name)
         assertTrue(restored.ui.value.dirty)
         assertTrue(restored.ui.value.unconfirmed)
@@ -123,7 +126,7 @@ class EventFormViewModelTest {
             event = Result.success(organizerEvent(EventStatus.Published, sold = 5))
             update = { _, _ -> Result.success(organizerEvent(EventStatus.Published, sold = 5)) }
         }
-        val vm = EventFormViewModel(SavedStateHandle(mapOf(OrganizerEventViewModel.EVENT_ID_ARG to EVENT_ID)), repo)
+        val vm = EventFormViewModel(SavedStateHandle(mapOf(OrganizerEventViewModel.EVENT_ID_ARG to EVENT_ID)), repo).inline()
         assertFalse(vm.creating)
         assertEquals("25", vm.ui.value.form!!.ticketTypes.single().price)
         assertFalse(vm.ui.value.dirty)
@@ -154,6 +157,81 @@ class EventFormViewModelTest {
         assertEquals("12.50", priceText(BigDecimal.valueOf(12.5)))
         assertEquals("0", priceText(BigDecimal.ZERO))
         assertEquals("1000", priceText(BigDecimal("1E+3")))
+    }
+
+    private fun photoFile(bytes: Int = 1234) = java.io.File.createTempFile("photo", ".jpg").apply {
+        writeBytes(ByteArray(bytes))
+        deleteOnExit()
+    }
+
+    @Test
+    fun `a picked photo is sent once the new event exists, then the form moves on`() = runTest {
+        val repo = FakeOrganizerRepository().apply {
+            create = { _, _ -> Result.success(organizerEvent()) }
+            setPhoto = Result.success("/api/v1/event-images/$EVENT_ID?v=1")
+        }
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
+        vm.fill()
+        vm.photoPicked(photoFile().path)
+        vm.save()
+        assertEquals(listOf(EVENT_ID to 1234), repo.photos)
+        assertEquals(EVENT_ID, vm.ui.value.savedId)
+    }
+
+    @Test
+    fun `a photo that fails leaves the event saved and offers to try again or go on without it`() = runTest {
+        val handle = SavedStateHandle()
+        val repo = FakeOrganizerRepository().apply {
+            create = { _, _ -> Result.success(organizerEvent()) }
+            setPhoto = Result.failure(ApiException(ApiError.Network))
+        }
+        val vm = EventFormViewModel(handle, repo).inline()
+        vm.fill()
+        vm.photoPicked(photoFile().path)
+        vm.save()
+        assertEquals(EVENT_ID, vm.ui.value.photoPendingFor)
+        assertEquals(null, vm.ui.value.savedId)
+        assertTrue(vm.ui.value.locked) // the event exists: no second create from here
+
+        // Killed here: the restored form still knows the event exists and only the photo is left.
+        val restored = EventFormViewModel(handle.afterProcessDeath(), repo).inline()
+        assertEquals(EVENT_ID, restored.ui.value.photoPendingFor)
+        restored.save()
+        assertEquals(1, repo.creates.size)
+
+        repo.setPhoto = Result.success("/api/v1/event-images/$EVENT_ID?v=2")
+        restored.retryPhoto()
+        assertEquals(EVENT_ID, restored.ui.value.savedId)
+    }
+
+    @Test
+    fun `going on without the photo opens the event anyway`() = runTest {
+        val repo = FakeOrganizerRepository().apply {
+            create = { _, _ -> Result.success(organizerEvent()) }
+            setPhoto = Result.failure(ApiException(ApiError.Invalid("photo")))
+        }
+        val vm = EventFormViewModel(SavedStateHandle(), repo).inline()
+        vm.fill()
+        vm.photoPicked(photoFile().path)
+        vm.save()
+        vm.skipPhoto()
+        assertEquals(EVENT_ID, vm.ui.value.savedId)
+    }
+
+    @Test
+    fun `removing the current photo on edit removes it on save, and an unreadable pick says so`() = runTest {
+        val repo = FakeOrganizerRepository().apply {
+            event = Result.success(organizerEvent().copy(imageUrl = "/api/v1/event-images/$EVENT_ID?v=1"))
+            update = { _, _ -> Result.success(organizerEvent()) }
+            removePhoto = Result.success(Unit)
+        }
+        val vm = EventFormViewModel(SavedStateHandle(mapOf(OrganizerEventViewModel.EVENT_ID_ARG to EVENT_ID)), repo).inline()
+        vm.photoPicked(null)
+        assertTrue(vm.ui.value.photoUnreadable)
+        vm.removePhoto()
+        vm.save()
+        assertEquals(listOf(EVENT_ID), repo.photosRemoved)
+        assertEquals(EVENT_ID, vm.ui.value.savedId)
     }
 
     @Test

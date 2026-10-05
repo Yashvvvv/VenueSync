@@ -1,5 +1,8 @@
+import { useState } from "react"
+import { API_BASE } from "@/lib/api"
+
 /**
- * Stand-in photography for events that have no uploaded image yet.
+ * An event's photo, or stand-in photography for events that have none (or whose photo fails to load).
  *
  * The picture is derived from a seed (the event id) instead of Math.random,
  * so a given event keeps the same photo across renders, pagination and
@@ -19,8 +22,10 @@ function seedToIndex(seed: string): number {
 }
 
 interface RandomEventImageProps {
-  /** Stable identifier. Same seed always resolves to the same photo. */
+  /** Stable identifier. Same seed always resolves to the same stand-in. */
   seed?: string
+  /** The event's own photo (its imageUrl, relative to the API). Wins over the stand-in. */
+  src?: string | null
   alt?: string
   className?: string
   /** Set on the first card of the first fold so it is not lazy-loaded. */
@@ -29,15 +34,20 @@ interface RandomEventImageProps {
 
 const RandomEventImage: React.FC<RandomEventImageProps> = ({
   seed = "venuesync",
+  src,
   alt = "",
   className = "",
   priority = false,
 }) => {
   const index = seedToIndex(seed)
+  // A photo that 404s or won't decode falls back to the stand-in instead of a broken image.
+  const [failed, setFailed] = useState(false)
+  const photo = src && !failed ? `${API_BASE}${src}` : `/event-image-${index}.webp`
 
   return (
     <img
-      src={`/event-image-${index}.webp`}
+      src={photo}
+      onError={() => setFailed(true)}
       alt={alt}
       width={800}
       height={600}

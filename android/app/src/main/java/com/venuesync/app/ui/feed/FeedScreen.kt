@@ -71,6 +71,7 @@ import com.venuesync.app.ui.theme.Mono
 import com.venuesync.app.ui.theme.animationsOn
 import com.venuesync.app.ui.theme.displayHero
 import com.venuesync.app.ui.theme.displaySection
+import com.venuesync.app.ui.theme.eventImage
 import com.venuesync.app.ui.theme.eventImageFor
 import com.venuesync.app.ui.theme.scaled
 import kotlinx.coroutines.delay
@@ -139,7 +140,10 @@ private fun EventPanel(event: Event, onGet: () -> Unit, animate: Boolean) {
     val style = LocalExperience.current
     val context = LocalContext.current
     Box(Modifier.fillMaxSize()) {
-        AsyncImage(eventImageFor(event.id), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        AsyncImage(
+            eventImage(event.id, event.imageUrl), null, Modifier.fillMaxSize(),
+            error = painterResource(eventImageFor(event.id)), contentScale = ContentScale.Crop,
+        )
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(

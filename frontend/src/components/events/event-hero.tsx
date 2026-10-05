@@ -16,6 +16,8 @@ interface EventHeroProps {
   end?: string
   /** Stable id so the stand-in photo does not change between visits. */
   seed?: string
+  /** The event's photo (imageUrl); the stand-in for [seed] without one. */
+  imageUrl?: string | null
 }
 
 /**
@@ -25,7 +27,7 @@ interface EventHeroProps {
  * overlaid on photography always read as a template; a solid strip under
  * the image is easier to read and holds up at any crop.
  */
-export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end, seed }) => {
+export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end, seed, imageUrl }) => {
   const reduce = useReducedMotion()
   const parsedStart = start ? parseWallClockDate(start) : null
   const parsedEnd = end ? parseWallClockDate(end) : null
@@ -54,7 +56,7 @@ export const EventHero: React.FC<EventHeroProps> = ({ name, venue, start, end, s
   return (
     <header className="relative">
       <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden bg-secondary lg:h-[54vh]">
-        <RandomEventImage seed={seed ?? name} alt="" priority />
+        <RandomEventImage seed={seed ?? name} src={imageUrl} alt="" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/10" />
       </div>
 
