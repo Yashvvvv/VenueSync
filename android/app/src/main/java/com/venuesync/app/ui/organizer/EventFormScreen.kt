@@ -1,6 +1,9 @@
 package com.venuesync.app.ui.organizer
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,10 +43,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -50,9 +60,11 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.venuesync.app.R
 import com.venuesync.app.core.model.ApiError
 import com.venuesync.app.ui.components.DisplayText
@@ -64,9 +76,12 @@ import com.venuesync.app.ui.components.TicketWhen
 import com.venuesync.app.ui.events.message
 import com.venuesync.app.ui.theme.LocalExperience
 import com.venuesync.app.ui.theme.StubCard
+import com.venuesync.app.ui.theme.eventImage
+import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import kotlinx.coroutines.launch
 
 /**
  * Create or edit an event: basics, when, the sales window, ticket types. Saving a new event makes a draft; publishing
@@ -106,7 +121,10 @@ fun EventFormScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             val form = ui.form
             when {
-                form != null -> FormContent(form, ui, viewModel.creating, viewModel::edit, viewModel::save)
+                form != null -> FormContent(
+                    form, ui, viewModel.creating, viewModel::edit, viewModel::save,
+                    photo = PhotoActions(viewModel::photoPicked, viewModel::removePhoto, viewModel::retryPhoto, viewModel::skipPhoto),
+                )
                 ui.loadError != null -> ErrorState(ui.loadError!!, viewModel::retryLoad)
                 else -> LinearProgressIndicator(Modifier.fillMaxWidth())
             }
@@ -144,6 +162,7 @@ private fun FormContent(
     creating: Boolean,
     onEdit: ((EventForm) -> EventForm) -> Unit,
     onSave: () -> Unit,
+    photo: PhotoActions,
 ) {
     val style = LocalExperience.current
     val badField = (ui.error as? ApiError.Invalid)?.field
@@ -151,7 +170,10 @@ private fun FormContent(
     fun error(field: String) = if (badField == field) fieldMessage(field, form) else null
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        Section("Basics", top = 8.dp)
+        Section("Photo", top = 8.dp)
+        PhotoSection(form, ui, enabled, photo)
+
+        Section("Basics")
         FormField("Event name", form.name, { v -> onEdit { it.copy(name = v) } }, error("name"), enabled, capitalize = true)
         FormField("Venue", form.venue, { v -> onEdit { it.copy(venue = v) } }, error("venue"), enabled, capitalize = true)
 
@@ -201,6 +223,11 @@ private fun FormContent(
 
         // The save button sits at the bottom, often far from the field: the reason is repeated here.
         when {
+            ui.photoPendingFor != null -> Notice(
+                "The event is saved, but its photo isn't: " +
+                    (if (ui.error is ApiError.Invalid) fieldMessage("photo", form) else ui.error?.message() ?: "try again.").replaceFirstChar { it.lowercase() },
+                isError = true,
+            )
             ui.unconfirmed -> Notice(
                 "Your last save wasn't confirmed. Saving again finishes that attempt, so you won't get two events.",
                 isError = false,
@@ -208,17 +235,27 @@ private fun FormContent(
             ui.error is ApiError.Invalid -> Notice(fieldMessage(badField, form), isError = true)
             ui.error != null -> Notice(ui.error.message(), isError = true)
         }
-        StubButton(
-            when {
-                ui.saving -> "Saving"
-                ui.unconfirmed -> "Try again"
-                creating -> "Save draft"
-                else -> "Save changes"
-            },
-            onSave,
-            Modifier.padding(top = 24.dp).fillMaxWidth().height(52.dp),
-            enabled = !ui.saving && ui.savedId == null,
-        )
+        if (ui.photoPendingFor != null) {
+            StubButton(
+                if (ui.saving) "Saving the photo" else "Try the photo again",
+                photo.retry,
+                Modifier.padding(top = 24.dp).fillMaxWidth().height(52.dp),
+                enabled = !ui.saving,
+            )
+            StubButton("Continue without it", photo.skip, Modifier.padding(top = 8.dp).fillMaxWidth(), enabled = !ui.saving, outlined = true)
+        } else {
+            StubButton(
+                when {
+                    ui.saving -> "Saving"
+                    ui.unconfirmed -> "Try again"
+                    creating -> "Save draft"
+                    else -> "Save changes"
+                },
+                onSave,
+                Modifier.padding(top = 24.dp).fillMaxWidth().height(52.dp),
+                enabled = !ui.saving && ui.savedId == null,
+            )
+        }
         if (ui.saving) LinearProgressIndicator(Modifier.padding(top = 8.dp).fillMaxWidth())
         if (creating) {
             Text(
@@ -229,6 +266,72 @@ private fun FormContent(
             )
         }
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+/** What the photo section can ask of the form. */
+private class PhotoActions(
+    val picked: (String?) -> Unit,
+    val remove: () -> Unit,
+    val retry: () -> Unit,
+    val skip: () -> Unit,
+)
+
+/**
+ * The event's photo: a 5:3 preview (the card's shape), choose or replace through the system photo picker (no
+ * permission), and remove. A picked photo is scaled and saved to the cache here, so the form only keeps its path.
+ */
+@Composable
+private fun PhotoSection(form: EventForm, ui: FormUi, enabled: Boolean, actions: PhotoActions) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var preparing by remember { mutableStateOf(false) }
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            preparing = true
+            scope.launch {
+                actions.picked(runCatching { preparePhoto(context, uri)?.path }.getOrNull())
+                preparing = false
+            }
+        }
+    }
+    val preview: Any? = form.photoPath?.let { File(it) }
+        ?: form.imageUrl?.takeIf { !form.photoRemoved }?.let { eventImage("", it) }
+    val colors = MaterialTheme.colorScheme
+
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(5f / 3f).clip(MaterialTheme.shapes.medium).background(colors.surfaceContainerHigh)
+            .border(LocalExperience.current.border, colors.outlineVariant, MaterialTheme.shapes.medium),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (preview != null) {
+            AsyncImage(preview, contentDescription = "The event's photo", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        } else {
+            Text(
+                "No photo yet. Events with one stand out; without one, a stand-in is shown.",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(24.dp),
+            )
+        }
+        if (preparing) CircularProgressIndicator(Modifier.size(28.dp))
+    }
+    Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StubButton(
+            if (preview != null) "Replace photo" else "Add a photo",
+            { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            enabled = enabled && !preparing,
+            outlined = true,
+            icon = R.drawable.ph_plus_bold,
+        )
+        if (preview != null) {
+            StubButton("Remove", actions.remove, enabled = enabled && !preparing, outlined = true, icon = R.drawable.ph_trash)
+        }
+    }
+    when {
+        ui.photoUnreadable -> FieldError("That file couldn't be read as a photo. Try another one.")
+        (ui.error as? ApiError.Invalid)?.field == "photo" && ui.photoPendingFor == null -> FieldError(fieldMessage("photo", form))
     }
 }
 
@@ -399,7 +502,7 @@ private fun TicketTypeEditor(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FormField(
                         "Price", type.price, { onChange(type.copy(price = it)) }, error("price"), enabled,
-                        Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "$", placeholder = "0",
+                        Modifier.weight(1f), keyboard = KeyboardType.Decimal, prefix = "₹", placeholder = "0",
                     )
                     FormField(
                         "How many", type.capacity, { onChange(type.copy(capacity = it)) }, error("capacity"), enabled,

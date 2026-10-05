@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import { type TicketSummary, TicketStatus } from "@/domain/domain"
@@ -78,7 +79,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, index = 0 }) => 
                 isSpent ? "text-muted-foreground" : "text-primary"
               }`}
             >
-              ${ticket.ticketType.price.toFixed(2)}
+              {formatInr(ticket.ticketType.price)}
             </p>
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
               {ticket.id.slice(0, 8)}

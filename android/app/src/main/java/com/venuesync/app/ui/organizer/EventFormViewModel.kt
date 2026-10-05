@@ -11,6 +11,11 @@ import com.venuesync.app.core.model.TicketTypeDraft
 import com.venuesync.app.core.model.firstInvalidField
 import com.venuesync.app.core.model.toApiError
 import com.venuesync.app.core.repository.OrganizerRepository
+import com.venuesync.app.core.model.ApiException
+import java.io.File
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -40,6 +45,12 @@ data class EventForm(
     val ticketTypes: List<TicketTypeForm> = listOf(TicketTypeForm()),
     /** The server's version of the event being edited; sent back so a stale save is refused, not applied. */
     val version: Long? = null,
+    /** The photo the event has on the server (its imageUrl), if any. */
+    val imageUrl: String? = null,
+    /** A photo picked on the form, prepared to upload (a JPEG in the app's cache); sent once the event saves. */
+    val photoPath: String? = null,
+    /** The server's photo is to be removed on save. */
+    val photoRemoved: Boolean = false,
 )
 
 @Serializable
@@ -70,9 +81,16 @@ data class FormUi(
     val unconfirmed: Boolean = false,
     /** Saved: the screen moves on to this event. */
     val savedId: String? = null,
+    /**
+     * The event saved but its photo didn't (the reason is in [error]). The form is locked: the choice is to try the
+     * photo again or go on without it.
+     */
+    val photoPendingFor: String? = null,
+    /** The picked photo couldn't be read or made small enough. */
+    val photoUnreadable: Boolean = false,
 ) {
     val dirty: Boolean get() = form != original
-    val locked: Boolean get() = saving || unconfirmed || savedId != null
+    val locked: Boolean get() = saving || unconfirmed || savedId != null || photoPendingFor != null
 }
 
 /**
@@ -92,6 +110,9 @@ class EventFormViewModel @Inject constructor(
     private val eventId: String? = handle[OrganizerEventViewModel.EVENT_ID_ARG]
     val creating: Boolean = eventId == null
 
+    /** Where the picked photo's file is read and deleted. Tests run it on their own dispatcher. */
+    internal var io: CoroutineDispatcher = Dispatchers.IO
+
     private val _ui = MutableStateFlow(restore())
     val ui: StateFlow<FormUi> = _ui.asStateFlow()
 
@@ -100,6 +121,32 @@ class EventFormViewModel @Inject constructor(
     }
 
     fun retryLoad() = load()
+
+    /** A photo was picked and prepared ([path] in the app's cache); null when it couldn't be read. */
+    fun photoPicked(path: String?) {
+        if (path == null) {
+            _ui.update { it.copy(photoUnreadable = true) }
+            return
+        }
+        _ui.update { it.copy(photoUnreadable = false) }
+        edit { it.copy(photoPath = path, photoRemoved = false) }
+    }
+
+    fun removePhoto() = edit { it.copy(photoPath = null, photoRemoved = true) }
+
+    /** After "the event saved but its photo didn't": try the photo again, or go on to the event without it. */
+    fun retryPhoto() {
+        val id = _ui.value.photoPendingFor ?: return
+        if (_ui.value.saving) return
+        _ui.update { it.copy(saving = true, error = null) }
+        viewModelScope.launch { finish(id) }
+    }
+
+    fun skipPhoto() {
+        val id = _ui.value.photoPendingFor ?: return
+        _ui.update { it.copy(photoPendingFor = null, error = null, savedId = id) }
+        persist()
+    }
 
     fun edit(transform: (EventForm) -> EventForm) {
         val current = _ui.value
@@ -112,7 +159,7 @@ class EventFormViewModel @Inject constructor(
     fun save() {
         val current = _ui.value
         val form = current.form ?: return
-        if (current.saving || current.savedId != null) return
+        if (current.saving || current.savedId != null || current.photoPendingFor != null) return
         val draft = form.toDraft()
         draft.firstInvalidField(creating)?.let { field ->
             _ui.value = current.copy(error = ApiError.Invalid(field))
@@ -124,7 +171,10 @@ class EventFormViewModel @Inject constructor(
         viewModelScope.launch {
             val result = if (eventId == null) repository.create(draft, key!!) else repository.update(eventId, draft)
             result.fold(
-                onSuccess = { saved -> _ui.update { it.copy(saving = false, unconfirmed = false, savedId = saved.id) } },
+                onSuccess = { saved ->
+                    _ui.update { it.copy(unconfirmed = false) }
+                    finish(saved.id)
+                },
                 onFailure = {
                     val error = it.toApiError().normalized()
                     val unclear = eventId == null && !error.nothingWasMade()
@@ -134,6 +184,29 @@ class EventFormViewModel @Inject constructor(
             )
             persist()
         }
+    }
+
+    /**
+     * The photo goes after the event: a new event needs its id first. If only the photo fails, the event is still
+     * saved; the form says so and offers to try the photo again ([retryPhoto]) or leave it ([skipPhoto]).
+     */
+    private suspend fun finish(savedId: String) {
+        val form = _ui.value.form
+        val photo = form?.photoPath?.let { path -> withContext(io) { runCatching { File(path).readBytes() }.getOrNull() } }
+        val result = when {
+            form?.photoPath != null && photo == null -> Result.failure(ApiException(ApiError.Invalid("photo"))) // cache cleared
+            photo != null -> repository.setPhoto(savedId, photo).map { }
+            form?.photoRemoved == true && form.imageUrl != null -> repository.removePhoto(savedId)
+            else -> Result.success(Unit)
+        }
+        result.fold(
+            onSuccess = {
+                form?.photoPath?.let { path -> withContext(io) { File(path).delete() } }
+                _ui.update { it.copy(saving = false, savedId = savedId, photoPendingFor = null) }
+            },
+            onFailure = { e -> _ui.update { it.copy(saving = false, photoPendingFor = savedId, error = e.toApiError()) } },
+        )
+        persist()
     }
 
     private fun load() {
@@ -160,6 +233,7 @@ class EventFormViewModel @Inject constructor(
                 // Killed with a create in flight or unconfirmed: whether it landed is unknown until it's retried.
                 unconfirmed = eventId == null && saved.savedId == null && handle.get<String>(KEY) != null,
                 savedId = saved.savedId,
+                photoPendingFor = saved.photoPendingFor,
             )
         }
         if (eventId != null) return FormUi()
@@ -170,11 +244,16 @@ class EventFormViewModel @Inject constructor(
     private fun persist() {
         val ui = _ui.value
         val form = ui.form ?: return
-        handle[STATE] = FormJson.encodeToString(Saved.serializer(), Saved(form, ui.original ?: form, ui.savedId))
+        handle[STATE] = FormJson.encodeToString(Saved.serializer(), Saved(form, ui.original ?: form, ui.savedId, ui.photoPendingFor))
     }
 
     @Serializable
-    private data class Saved(val form: EventForm, val original: EventForm, val savedId: String? = null)
+    private data class Saved(
+        val form: EventForm,
+        val original: EventForm,
+        val savedId: String? = null,
+        val photoPendingFor: String? = null,
+    )
 
     private companion object {
         const val STATE = "eventForm.state"
@@ -245,6 +324,7 @@ internal fun OrganizerEvent.toForm() = EventForm(
         )
     },
     version = version,
+    imageUrl = imageUrl,
 )
 
 /** "25" for whole amounts, "12.50" (never "12.5") for cents: how a price is written. */
@@ -289,6 +369,7 @@ internal fun fieldMessage(field: String?, form: EventForm): String {
             }
         }
         "ticketTypes" -> "Add at least one ticket type."
+        "photo" -> "That photo wasn't accepted. Use a JPEG, PNG or WebP photo under 2 MB."
         else -> "Some details aren't right. Check the form and try again."
     }
 }

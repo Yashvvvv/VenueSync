@@ -70,6 +70,8 @@ export interface TicketTypeSummary {
 }
 
 export interface EventSummary {
+  /** The event's photo, relative to the API origin; absent without one (a stand-in is shown). */
+  imageUrl?: string | null;
   id: string;
   name: string;
   start?: string;
@@ -82,6 +84,8 @@ export interface EventSummary {
 }
 
 export interface PublishedEventSummary {
+  /** The event's photo, relative to the API origin; absent without one (a stand-in is shown). */
+  imageUrl?: string | null;
   id: string;
   name: string;
   start?: string;
@@ -98,6 +102,8 @@ export interface TicketTypeDetails {
 }
 
 export interface EventDetails {
+  /** The event's photo, relative to the API origin; absent without one (a stand-in is shown). */
+  imageUrl?: string | null;
   id: string;
   name: string;
   start?: string;
@@ -151,6 +157,8 @@ export interface PublishedEventTicketTypeDetails {
 }
 
 export interface PublishedEventDetails {
+  /** The event's photo, relative to the API origin; absent without one (a stand-in is shown). */
+  imageUrl?: string | null;
   id: string;
   name: string;
   start?: string;

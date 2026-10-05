@@ -31,10 +31,11 @@ export const serializeEventRequest = (
   return { ...req } as Record<string, unknown>;
 };
 
+/** Creates the event and returns it (its id is what a photo upload needs next). */
 export const createEvent = async (
   accessToken: string,
   request: CreateEventRequest,
-): Promise<void> => {
+): Promise<{ id: string }> => {
   const response = await fetch(`${API_BASE}/api/v1/events`, {
     method: "POST",
     headers: {
@@ -54,6 +55,7 @@ export const createEvent = async (
       throw new Error("An unknown error occurred");
     }
   }
+  return responseBody;
 };
 
 export const updateEvent = async (
@@ -503,3 +505,30 @@ export const listMyStaffingEvents = (accessToken: string) =>
 /** The event's guests matching name, email or ticket code (staff/organizer; at least 2 characters, max 20). */
 export const searchGuests = (accessToken: string, eventId: string, query: string) =>
   send<Guest[]>(accessToken, `/api/v1/staff/events/${eventId}/guests?q=${encodeURIComponent(query.trim())}`);
+
+/**
+ * Sets an event's photo: the raw image bytes, as the server expects (no multipart). Returns its new URL.
+ * Throws with the server's message (wrong format, too large) for the form to show.
+ */
+export const uploadEventImage = async (accessToken: string, eventId: string, image: Blob): Promise<string> => {
+  const response = await fetch(`${API_BASE}/api/v1/events/${eventId}/image`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": image.type },
+    body: image,
+  })
+  const body = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(body?.error ?? "The photo could not be saved.")
+  }
+  return body.imageUrl
+}
+
+export const deleteEventImage = async (accessToken: string, eventId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE}/api/v1/events/${eventId}/image`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!response.ok) {
+    throw new Error("The photo could not be removed.")
+  }
+}

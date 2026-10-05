@@ -87,6 +87,27 @@ class OrganizerRepositoryTest {
     }
 
     @Test
+    fun `a photo goes up as raw JPEG bytes and only our own image path comes back`() = runTest {
+        val url = repo(body = """{"imageUrl":"/api/v1/event-images/$eventId?v=17"}""").setPhoto(eventId, ByteArray(10)).getOrThrow()
+        assertEquals("/api/v1/event-images/$eventId?v=17", url)
+        assertEquals(HttpMethod.Put, requests.last().method)
+        assertTrue(requests.last().url.encodedPath.endsWith("/events/$eventId/image"))
+        assertEquals("image/jpeg", requests.last().body.contentType.toString())
+        assertEquals(ApiError.InvalidResponse, repo(body = """{"imageUrl":"https://evil.example/x.jpg"}""").setPhoto(eventId, ByteArray(10)).error())
+    }
+
+    @Test
+    fun `a photo too big or refused by the server is a photo field error`() = runTest {
+        val before = requests.size
+        assertEquals(ApiError.Invalid("photo"), repo().setPhoto(eventId, ByteArray(MaxPhotoBytes + 1)).error())
+        assertEquals(before, requests.size) // never sent
+        assertEquals(
+            ApiError.Invalid("photo"),
+            repo(HttpStatusCode.PayloadTooLarge, """{"code":"IMAGE_TOO_LARGE","error":"x"}""").setPhoto(eventId, ByteArray(10)).error(),
+        )
+    }
+
+    @Test
     fun `create sends the key, wall-clock dates without an offset, and prices as numbers`() = runTest {
         repo(body = eventJson).create(draft, key).getOrThrow()
         val request = requests.single()

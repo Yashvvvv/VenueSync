@@ -1,5 +1,6 @@
 "use client"
 
+import { formatInr } from "@/lib/utils"
 import type React from "react"
 
 import type { PublishedEventDetails, PublishedEventTicketTypeDetails } from "@/domain/domain"
@@ -20,7 +21,7 @@ interface TicketSelectorProps {
   eventId: string
 }
 
-const money = (value: number) => `$${value.toFixed(2)}`
+const money = formatInr
 
 export const TicketSelector: React.FC<TicketSelectorProps> = ({
   event,

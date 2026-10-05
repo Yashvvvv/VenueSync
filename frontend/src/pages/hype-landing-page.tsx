@@ -74,7 +74,7 @@ const EventPanel: React.FC<{ event: PublishedEventSummary; index: number }> = ({
       aria-label={event.name}
     >
       <div className="absolute inset-0">
-        <RandomEventImage seed={event.id} alt="" priority={index < 2} />
+        <RandomEventImage seed={event.id} src={event.imageUrl} alt="" priority={index < 2} />
         {/* Scrim carries the type. Without it a light photo eats the headline. */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-background/20" />
       </div>
