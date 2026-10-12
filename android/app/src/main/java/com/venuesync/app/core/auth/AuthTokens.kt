@@ -4,6 +4,7 @@ import java.util.Base64
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
@@ -30,10 +31,19 @@ data class AuthTokens(
  * An opaque (non-JWT) access token yields no roles. That is also the symptom of a login that
  * forgot the `audience` parameter.
  */
-fun AuthTokens.roles(): Set<String> = runCatching {
+fun AuthTokens.roles(): Set<String> {
+    val roles = claims()?.get(ROLES_CLAIM) as? JsonArray ?: return emptySet()
+    return roles.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }.toSet()
+}
+
+/**
+ * Whose token this is (`sub`), to keep one account's saved data from another's on this phone. Unverified, like
+ * [roles]: never an authorization decision. Null for an opaque token.
+ */
+fun AuthTokens.subject(): String? = (claims()?.get("sub") as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private fun AuthTokens.claims(): JsonObject? = runCatching {
     val parts = accessToken.split('.')
-    if (parts.size != 3) return emptySet()
-    val payload = String(Base64.getUrlDecoder().decode(parts[1]), Charsets.UTF_8)
-    val roles = Json.parseToJsonElement(payload).jsonObject[ROLES_CLAIM] as? JsonArray ?: return emptySet()
-    roles.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }.toSet()
-}.getOrDefault(emptySet())
+    if (parts.size != 3) return null
+    Json.parseToJsonElement(String(Base64.getUrlDecoder().decode(parts[1]), Charsets.UTF_8)).jsonObject
+}.getOrNull()

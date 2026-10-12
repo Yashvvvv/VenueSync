@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.venuesync.app.core.auth.Session
 import com.venuesync.app.core.auth.SessionManager
+import com.venuesync.app.core.auth.subject
 import com.venuesync.app.core.repository.CachedTicket
 import com.venuesync.app.core.repository.TicketCache
 import com.venuesync.app.di.ApplicationScope
@@ -46,8 +47,12 @@ class KeystoreTicketCache @Inject constructor(
 
     override suspend fun read(): List<CachedTicket> {
         if (sessionManager.session.first { it != Session.Unknown } !is Session.SignedIn) return emptyList()
-        val blob = dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }.first()[TICKETS]
-            ?: return emptyList()
+        val saved = dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }.first()
+        // The sign-out clear above runs asynchronously; a phone that died in between must still never show one
+        // account's tickets to the next. Saved by someone else (or by a version that didn't record it) = nothing saved.
+        val owner = owner() ?: return emptyList()
+        if (saved[OWNER] != owner) return emptyList()
+        val blob = saved[TICKETS] ?: return emptyList()
         return withContext(Dispatchers.IO) {
             runCatching { json.decodeFromString(Serializer, String(KeystoreCipher.decrypt(blob), Charsets.UTF_8)) }
                 .onFailure { Log.w(TAG, "Saved tickets unreadable; treating as none (${it.javaClass.simpleName})") }
@@ -56,18 +61,32 @@ class KeystoreTicketCache @Inject constructor(
     }
 
     override suspend fun write(tickets: List<CachedTicket>) {
+        val owner = owner() ?: return
         val blob = withContext(Dispatchers.IO) { KeystoreCipher.encrypt(json.encodeToString(Serializer, tickets).toByteArray()) }
         // Checked inside the edit: edits are serialized, so this either runs before the sign-out clear or sees SignedOut.
-        dataStore.edit { if (sessionManager.session.value is Session.SignedIn) it[TICKETS] = blob }
+        dataStore.edit {
+            if (sessionManager.session.value is Session.SignedIn) {
+                it[TICKETS] = blob
+                it[OWNER] = owner
+            }
+        }
     }
 
     override suspend fun clear() {
-        dataStore.edit { it.remove(TICKETS) }
+        dataStore.edit {
+            it.remove(TICKETS)
+            it.remove(OWNER)
+        }
     }
+
+    /** The signed-in account, as its token names it. */
+    private suspend fun owner(): String? = sessionManager.currentTokens()?.subject()
 
     private companion object {
         const val TAG = "KeystoreTicketCache"
         val TICKETS = stringPreferencesKey("tickets")
+        /** Whose tickets these are (the token's `sub`). */
+        val OWNER = stringPreferencesKey("owner")
         val Serializer = ListSerializer(CachedTicket.serializer())
         val json = Json { ignoreUnknownKeys = true }
     }
