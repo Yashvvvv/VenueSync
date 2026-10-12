@@ -75,13 +75,21 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
   List<Ticket> findByEventAndCodePrefix(
       @Param("eventId") UUID eventId, @Param("prefix") String prefix, Pageable pageable);
 
-  /** The door guest list: an event's tickets whose attendee name or email contains [pattern], or whose code starts with [codePrefix]. */
+  /**
+   * The door guest list: a published event's tickets whose attendee name contains [pattern], whose email is exactly
+   * [email], or whose code starts with [codePrefix]. Email is never matched by substring: the list shows it masked, and
+   * "does it contain x@gmail.com" asked one character at a time would spell out the whole address. Once the event is
+   * cancelled or completed there's no door left to work, so its guests are no longer listed to anyone.
+   */
   @Query("SELECT t FROM Ticket t JOIN FETCH t.purchaser u JOIN FETCH t.ticketType tt "
-      + "WHERE tt.event.id = :eventId AND (LOWER(u.name) LIKE :pattern OR LOWER(u.email) LIKE :pattern "
+      + "WHERE tt.event.id = :eventId "
+      + "AND tt.event.status = com.fullstack.venuesync.events.domain.EventStatusEnum.PUBLISHED "
+      + "AND (LOWER(u.name) LIKE :pattern OR LOWER(u.email) = :email "
       + "OR CAST(t.id AS String) LIKE :codePrefix) ORDER BY u.name")
   List<Ticket> searchGuests(
       @Param("eventId") UUID eventId,
       @Param("pattern") String pattern,
+      @Param("email") String email,
       @Param("codePrefix") String codePrefix,
       Pageable pageable);
 

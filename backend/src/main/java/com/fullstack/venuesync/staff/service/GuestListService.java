@@ -12,7 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Door fallback when a QR code won't scan: find the guest by name, email or ticket code, then check them in. */
+/** Door fallback when a QR code won't scan: find the guest by name, full email or ticket code, then check them in. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,7 +35,7 @@ public class GuestListService {
     }
     String hex = q.replaceAll("[\\s-]", "");
     String codePrefix = hex.matches("[0-9a-f]{1," + TicketCodes.LENGTH + "}") ? hex + "%" : NO_CODE;
-    return ticketRepository.searchGuests(eventId, "%" + q + "%", codePrefix, PageRequest.of(0, MAX_RESULTS))
+    return ticketRepository.searchGuests(eventId, "%" + q + "%", q, codePrefix, PageRequest.of(0, MAX_RESULTS))
         .stream()
         .map(GuestListService::toGuest)
         .toList();
