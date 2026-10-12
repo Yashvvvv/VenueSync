@@ -15,6 +15,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -194,6 +196,32 @@ class TicketTypeServiceImplTest {
 
       assertThrows(TicketTypeNotFoundException.class, () -> purchase());
       verify(ticketRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventStatusEnum.class, names = {"DRAFT", "CANCELLED"})
+    @DisplayName("should refuse an event that isn't published, even with its sales window open")
+    void shouldRejectUnpublishedEvent(EventStatusEnum status) {
+      event.setStatus(status); // e.g. published, ids seen, then moved back to draft
+      givenTicketTypeInEvent();
+      givenNoPreviousPurchase();
+      when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
+      assertThrows(TicketTypeNotFoundException.class, () -> purchase());
+      verify(ticketRepository, never()).save(any());
+      verify(qrCodeService, never()).generateQrCode(any());
+    }
+
+    @Test
+    @DisplayName("should still replay a ticket bought before the event was cancelled")
+    void shouldReplayAfterCancellation() {
+      Ticket existing = new Ticket();
+      existing.setTicketType(ticketType);
+      event.setStatus(EventStatusEnum.CANCELLED);
+      givenTicketTypeInEvent();
+      when(ticketRepository.findByPurchaserIdAndIdempotencyKey(userId, key)).thenReturn(Optional.of(existing));
+
+      assertSame(existing, purchase());
     }
 
     @Test
