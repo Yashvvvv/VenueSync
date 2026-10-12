@@ -1,6 +1,7 @@
 package com.fullstack.venuesync.staff.service;
 
 import com.fullstack.venuesync.events.domain.Event;
+import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.exception.EventNotFoundException;
 import com.fullstack.venuesync.events.repository.EventRepository;
 import com.fullstack.venuesync.shared.domain.User;
@@ -67,7 +68,9 @@ public class StaffInviteService {
       }
       throw new StaffInviteUsedException();
     }
-    if (LocalDateTime.now().isAfter(invite.getExpiresAt())) {
+    // An event that's over (cancelled or completed) has no door to work: its leftover invites expire with it.
+    if (LocalDateTime.now().isAfter(invite.getExpiresAt())
+        || event.getStatus() == EventStatusEnum.CANCELLED || event.getStatus() == EventStatusEnum.COMPLETED) {
       throw new StaffInviteExpiredException();
     }
 

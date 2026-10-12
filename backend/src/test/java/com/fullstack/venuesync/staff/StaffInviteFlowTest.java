@@ -109,6 +109,21 @@ class StaffInviteFlowTest {
   }
 
   @Test
+  void anInviteDiesWithItsEvent() {
+    for (EventStatusEnum over : new EventStatusEnum[] {EventStatusEnum.CANCELLED, EventStatusEnum.COMPLETED}) {
+      String code = service.createInvite(organizer.getId(), event.getId()).code();
+      entityManager.find(Event.class, event.getId()).setStatus(over);
+      reload();
+
+      assertThrows(StaffInviteExpiredException.class, () -> service.acceptInvite(staff.getId(), code), over.name());
+      reload();
+      assertFalse(userRepository.isStaffOf(staff.getId(), event.getId()));
+      entityManager.find(Event.class, event.getId()).setStatus(EventStatusEnum.PUBLISHED);
+      reload();
+    }
+  }
+
+  @Test
   void onlyTheOrganizerManagesTheTeam() {
     assertThrows(EventNotFoundException.class, () -> service.createInvite(stranger.getId(), event.getId()));
     assertThrows(EventNotFoundException.class, () -> service.listStaff(stranger.getId(), event.getId()));

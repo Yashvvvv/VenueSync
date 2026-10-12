@@ -235,6 +235,21 @@ class TicketValidationServiceImplTest {
     }
 
     @Test
+    @DisplayName("a known key is no replay for someone who may no longer work that ticket's door")
+    void replayNeedsTheDoorStill() {
+      UUID key = UUID.randomUUID();
+      TicketValidation first = new TicketValidation();
+      first.setStatus(TicketValidationStatusEnum.VALID);
+      first.setTicket(ticket);
+      when(ticketValidationRepository.findByIdempotencyKey(key)).thenReturn(Optional.of(first));
+      doThrow(new NotEventStaffException("removed")).when(eventStaffService).requireCanScan(userId, event.getId());
+
+      assertThrows(NotEventStaffException.class,
+          () -> ticketValidationService.validateTicketByQrCode(qrCodeId, userId, key, null));
+      verify(ticketValidationRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("a new key is stored with the validation")
     void storesKey() {
       UUID key = UUID.randomUUID();
