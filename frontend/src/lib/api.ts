@@ -502,7 +502,7 @@ export const acceptStaffInvite = (accessToken: string, code: string) =>
 export const listMyStaffingEvents = (accessToken: string) =>
   send<PublishedEventSummary[]>(accessToken, "/api/v1/users/me/staffing-events");
 
-/** The event's guests matching name, email or ticket code (staff/organizer; at least 2 characters, max 20). */
+/** The event's guests matching name, full email or ticket code (staff/organizer; at least 2 characters, max 20). */
 export const searchGuests = (accessToken: string, eventId: string, query: string) =>
   send<Guest[]>(accessToken, `/api/v1/staff/events/${eventId}/guests?q=${encodeURIComponent(query.trim())}`);
 

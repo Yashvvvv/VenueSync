@@ -36,4 +36,13 @@ class AuthTokensTest {
     fun `missing claim has no roles`() {
         assertEquals(emptySet<String>(), jwt("""{"sub":"u1"}""").roles())
     }
+
+    @Test
+    fun `subject is the sub claim, or null when there isn't one`() {
+        assertEquals("auth0|abc", jwt("""{"sub":"auth0|abc","$ROLES_CLAIM":[]}""").subject())
+        assertEquals(null, jwt("""{"$ROLES_CLAIM":[]}""").subject())
+        assertEquals(null, jwt("""{"sub":42}""").subject())
+        assertEquals(null, AuthTokens("opaque-token-without-dots", null, null).subject())
+        assertEquals(null, jwt("not json").subject())
+    }
 }

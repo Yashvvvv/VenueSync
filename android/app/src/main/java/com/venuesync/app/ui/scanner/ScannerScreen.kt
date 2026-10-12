@@ -214,7 +214,7 @@ private fun TicketCodeDialog(onCheckIn: (String) -> Unit, onDismiss: () -> Unit)
     )
 }
 
-/** Find a guest by name, email or ticket code. Check-in is an explicit button, so a stray tap admits nobody. */
+/** Find a guest by name, full email or ticket code. Check-in is an explicit button, so a stray tap admits nobody. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GuestListSheet(
@@ -229,7 +229,7 @@ private fun GuestListSheet(
             OutlinedTextField(
                 value = search.query,
                 onValueChange = onQueryChange,
-                placeholder = { Text("Name, email or ticket code") },
+                placeholder = { Text("Name, full email or ticket code") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),

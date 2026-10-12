@@ -23,8 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>Runs on every start and only ever converges: an event that's missing is created; one still carrying its old
  * US demo name is rewritten in place (same id, so tickets already bought for it stay valid); one without a photo gets
- * its photo. A demo event is found by its exact name and venue together (the old US ones by theirs), which no
- * organizer's event shares, so nothing an organizer made is touched.
+ * its photo. A demo event is one with no organizer and its exact name and venue (the old US ones by theirs), so an
+ * organizer's event is never touched, even one named exactly like a demo.
  */
 @Component
 @RequiredArgsConstructor
@@ -57,13 +57,13 @@ public class DataLoader implements CommandLineRunner {
 
   private Outcome converge(Demo demo) {
     LocalDateTime now = LocalDateTime.now();
-    Optional<Event> current = eventRepository.findFirstByNameAndVenue(demo.name(), demo.venue());
+    Optional<Event> current = eventRepository.findFirstByNameAndVenueAndOrganizerIsNull(demo.name(), demo.venue());
     Outcome outcome = Outcome.UNCHANGED;
     Event event;
     if (current.isPresent()) {
       event = current.get();
     } else {
-      Optional<Event> legacy = eventRepository.findFirstByNameAndVenue(demo.legacyName(), demo.legacyVenue());
+      Optional<Event> legacy = eventRepository.findFirstByNameAndVenueAndOrganizerIsNull(demo.legacyName(), demo.legacyVenue());
       event = legacy.orElseGet(Event::new);
       outcome = legacy.isPresent() ? Outcome.REWRITTEN : Outcome.CREATED;
       apply(demo, event, now, legacy.isEmpty());

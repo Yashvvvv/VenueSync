@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 /**
  * Simple in-memory rate limiter for public API endpoints.
@@ -29,6 +30,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
   private static final int MAX_REQUESTS_PER_MINUTE = 60;
   private static final long WINDOW_MS = 60_000L;
   private static final long CLEANUP_INTERVAL_MS = 300_000L; // 5 minutes
+  /** IPv4 or IPv6 text, nothing longer: a key is never an 8 KB header a caller chose. */
+  private static final Pattern IP = Pattern.compile("[0-9A-Fa-f:.]{2,45}");
+  // ponytail: past this many clients new ones go unlimited instead of growing the map; a Redis limiter if that's real.
+  static final int MAX_CLIENTS = 10_000;
 
   private final Map<String, RateLimitEntry> requestCounts = new ConcurrentHashMap<>();
   private volatile long lastCleanup = System.currentTimeMillis();
@@ -45,6 +50,14 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
       cleanup(now);
       lastCleanup = now;
+    }
+
+    if (requestCounts.size() >= MAX_CLIENTS && !requestCounts.containsKey(clientIp)) {
+      cleanup(now);
+      if (requestCounts.size() >= MAX_CLIENTS) {
+        filterChain.doFilter(request, response);
+        return;
+      }
     }
 
     RateLimitEntry entry = requestCounts.computeIfAbsent(clientIp,
@@ -80,10 +93,23 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     return !path.startsWith("/api/v1/published-events");
   }
 
+  /**
+   * Who the quota belongs to. In production Cloudflare sits in front of Render and sets CF-Connecting-IP to the real
+   * client (it refuses requests that bring their own, error 1000), so that one can't be chosen by the caller. The
+   * left-most X-Forwarded-For entry CAN be: Cloudflare puts a caller's own value in front of the real address, which
+   * gave every request a fresh quota. Only kept as the fallback for running without Cloudflare (local, Docker).
+   */
   private String getClientIp(HttpServletRequest request) {
+    String cloudflare = request.getHeader("CF-Connecting-IP");
+    if (cloudflare != null && IP.matcher(cloudflare.trim()).matches()) {
+      return cloudflare.trim();
+    }
     String xForwardedFor = request.getHeader("X-Forwarded-For");
-    if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-      return xForwardedFor.split(",")[0].trim();
+    if (xForwardedFor != null) {
+      String first = xForwardedFor.split(",")[0].trim();
+      if (IP.matcher(first).matches()) {
+        return first;
+      }
     }
     return request.getRemoteAddr();
   }

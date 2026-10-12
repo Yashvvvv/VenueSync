@@ -97,7 +97,7 @@ class DoorLookupTest {
   }
 
   @Test
-  void guestListSearchesNameEmailAndCodeAndMasksEmails() {
+  void guestListSearchesNameFullEmailAndCodeAndMasksEmails() {
     List<GuestDto> byName = guestListService.search(organizer.getId(), event.getId(), "yash");
     assertEquals(1, byName.size());
     GuestDto guest = byName.get(0);
@@ -106,9 +106,32 @@ class DoorLookupTest {
     assertEquals(TicketCodes.of(yashTicket.getId()), guest.ticketCode());
     assertEquals("VIP", guest.ticketTypeName());
 
-    assertEquals(1, guestListService.search(organizer.getId(), event.getId(), "asha@example").size());
+    assertEquals(1, guestListService.search(organizer.getId(), event.getId(), " Asha@Example.com ").size());
     assertEquals(yashTicket.getId(),
         guestListService.search(organizer.getId(), event.getId(), TicketCodes.of(yashTicket.getId())).get(0).ticketId());
+  }
+
+  /** The list masks emails, so part of one must not match: "h@gmail.com", then "sh@gmail.com"... spelled them out. */
+  @Test
+  void partOfAnEmailMatchesNobodyEvenForDoorStaff() {
+    User doorStaff = entityManager.find(User.class, stranger.getId());
+    doorStaff.getStaffingEvents().add(entityManager.find(Event.class, event.getId()));
+    entityManager.flush();
+
+    for (String part : List.of("h@gmail.com", "@gmail.com", "yash@gmail", "asha@example", "a@example.com")) {
+      assertTrue(guestListService.search(doorStaff.getId(), event.getId(), part).isEmpty(), part);
+    }
+    List<GuestDto> exact = guestListService.search(doorStaff.getId(), event.getId(), "yash@gmail.com");
+    assertEquals(List.of("ya***@gmail.com"), exact.stream().map(GuestDto::attendeeEmail).toList());
+  }
+
+  @Test
+  void anEventThatIsOverListsNoGuests() {
+    for (EventStatusEnum over : new EventStatusEnum[] {EventStatusEnum.CANCELLED, EventStatusEnum.COMPLETED}) {
+      entityManager.find(Event.class, event.getId()).setStatus(over);
+      entityManager.flush();
+      assertTrue(guestListService.search(organizer.getId(), event.getId(), "yash").isEmpty(), over.name());
+    }
   }
 
   @Test

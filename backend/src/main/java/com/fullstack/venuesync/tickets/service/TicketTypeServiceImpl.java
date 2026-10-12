@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.fullstack.venuesync.events.domain.Event;
+import com.fullstack.venuesync.events.domain.EventStatusEnum;
 import com.fullstack.venuesync.events.domain.SalesStatus;
 import com.fullstack.venuesync.events.exception.SalesPeriodException;
 import com.fullstack.venuesync.shared.domain.User;
@@ -63,6 +64,12 @@ public class TicketTypeServiceImpl implements TicketTypeService {
     SalesStatus salesStatus = ticketType.getEvent().salesStatusAt(LocalDateTime.now());
     if (salesStatus != SalesStatus.ON_SALE) {
       throw new SalesPeriodException(salesStatus);
+    }
+    // Only a published event sells. Its ids were public while it was, so a draft it went back to (or a cancelled one)
+    // must refuse them; "not found", the same answer its public page now gives. After the replay check on purpose.
+    if (ticketType.getEvent().getStatus() != EventStatusEnum.PUBLISHED) {
+      throw new TicketTypeNotFoundException(
+          String.format("Ticket type %s was not found in event %s", ticketTypeId, eventId));
     }
 
     if (ticketType.isSoldOut(ticketRepository.countByTicketTypeId(ticketType.getId()))) {

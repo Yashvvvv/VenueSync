@@ -17,7 +17,7 @@ interface StaffRepository {
     /** Redeems an organizer's invite code; the user then staffs that event. */
     suspend fun acceptInvite(code: String): Result<JoinedEvent>
 
-    /** The event's guests matching name, email or ticket code (at least 2 characters). */
+    /** The event's guests matching name, full email or ticket code (at least 2 characters). */
     suspend fun searchGuests(eventId: String, query: String): Result<List<Guest>>
 }
 

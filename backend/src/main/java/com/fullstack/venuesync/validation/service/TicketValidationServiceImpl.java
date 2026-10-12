@@ -38,8 +38,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   @Override
   public TicketValidation validateTicketByQrCode(
       UUID qrCodeId, UUID userId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
-    return replayOrRecord(idempotencyKey, () -> {
-      requireCanScanDeclaredEvent(userId, eventId);
+    return replayOrRecord(userId, eventId, idempotencyKey, () -> {
       Optional<QrCode> qrCodeOpt = qrCodeRepository.findByIdAndStatus(qrCodeId, QrCodeStatusEnum.ACTIVE);
 
       // If QR code not found or inactive, return INVALID status
@@ -53,8 +52,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   @Override
   public TicketValidation validateTicketManually(
       UUID ticketId, UUID userId, @Nullable UUID idempotencyKey, @Nullable UUID eventId) {
-    return replayOrRecord(idempotencyKey, () -> {
-      requireCanScanDeclaredEvent(userId, eventId);
+    return replayOrRecord(userId, eventId, idempotencyKey, () -> {
       Optional<Ticket> ticketOpt = ticketRepository.findById(Objects.requireNonNull(ticketId));
 
       // If ticket not found, return INVALID status
@@ -68,8 +66,7 @@ public class TicketValidationServiceImpl implements TicketValidationService {
   @Override
   public TicketValidation validateTicketByCode(
       String codePrefix, UUID userId, @Nullable UUID idempotencyKey, UUID eventId) {
-    return replayOrRecord(idempotencyKey, () -> {
-      requireCanScanDeclaredEvent(userId, eventId);
+    return replayOrRecord(userId, eventId, idempotencyKey, () -> {
       List<Ticket> matches = ticketRepository.findByEventAndCodePrefix(eventId, codePrefix, PageRequest.of(0, 2));
       if (matches.size() != 1) {
         return invalid(TicketValidationMethod.MANUAL);
@@ -82,11 +79,19 @@ public class TicketValidationServiceImpl implements TicketValidationService {
    * A scan whose response was lost (venue Wi-Fi) is retried with the same key and must get the FIRST answer:
    * re-running it would say ALREADY_USED about the ticket this very scan just admitted. A key identifies one
    * scan; reusing it for a different scan is a client bug and gets the first scan's answer.
+   *
+   * <p>Permission first, replay second: a stored answer goes only to someone who may work that ticket's door now,
+   * not to a removed staff member or anyone else who learned the key.
    */
-  private TicketValidation replayOrRecord(@Nullable UUID idempotencyKey, Supplier<TicketValidation> validation) {
+  private TicketValidation replayOrRecord(
+      UUID userId, @Nullable UUID eventId, @Nullable UUID idempotencyKey, Supplier<TicketValidation> validation) {
+    requireCanScanDeclaredEvent(userId, eventId);
     if (idempotencyKey != null) {
       Optional<TicketValidation> previous = ticketValidationRepository.findByIdempotencyKey(idempotencyKey);
       if (previous.isPresent()) {
+        if (previous.get().getTicket() != null) {
+          eventStaffService.requireCanScan(userId, previous.get().getTicket().getTicketType().getEvent().getId());
+        }
         return previous.get();
       }
     }

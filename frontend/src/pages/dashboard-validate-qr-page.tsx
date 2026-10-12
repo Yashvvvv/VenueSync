@@ -380,7 +380,7 @@ const DashboardValidateQrPage: React.FC = () => {
                   <div className="pt-2">
                     <Input
                       className="w-full bg-secondary border-border text-foreground h-12"
-                      placeholder="Guest list: name, email or ticket code"
+                      placeholder="Guest list: name, full email or ticket code"
                       aria-label="Search the guest list"
                       value={guestQuery}
                       onChange={(e) => setGuestQuery(e.target.value)}

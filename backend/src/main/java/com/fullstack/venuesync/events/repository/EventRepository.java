@@ -48,8 +48,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
   Optional<Event> findByIdAndStatus(UUID id, EventStatusEnum status);
 
-  /** The demo catalogue finds its own events by name and venue together, which no organizer's event shares. */
-  Optional<Event> findFirstByNameAndVenue(String name, String venue);
+  /** The demo catalogue finds its own events: no organizer, and this exact name and venue (an organizer may reuse them). */
+  Optional<Event> findFirstByNameAndVenueAndOrganizerIsNull(String name, String venue);
 
   // Count events by status for organizer (for stats)
   long countByOrganizerIdAndStatus(UUID organizerId, EventStatusEnum status);
