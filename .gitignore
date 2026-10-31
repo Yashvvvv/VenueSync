@@ -47,3 +47,8 @@ keycloak/RENDER_DEPLOY.md
 .github/appmod/
 .github/modernize/
 .github/java-upgrade/
+
+
+.idea
+.claude
+graphify-out/
