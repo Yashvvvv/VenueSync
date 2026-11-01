@@ -10,15 +10,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 /**
  * Simple in-memory rate limiter for public API endpoints.
  * Limits each IP to a configurable number of requests per minute.
- * Uses a sliding window approach with automatic cleanup.
+ * Uses a fixed one-minute window per client.
  *
  * <p>This is suitable for free-tier single-instance deployments.
  * For multi-instance deployments, use Redis-backed rate limiting.</p>
@@ -29,14 +28,22 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
   private static final int MAX_REQUESTS_PER_MINUTE = 60;
   private static final long WINDOW_MS = 60_000L;
-  private static final long CLEANUP_INTERVAL_MS = 300_000L; // 5 minutes
   /** IPv4 or IPv6 text, nothing longer: a key is never an 8 KB header a caller chose. */
   private static final Pattern IP = Pattern.compile("[0-9A-Fa-f:.]{2,45}");
-  // ponytail: past this many clients new ones go unlimited instead of growing the map; a Redis limiter if that's real.
   static final int MAX_CLIENTS = 10_000;
 
-  private final Map<String, RateLimitEntry> requestCounts = new ConcurrentHashMap<>();
-  private volatile long lastCleanup = System.currentTimeMillis();
+  /**
+   * Least-recently-used, capped at MAX_CLIENTS. A full map evicts the longest-idle client, which only hands that client
+   * a fresh quota. It used to let every new client through unlimited instead, so ~10k addresses switched limiting off.
+   * A flood can't evict a client that's still sending, so nobody gets more than their own 60 a minute.
+   */
+  // ponytail: one lock around the map; stripe it or move to Redis if it ever shows up in a profile.
+  private final Map<String, RateLimitEntry> requestCounts = new LinkedHashMap<>(16, 0.75f, true) {
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, RateLimitEntry> eldest) {
+      return size() > MAX_CLIENTS;
+    }
+  };
 
   @Override
   protected void doFilterInternal(HttpServletRequest request,
@@ -46,29 +53,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     String clientIp = getClientIp(request);
     long now = System.currentTimeMillis();
 
-    // Periodic cleanup of stale entries
-    if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
-      cleanup(now);
-      lastCleanup = now;
-    }
-
-    if (requestCounts.size() >= MAX_CLIENTS && !requestCounts.containsKey(clientIp)) {
-      cleanup(now);
-      if (requestCounts.size() >= MAX_CLIENTS) {
-        filterChain.doFilter(request, response);
-        return;
+    int count;
+    synchronized (requestCounts) {
+      RateLimitEntry entry = requestCounts.computeIfAbsent(clientIp, k -> new RateLimitEntry(now));
+      if (now - entry.windowStart > WINDOW_MS) {
+        entry.windowStart = now;
+        entry.count = 0;
       }
+      count = ++entry.count;
     }
-
-    RateLimitEntry entry = requestCounts.computeIfAbsent(clientIp,
-        k -> new RateLimitEntry(now));
-
-    // Reset window if expired
-    if (now - entry.windowStart > WINDOW_MS) {
-      entry.reset(now);
-    }
-
-    int count = entry.count.incrementAndGet();
 
     response.setHeader("X-RateLimit-Limit", String.valueOf(MAX_REQUESTS_PER_MINUTE));
     response.setHeader("X-RateLimit-Remaining",
@@ -114,23 +107,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     return request.getRemoteAddr();
   }
 
-  private void cleanup(long now) {
-    requestCounts.entrySet().removeIf(
-        e -> now - e.getValue().windowStart > WINDOW_MS * 2);
-  }
-
+  /** Only touched while holding the {@code requestCounts} lock. */
   private static class RateLimitEntry {
-    volatile long windowStart;
-    final AtomicInteger count;
+    long windowStart;
+    int count;
 
     RateLimitEntry(long windowStart) {
       this.windowStart = windowStart;
-      this.count = new AtomicInteger(0);
-    }
-
-    void reset(long newWindowStart) {
-      this.windowStart = newWindowStart;
-      this.count.set(0);
     }
   }
 }
