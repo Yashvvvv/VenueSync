@@ -61,6 +61,41 @@ class RateLimitingFilterTest {
     assertTrue(keys().size() <= RateLimitingFilter.MAX_CLIENTS);
   }
 
+  /** A flood of new addresses used to fill the map, after which every new client went unlimited. */
+  @Test
+  void aFullMapStillLimitsANewClient() throws Exception {
+    flood(RateLimitingFilter.MAX_CLIENTS + 50, () -> { });
+    for (int i = 0; i < 60; i++) {
+      assertEquals(200, status(r -> r.addHeader("CF-Connecting-IP", "198.51.100.9")));
+    }
+    assertEquals(429, status(r -> r.addHeader("CF-Connecting-IP", "198.51.100.9")));
+  }
+
+  /** Eviction takes the longest-idle client, so a flood can't push out the one that's hammering and reset its quota. */
+  @Test
+  void floodingNewAddressesCannotResetAnActiveClient() throws Exception {
+    for (int i = 0; i < 60; i++) {
+      assertEquals(200, status(r -> r.addHeader("CF-Connecting-IP", "203.0.113.7")));
+    }
+    flood(RateLimitingFilter.MAX_CLIENTS + 50,
+        () -> assertEquals(429, status(r -> r.addHeader("CF-Connecting-IP", "203.0.113.7"))));
+  }
+
+  /** One request from each of {@code n} new addresses, running {@code every100} after each hundred. */
+  private void flood(int n, ThrowingRunnable every100) throws Exception {
+    for (int i = 0; i < n; i++) {
+      String ip = String.format("10.%d.%d.%d", (i >> 16) & 255, (i >> 8) & 255, i & 255);
+      status(r -> r.addHeader("CF-Connecting-IP", ip));
+      if (i % 100 == 99) {
+        every100.run();
+      }
+    }
+  }
+
+  private interface ThrowingRunnable {
+    void run() throws Exception;
+  }
+
   /** Keys with a 1 each, just to compare sizes and names. */
   @SuppressWarnings("unchecked")
   private Map<String, Integer> keys() {
