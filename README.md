@@ -1,6 +1,6 @@
 # VenueSync
 
-> **A high-performance event ticketing platform with race-condition-proof seat allocation and real-time QR validation**
+> **An event ticketing platform with race-safe seat allocation and real-time QR validation**
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
@@ -14,15 +14,15 @@
 | Spring Boot | JPA | JWT | Spring Security | Docker | React | TypeScript |
 |:-----------:|:---:|:---:|:---------------:|:------:|:-----:|:----------:|
 
-- **Engineered a race-condition-proof ticketing engine** using JPA pessimistic locking with PostgreSQL, ensuring atomic seat allocation and zero overselling across 100+ concurrent purchase requests.
+- **Engineered a race-safe ticketing engine** using JPA pessimistic locking (`PESSIMISTIC_WRITE`) on PostgreSQL. In a stress test, 200 concurrent buyers for 50 seats sold exactly 50 in 5 of 5 runs; with the lock removed, the same test oversold (up to 58 tickets for 50 seats). An `Idempotency-Key` turns 50 parallel retries of one purchase into one ticket. See [How the numbers were measured](#how-the-numbers-were-measured).
 
-- **Developed a RESTful API with automated QR code generation** (Google ZXing) and real-time validation scanner, eliminating 95% of manual entry checks with sub-100ms response latency.
+- **Developed a RESTful API with automated QR code generation** (Google ZXing on the server) and door check-in through a scanner (the web app and an ML Kit scanner in the Android client). Validation is race-safe, idempotent and scoped to the event, and errors carry stable codes so clients branch on the code, not the message text.
 
-- **Architected a modular monolith** with 5 domain modules (`shared`, `users`, `events`, `tickets`, `validation`), clean inter-module dependency rules, and 94 Java source files — `mvn clean compile` passes with 0 errors.
+- **Architected a modular monolith** with 6 domain modules (`shared`, `users`, `events`, `tickets`, `validation`, `staff`), clean inter-module dependency rules, and 127 Java source files.
 
 - **Implemented OAuth2/OIDC-secured platform** with Auth0 multi-role RBAC (Organizer/Attendee/Staff) and a responsive TypeScript SPA featuring Framer Motion animations.
 
-- **Built comprehensive test suite** with unit tests for all service implementations and `@WebMvcTest` controller integration tests across all five controllers.
+- **Built a test suite** of 34 backend test classes: unit tests for the service implementations, `@WebMvcTest` tests for the event, published-event, ticket, ticket-type, validation and staff controllers, and opt-in concurrency stress tests against real PostgreSQL. GitHub Actions runs the backend, frontend and Android checks on every pull request.
 
 ---
 
@@ -109,6 +109,22 @@ set `venuesync.apiBaseUrl=...` in `android/local.properties`.
 ```powershell
 cd backend
 .\mvnw.cmd test
+```
+
+### How the numbers were measured
+
+The concurrency numbers above come from `backend/src/test/java/com/fullstack/venuesync/tickets/stress/ConcurrentPurchaseStressTest.java`:
+
+- **Overselling:** 200 threads each buy one ticket of a type with 50 seats, all at once. Exactly 50 must succeed and 150 must get `TicketsSoldOutException`. Repeated 5 times.
+- **Idempotency:** 50 threads retry the same purchase with one `Idempotency-Key`. All 50 get a ticket back, and exactly one ticket exists. Repeated 5 times.
+- **Proving the test can fail:** commenting out `@Lock(LockModeType.PESSIMISTIC_WRITE)` in `TicketTypeRepository` makes the overselling test fail (53 to 58 tickets sold for 50 seats in local runs).
+- The threads call the service directly (no HTTP). The connection pool is HikariCP's default of 10, so at most 10 purchases hold a database transaction at the same moment; the rest wait for a connection.
+- It runs only against PostgreSQL, because H2's row locks don't behave like PostgreSQL's `SELECT ... FOR UPDATE`. CI uses H2, so CI skips it. To run it:
+
+```bash
+docker run -d --name vs-stress-db -e POSTGRES_PASSWORD=stress -p 55432:5432 postgres:17-alpine
+cd backend
+STRESS_DB_URL=jdbc:postgresql://localhost:55432/postgres ./mvnw test -Dtest=ConcurrentPurchaseStressTest
 ```
 
 🌐 **Frontend:** http://localhost:5173  
